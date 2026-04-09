@@ -317,6 +317,61 @@ class SwordImportAllReversed(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class Import3DMigotoRaw(bpy.types.Operator, ImportHelper):
+    """Import raw 3DMigoto vertex and index buffers"""
+    bl_idname = "import_mesh.migoto_raw_buffers_mmt"
+    bl_label = TR.translate("导入.fmt .ib .vb格式模型")
+    bl_description = "导入3Dmigoto格式的 .ib .vb .fmt文件，只需选择.fmt文件即可"
+    bl_options = {'REGISTER','UNDO'}
+
+    # 我们只需要选择fmt文件即可，因为其它文件都是根据fmt文件的前缀来确定的。
+    # 所以可以实现一个.ib 和 .vb文件存在多个数据类型描述的.fmt文件的导入。
+    filename_ext = '.fmt'
+
+    filter_glob: bpy.props.StringProperty(
+        default='*.fmt',
+        options={'HIDDEN'},
+    ) # type: ignore
+
+    files: bpy.props.CollectionProperty(
+        name="File Path",
+        type=bpy.types.OperatorFileListElement,
+    ) # type: ignore
+
+    def execute(self, context):
+        # 我们需要添加到一个新建的集合里，方便后续操作
+        # 这里集合的名称需要为当前文件夹的名称
+        dirname = os.path.dirname(self.filepath)
+
+        collection_name = os.path.basename(dirname)
+        collection = bpy.data.collections.new(collection_name)
+        bpy.context.scene.collection.children.link(collection)
+
+        # 如果用户不选择任何fmt文件，则默认返回读取所有的fmt文件。
+        import_filename_list = []
+        if len(self.files) == 1:
+            if str(self.filepath).endswith(".fmt"):
+                import_filename_list.append(self.filepath)
+            else:
+                for filename in os.listdir(self.filepath):
+                    if filename.endswith(".fmt"):
+                        import_filename_list.append(filename)
+        else:
+            for fmt_file in self.files:
+                import_filename_list.append(fmt_file.name)
+
+        # 逐个fmt文件导入
+        for fmt_file_name in import_filename_list:
+            fmt_file_path = os.path.join(dirname, fmt_file_name)
+            mbf = MigotoBinaryFile(fmt_path=fmt_file_path)
+            MeshImportHelper.create_mesh_obj_from_mbf(mbf=mbf,import_collection=collection)
+
+        # Select all objects under collection (因为用户习惯了导入后就是全部选中的状态). 
+        CollectionUtils.select_collection_objects(collection)
+
+        return {'FINISHED'}
+
+
 # 面板UI布局
 class Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
     bl_label = "3Dmigoto-Sword面板"
@@ -331,10 +386,10 @@ class Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
         scene = context.scene
 
         # 一键导入逆向结果按钮
-        layout.operator("ssmt.import_all_reverse")
+        layout.operator("ssmt.import_all_reverse",icon='IMPORT')
         
         # 导入 ib vb fmt格式文件
-        layout.operator("import_mesh.migoto_raw_buffers_mmt",icon='IMPORT')
+        layout.operator(Import3DMigotoRaw.bl_idname,icon='IMPORT')
 
         # 自动检测按钮
         row = layout.row()
@@ -401,6 +456,7 @@ def register():
     pcoll = bpy.utils.previews.new()
     preview_collections["main"] = pcoll
 
+    bpy.utils.register_class(Import3DMigotoRaw)
     bpy.utils.register_class(Sword_ImportTexture_ImageListItem)
     bpy.utils.register_class(SWORD_UL_FastImportTextureList)
     bpy.utils.register_class(Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel)
@@ -434,4 +490,5 @@ def unregister():
     bpy.utils.unregister_class(Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel)
     bpy.utils.unregister_class(SWORD_UL_FastImportTextureList)
     bpy.utils.unregister_class(Sword_ImportTexture_ImageListItem)
+    bpy.utils.unregister_class(Import3DMigotoRaw)
                 

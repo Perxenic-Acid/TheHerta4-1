@@ -47,12 +47,9 @@ class PanelBasicInformation(bpy.types.Panel):
             
         # SSMT蓝图
         layout.operator("theherta3.open_persistent_blueprint", icon='NODETREE')
-        
-        # 导入 ib vb fmt格式文件
-        layout.operator("import_mesh.migoto_raw_buffers_mmt",icon='IMPORT')
+        layout.operator(SSMT4ImportRaw.bl_idname,icon='IMPORT')
+        layout.operator(SSMT4ImportAllFromCurrentWorkSpaceBlueprint.bl_idname,icon='IMPORT')
 
-        # 一键导入当前工作空间为蓝图架构
-        layout.operator("ssmt.import_all_from_workspace_blueprint",icon='IMPORT')
 
         if GlobalConfig.logic_name == LogicName.WWMI:
             layout.prop(context.scene.global_properties,"import_merged_vgmap")
@@ -61,8 +58,6 @@ class PanelBasicInformation(bpy.types.Panel):
         # 决定导入时是否调用法线贴图
         layout.prop(context.scene.global_properties, "use_normal_map")
 
-        layout.operator(SSMT4ImportRaw.bl_idname,icon='IMPORT')
-        layout.operator(SSMT4ImportAllFromCurrentWorkSpaceBlueprint.bl_idname,icon='IMPORT')
 
 
 
