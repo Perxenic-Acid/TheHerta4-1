@@ -22,6 +22,27 @@ from ..ui.wwmi.extracted_object import ExtractedObjectHelper
 
 class MeshCreateHelper:
     @staticmethod
+    def _decode_yysls_position_mode_1(data: numpy.ndarray, bbox_min: numpy.ndarray, bbox_max: numpy.ndarray) -> numpy.ndarray:
+        bbox_span = bbox_max - bbox_min
+        return data[:, :3] * bbox_span + bbox_min
+
+    @staticmethod
+    def _decode_yysls_position_mode_2(data: numpy.ndarray, bbox_min: numpy.ndarray, bbox_max: numpy.ndarray) -> numpy.ndarray:
+        packed_bytes = numpy.rint(numpy.clip(data[:, [2, 1, 0, 3]], 0.0, 1.0) * 255.0).astype(numpy.uint32)
+
+        qx = packed_bytes[:, 0] | (((packed_bytes[:, 3] >> 5) & 0x7) << 8)
+        qy = packed_bytes[:, 1] | (((packed_bytes[:, 3] >> 3) & 0x3) << 8)
+        qz = packed_bytes[:, 2] | ((packed_bytes[:, 3] & 0x7) << 8)
+
+        normalized = numpy.empty((len(data), 3), dtype=numpy.float32)
+        normalized[:, 0] = qx.astype(numpy.float32) / 2047.0
+        normalized[:, 1] = qy.astype(numpy.float32) / 1023.0
+        normalized[:, 2] = qz.astype(numpy.float32) / 2047.0
+
+        bbox_span = bbox_max - bbox_min
+        return normalized * bbox_span + bbox_min
+
+    @staticmethod
     def create_mesh_object(
         mesh_name:str,
         source_path:str,
@@ -33,6 +54,9 @@ class MeshCreateHelper:
         vb_vertex_count:int,
         ib_count:int,
         ib_polygon_count:int,
+        local_bounding_box_min:list | None = None,
+        local_bounding_box_max:list | None = None,
+        vertex_compression_params:list | None = None,
         import_collection:bpy.types.Collection | None = None,
     ):
         TimerUtils.Start("Import 3Dmigoto Raw")
@@ -76,11 +100,29 @@ class MeshCreateHelper:
             print("当前数据转换后 Shape: " + str(data.shape))
 
             if element.SemanticName == "POSITION":
-                if len(data[0]) == 4:
-                    if not all(x[3] in (0, 1) for x in data):
-                        raise Fatal('Positions are 4D')
+                if GlobalConfig.logic_name == LogicName.YYSLS and element.Format == "R16G16B16A16_UNORM":
+                    bbox_min = numpy.asarray((local_bounding_box_min or [])[:3], dtype=numpy.float32)
+                    bbox_max = numpy.asarray((local_bounding_box_max or [])[:3], dtype=numpy.float32)
+                    compression_mode = int(float((vertex_compression_params or [0])[0]) + 0.01) if vertex_compression_params else 0
+                    compression_mode = 2
+                    if bbox_min.shape == (3,) and bbox_max.shape == (3,) and compression_mode == 1:
+                        print("燕云十六声 POSITION 解压: mode 1")
+                        decoded_positions = MeshCreateHelper._decode_yysls_position_mode_1(data, bbox_min, bbox_max)
+                        positions = [tuple(pos) for pos in decoded_positions]
+                    elif bbox_min.shape == (3,) and bbox_max.shape == (3,) and compression_mode == 2:
+                        print("燕云十六声 POSITION 解压: mode 2")
+                        decoded_positions = MeshCreateHelper._decode_yysls_position_mode_2(data, bbox_min, bbox_max)
+                        positions = [tuple(pos) for pos in decoded_positions]
+                    else:
+                        print("燕云十六声 POSITION 未命中压缩模式，回退原始 UNORM 坐标")
+                        positions = [(x[0], x[1], x[2]) for x in data]
+                else:
+                    if len(data[0]) == 4:
+                        if not all(x[3] in (0, 1) for x in data):
+                            raise Fatal('Positions are 4D')
 
-                positions = [(x[0], x[1], x[2]) for x in data]
+                    positions = [(x[0], x[1], x[2]) for x in data]
+
                 mesh.vertices.foreach_set('co', unpack_list(positions))
             elif element.SemanticName.startswith("COLOR"):
                 mesh.vertex_colors.new(name=element.ElementName)
