@@ -104,7 +104,6 @@ class MeshCreateHelper:
                     bbox_min = numpy.asarray((local_bounding_box_min or [])[:3], dtype=numpy.float32)
                     bbox_max = numpy.asarray((local_bounding_box_max or [])[:3], dtype=numpy.float32)
                     compression_mode = int(float((vertex_compression_params or [0])[0]) + 0.01) if vertex_compression_params else 0
-                    compression_mode = 2
                     if bbox_min.shape == (3,) and bbox_max.shape == (3,) and compression_mode == 1:
                         print("燕云十六声 POSITION 解压: mode 1")
                         decoded_positions = MeshCreateHelper._decode_yysls_position_mode_1(data, bbox_min, bbox_max)
