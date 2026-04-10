@@ -68,7 +68,7 @@ class ExportYYSLS(DrawIBExportBase):
             # 但是角色外观界面，使用的是DrawIndexed
             # 所以这个能够兼容的方法仍然需要摸索，也许能够通过某种DRAW_TYPE来进行过滤？
             # emmmm，总之后面测试的时候在考虑，暂时记录在此
-            for drawindexed_str in M_IniHelper.get_drawindexed_instanced_str_list(
+            for drawindexed_str in M_IniHelper.get_drawindexed_str_list(
                 submesh_model.drawcall_model_list,
                 obj_name_draw_offset_dict=drawib_model.obj_name_draw_offset,
             ):
