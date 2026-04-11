@@ -7,7 +7,7 @@ from .common import global_properties
 # UI界面
 from .ui import ui_panel_basic
 from .ui import ui_panel_model
-from .ui import ui_panel_sword
+from .ui.sword import ui_panel_sword
 from .ui import ui_func_import_ssmt
 from .ui import ui_panel_fast_texture
 
@@ -29,7 +29,7 @@ bl_info = {
     "name": "TheHerta4",
     "description": "Blender Plugin of SSMT4",
     "blender": (4, 5, 0),
-    "version": (4, 0, 6),
+    "version": (4, 0, 7),
     "location": "View3D",
     "category": "Generic"
 }
