@@ -1,8 +1,9 @@
 
-# TheHerta4
+# TheHerta4 ![Downloads](https://img.shields.io/github/downloads/StarBobis/TheHerta4/total?style=flat-square&logo=github)  ![GitHub Repo stars](https://img.shields.io/github/stars/StarBobis/TheHerta4?style=social)
 
 SSMT4的Blender插件
 
+![GitHub Releases (by Release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?style=for-the-badge&logo=github&color=green)
 
 # 仍在开发中
 
