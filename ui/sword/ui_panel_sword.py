@@ -378,7 +378,7 @@ class Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
     bl_idname = "VIEW3D_PT_image_material_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Sword'
+    bl_category = 'Sword4'
     # bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
@@ -437,7 +437,7 @@ class Sword_SplitModel_By_DrawIndexed_Panel(Panel):
     bl_idname = "VIEW3D_PT_Sword_SplitModel_By_DrawIndexed_Panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Sword'
+    bl_category = 'Sword4'
     # bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
