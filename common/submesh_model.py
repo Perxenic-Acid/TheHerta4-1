@@ -173,7 +173,9 @@ class SubMeshModel:
             temp_obj.rotation_euler[1] = 0
             temp_obj.rotation_euler[2] = 0
             bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-        elif GlobalConfig.logic_name == LogicName.EFMI:
+        
+        # 这里真的需要设置一下吗？暂且留着反正不影响
+        elif GlobalConfig.logic_name == LogicName.EFMI or GlobalConfig.logic_name == LogicName.Naraka:
             ObjUtils.select_obj(temp_obj)
             temp_obj.rotation_euler[0] = 0
             temp_obj.rotation_euler[1] = 0

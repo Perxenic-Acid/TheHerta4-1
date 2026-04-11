@@ -71,7 +71,7 @@ class HertaUpdatePreference(bpy.types.AddonPreferences):
     bl_label = "TheHerta 更新器"
     bl_idname = __package__
 
-
+    
     auto_check_update: bpy.props.BoolProperty(
         name="自动检查更新",
         description="如启用，按设定的时间间隔自动检查更新",
