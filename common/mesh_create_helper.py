@@ -93,9 +93,11 @@ class MeshCreateHelper:
 
         for element in elements:
             data = vb_data[element.ElementName]
-
+            TimerUtils.Start(f"Process Element: {element.ElementName}")
             print("当前Element: " + element.ElementName)
             print("当前数据转换前 Shape: " + str(data.shape))
+
+            
             data = FormatUtils.apply_format_conversion(data, element.Format)
             print("当前数据转换后 Shape: " + str(data.shape))
 
@@ -124,10 +126,27 @@ class MeshCreateHelper:
 
                 mesh.vertices.foreach_set('co', unpack_list(positions))
             elif element.SemanticName.startswith("COLOR"):
-                mesh.vertex_colors.new(name=element.ElementName)
-                color_layer = mesh.vertex_colors[element.ElementName].data
-                for loop in mesh.loops:
-                    color_layer[loop.index].color = list(data[loop.vertex_index]) + [0] * (4 - len(data[loop.vertex_index]))
+                # 用 numpy 向量化构建 (num_loops, 4) 的 RGBA 数组，再用 foreach_set 批量写入。
+                # 避免逐元素 Python 循环——在 Blender 5.1 中 vertex_colors 兼容层极慢。
+                num_loops = len(mesh.loops)
+                loop_vertex_indices = numpy.empty(num_loops, dtype=numpy.int32)
+                mesh.loops.foreach_get('vertex_index', loop_vertex_indices)
+
+                colors_flat = numpy.zeros((num_loops, 4), dtype=numpy.float32)
+                if data.ndim > 1:
+                    actual_channels = min(data.shape[1], 4)
+                    colors_flat[:, :actual_channels] = data[loop_vertex_indices, :actual_channels].astype(numpy.float32)
+                else:
+                    colors_flat[:, 0] = data[loop_vertex_indices].astype(numpy.float32)
+
+                if hasattr(mesh, 'color_attributes'):
+                    # Blender 3.2+ 原生 API，Blender 5.1 也适用
+                    color_attr = mesh.color_attributes.new(name=element.ElementName, type='FLOAT_COLOR', domain='CORNER')
+                    color_attr.data.foreach_set('color', colors_flat.ravel())
+                else:
+                    # Blender 3.2 以下的旧式 API
+                    mesh.vertex_colors.new(name=element.ElementName)
+                    mesh.vertex_colors[element.ElementName].data.foreach_set('color', colors_flat.ravel())
             elif element.SemanticName == "BLENDINDICES":
                 if data.ndim == 1:
                     blend_indices[element.SemanticIndex] = numpy.array([(x,) for x in data])
@@ -179,6 +198,8 @@ class MeshCreateHelper:
                 pass
             else:
                 raise Fatal("Unknown ElementName: " + element.ElementName)
+            
+            TimerUtils.End(f"Process Element: {element.ElementName}")
 
         if len(blend_weights) == 0 and len(blend_indices) != 0:
             print("检测到BLENDWEIGHTS为空，但是含有BLENDINDICES数据，特殊情况，默认补充1,0,0,0的BLENDWEIGHTS")
