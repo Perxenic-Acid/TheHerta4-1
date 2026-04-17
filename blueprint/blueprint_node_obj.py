@@ -6,9 +6,9 @@ import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 from bpy_extras.io_utils import ImportHelper
 
-from .logic_name import LogicName
-from .global_config import GlobalConfig
-from .global_properties import GlobalProterties
+from ..common.logic_name import LogicName
+from ..common.global_config import GlobalConfig
+from ..common.global_properties import GlobalProterties
 from .blueprint_export_helper import BlueprintExportHelper
 from .blueprint_node_base import SSMTBlueprintTree, SSMTNodeBase
 
