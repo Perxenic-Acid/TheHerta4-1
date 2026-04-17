@@ -20,6 +20,7 @@ from .universal.zzmi import ExportZZMI
 
 from ..common.blueprint_model import BluePrintModel
 from ..common.blueprint_export_helper import BlueprintExportHelper
+from ..common.blueprint_node_obj import refresh_all_object_info_nodes
 
 
 class SSMTGenerateModBlueprint(bpy.types.Operator):
@@ -38,6 +39,14 @@ class SSMTGenerateModBlueprint(bpy.types.Operator):
             return {'CANCELLED'}
 
         BlueprintExportHelper.set_runtime_blueprint_tree(tree)
+
+        # 导出前强制同步一次 Object Info 节点。
+        # 蓝图后续解析主要仍读取 node.object_name，
+        # 因此必须先通过持久 object_id 把改名后的真实物体名称回写到节点上，
+        # 避免用户改名后蓝图仍使用旧名称导出。
+        refresh_summary = refresh_all_object_info_nodes(tree=tree, source="export")
+        if refresh_summary["missing_count"] > 0:
+            self.report({'WARNING'}, f"导出前刷新了 {refresh_summary['updated_count']} 个物体节点，但有 {refresh_summary['missing_count']} 个节点未找到对应物体")
 
         try:
             blueprint_model = BluePrintModel(tree=tree, context=context)

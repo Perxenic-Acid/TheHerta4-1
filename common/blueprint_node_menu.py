@@ -209,17 +209,6 @@ class SSMT_MT_ObjectContextMenuSub(bpy.types.Menu):
         layout.operator("ssmt.create_group_from_selection", text="将所选物体新建到组节点", icon='GROUP')
         layout.operator("ssmt.create_internal_switch", text="创建内部切换", icon='ARROW_LEFTRIGHT')
 
-
-class SSMT_MT_NodeMenu_Branch(bpy.types.Menu):
-    bl_label = "分支"
-    
-    def draw(self, context):
-        layout = self.layout
-        layout.operator("node.add_node", text="Object Info", icon='OBJECT_DATAMODE').type = "SSMTNode_Object_Info"
-        layout.operator("node.add_node", text="Group", icon='GROUP').type = "SSMTNode_Object_Group"
-        layout.operator("node.add_node", text="Mod Output", icon='EXPORT').type = "SSMTNode_Result_Output"
-        layout.operator("node.add_node", text="Switch Key", icon='GROUP').type = "SSMTNode_SwitchKey"
-
 class SSMT_MT_NodeMenu_ShapeKey(bpy.types.Menu):
     bl_label = "形态键"
     
@@ -227,78 +216,6 @@ class SSMT_MT_NodeMenu_ShapeKey(bpy.types.Menu):
         layout = self.layout
         layout.operator("node.add_node", text="Shape Key", icon='SHAPEKEY_DATA').type = "SSMTNode_ShapeKey"
         layout.operator("node.add_node", text="Generate ShapeKey Buffer", icon='EXPORT').type = "SSMTNode_ShapeKey_Output"
-
-
-class SSMT_OT_AddCommonKeySwitches(bpy.types.Operator):
-    '''Add 9 Switch Key nodes (CTRL 1-9), group them and connect to Output'''
-    bl_idname = "ssmt.add_common_key_switches"
-    bl_label = "常用按键切换"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    def execute(self, context):
-        # 1. Get/Create Node Tree
-        GlobalConfig.read_from_main_json_ssmt4()
-        workspace_name = f"{GlobalConfig.workspacename}" if GlobalConfig.workspacename else "SSMT_Mod_Logic"
-        node_tree = bpy.data.node_groups.get(workspace_name)
-        if not node_tree or node_tree.bl_idname != 'SSMTBlueprintTreeType':
-            node_tree = bpy.data.node_groups.new(name=workspace_name, type='SSMTBlueprintTreeType')
-
-        # 2. Add Nodes
-        nodes = node_tree.nodes
-        links = node_tree.links
-        
-        # Base location
-        base_x, base_y = 0, 0
-        
-        # Create Frame Node
-        frame_node = nodes.new(type='NodeFrame')
-        frame_node.label = "常用按键切换组"
-        frame_node.location = (base_x - 50, base_y + 100)
-
-        # Create Group Node
-        group_node = nodes.new(type='SSMTNode_Object_Group')
-        group_node.location = (base_x + 300, base_y)
-        group_node.parent = frame_node
-        
-        # Create or Find Output Node
-        output_node = None
-        for node in nodes:
-            if node.bl_idname == 'SSMTNode_Result_Output':
-                output_node = node
-                break
-        
-        if not output_node:
-            output_node = nodes.new(type='SSMTNode_Result_Output')
-            output_node.location = (base_x + 600, base_y)
-        else:
-            # If finding existing one, maybe move it if it's far? No, keep it.
-            pass
-
-        # Connect Group -> Output
-        if output_node.inputs:
-            target_socket = output_node.inputs[-1]
-            links.new(group_node.outputs[0], target_socket)
-            if hasattr(output_node, "update"):
-                output_node.update()
-
-        # Create 9 Switch Keys
-        key_names = [f"CTRL {i}" for i in range(1, 10)]
-        
-        for i, key_name in enumerate(key_names):
-            key_node = nodes.new(type='SSMTNode_SwitchKey')
-            key_node.location = (base_x, base_y - i * 200)
-            key_node.key_name = key_name
-            key_node.parent = frame_node
-            # key_node.label = key_name # Optional: override label? No need.
-            
-            # Connect Key -> Group
-            if group_node.inputs:
-                target_socket = group_node.inputs[-1]
-                links.new(key_node.outputs[0], target_socket)
-                if hasattr(group_node, "update"):
-                    group_node.update()
-
-        return {'FINISHED'}
 
 
 class SSMT_OT_AlignNodes(bpy.types.Operator):
@@ -733,33 +650,6 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
             print(f"  {info}")
 
         return {'FINISHED'}
-
-
-
-class SSMT_MT_NodeMenu_Preset(bpy.types.Menu):
-    bl_label = "预设"
-    
-    def draw(self, context):
-        layout = self.layout
-        layout.operator("ssmt.add_common_key_switches", text="常用按键开关", icon='PRESET')
-
-class SSMT_MT_NodeMenu_PostProcess(bpy.types.Menu):
-    bl_label = "后处理"
-    
-    def draw(self, context):
-        layout = self.layout
-        layout.operator("node.add_node", text="顶点属性定义", icon='PROPERTIES').type = "SSMTNode_PostProcess_VertexAttrs"
-        layout.separator()
-        layout.operator("node.add_node", text="形态键配置", icon='SHAPEKEY_DATA').type = "SSMTNode_PostProcess_ShapeKey"
-        layout.operator("node.add_node", text="多文件配置", icon='FILE_FOLDER').type = "SSMTNode_PostProcess_MultiFile"
-        layout.separator()
-        layout.operator("node.add_node", text="缓冲区清理", icon='X').type = "SSMTNode_PostProcess_BufferCleanup"
-        layout.operator("node.add_node", text="资源合并", icon='LINKED').type = "SSMTNode_PostProcess_ResourceMerge"
-        layout.operator("node.add_node", text="材质转资源", icon='MATERIAL').type = "SSMTNode_PostProcess_Material"
-        layout.separator()
-        layout.operator("node.add_node", text="血量检测", icon='DOT').type = "SSMTNode_PostProcess_HealthDetection"
-        layout.operator("node.add_node", text="滑块面板", icon='DOT').type = "SSMTNode_PostProcess_SliderPanel"
-
 def draw_node_add_menu(self, context):
     if not isinstance(context.space_data, bpy.types.SpaceNodeEditor):
         return
@@ -767,10 +657,11 @@ def draw_node_add_menu(self, context):
         return
     
     layout = self.layout
-    layout.menu("SSMT_MT_NodeMenu_Preset", text="预设", icon='PRESET')
-    layout.menu("SSMT_MT_NodeMenu_Branch", text="分支", icon='RNA')
+    layout.operator("node.add_node", text="Object Info", icon='OBJECT_DATAMODE').type = "SSMTNode_Object_Info"
+    layout.operator("node.add_node", text="Group", icon='GROUP').type = "SSMTNode_Object_Group"
+    layout.operator("node.add_node", text="Mod Output", icon='EXPORT').type = "SSMTNode_Result_Output"
+    layout.operator("node.add_node", text="Switch Key", icon='GROUP').type = "SSMTNode_SwitchKey"
     layout.menu("SSMT_MT_NodeMenu_ShapeKey", text="形态键", icon='SHAPEKEY_DATA')
-    layout.menu("SSMT_MT_NodeMenu_PostProcess", text="后处理", icon='FILE_REFRESH')
     layout.separator()
 
     # Frame节点没有任何功能，它是Blender自带的一种辅助节点，用于在节点编辑器中组织和分组节点
@@ -792,21 +683,16 @@ def draw_node_context_menu(self, context):
     layout.operator("ssmt.align_nodes", text="矩阵对齐节点", icon='GRID')
     layout.operator("ssmt.batch_connect_nodes", text="批量连接节点", icon='LINKED')
     layout.separator()
-    layout.operator("ssmt.refresh_node_object_ids", text="刷新物体ID关联", icon='FILE_REFRESH')
-    layout.operator("ssmt.check_object_name_changes", text="检查物体名称变化", icon='FILE_REFRESH')
+    layout.operator("ssmt.refresh_node_object_ids", text="刷新物体节点信息", icon='FILE_REFRESH')
 
 
 def register():
     bpy.utils.register_class(SSMT_OT_CreateGroupFromSelection)
     bpy.utils.register_class(SSMT_OT_CreateInternalSwitch)
-    bpy.utils.register_class(SSMT_OT_AddCommonKeySwitches)
     bpy.utils.register_class(SSMT_OT_AlignNodes)
     bpy.utils.register_class(SSMT_OT_BatchConnectNodes)
     bpy.utils.register_class(SSMT_MT_ObjectContextMenuSub)
-    bpy.utils.register_class(SSMT_MT_NodeMenu_Preset)
-    bpy.utils.register_class(SSMT_MT_NodeMenu_Branch)
     bpy.utils.register_class(SSMT_MT_NodeMenu_ShapeKey)
-    bpy.utils.register_class(SSMT_MT_NodeMenu_PostProcess)
 
     bpy.types.NODE_MT_add.prepend(draw_node_add_menu)
     # 添加到 3D 视图物体右键菜单
@@ -819,13 +705,9 @@ def unregister():
     bpy.types.NODE_MT_add.remove(draw_node_add_menu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(draw_objects_context_menu_add)
 
-    bpy.utils.unregister_class(SSMT_MT_NodeMenu_PostProcess)
     bpy.utils.unregister_class(SSMT_MT_NodeMenu_ShapeKey)
-    bpy.utils.unregister_class(SSMT_MT_NodeMenu_Branch)
-    bpy.utils.unregister_class(SSMT_MT_NodeMenu_Preset)
     bpy.utils.unregister_class(SSMT_MT_ObjectContextMenuSub)
     bpy.utils.unregister_class(SSMT_OT_BatchConnectNodes)
     bpy.utils.unregister_class(SSMT_OT_AlignNodes)
-    bpy.utils.unregister_class(SSMT_OT_AddCommonKeySwitches)
     bpy.utils.unregister_class(SSMT_OT_CreateInternalSwitch)
     bpy.utils.unregister_class(SSMT_OT_CreateGroupFromSelection)
