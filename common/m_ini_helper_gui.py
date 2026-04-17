@@ -26,8 +26,9 @@ class M_IniHelperGUI:
 
             # 只复制文件，忽略子目录
             if os.path.isfile(src_file):
-                if not os.path.exists(dst_file):
-                    shutil.copy2(src_file, dst_file)  # 使用 copy2 保留元数据
+                # 面板 shader 和贴图会持续迭代，生成 Mod 时必须覆盖旧资源，
+                # 否则生成目录里会残留旧版 res 文件，导致 ini 与 shader 行为不一致。
+                shutil.copy2(src_file, dst_file)  # 使用 copy2 保留元数据
                 print(f"复制文件: {src_file} -> {dst_file}")
                 
     @classmethod
@@ -83,6 +84,9 @@ class M_IniHelperGUI:
         
         constants_section.append("global $x_size_Button = 0.03")
         constants_section.append("global $y_size_Button = 0.03")
+        constants_section.append("global $Button_frame_pad = 0.002")
+        constants_section.append("global $Button_outer_x = 0")
+        constants_section.append("global $Button_outer_y = 0")
         constants_section.append("global $y_offset_button = 0.029")
         constants_section.append("global $last_mx = 0")
         constants_section.append("global $last_my = 0")
@@ -112,6 +116,12 @@ class M_IniHelperGUI:
         constants_section.append("global $ActiveCharacter = 0")
         constants_section.new_line()
 
+        constants_section.append("; 流光边框控制参数")
+        constants_section.append("global persist $ui_fx_phase = 0")
+        constants_section.append("global $ui_fx_speed = 0.006")
+        constants_section.append("global $ui_fx_intensity = 1")
+        constants_section.new_line()
+
         constants_section.append(";设置按钮总数")
         constants_section.append("global $Button_amount = " + str(len(key_name_mkey_dict.values())))
         constants_section.append(";设置横向最大按钮数")
@@ -122,6 +132,8 @@ class M_IniHelperGUI:
         constants_section.append("global $Button_now = 0")
         constants_section.append("global $Button_x = 0")
         constants_section.append("global $Button_y = 0")
+        constants_section.append("global $Button_frame_x = 0")
+        constants_section.append("global $Button_frame_y = 0")
         
         ini_builder.append_section(constants_section)
 
@@ -153,12 +165,16 @@ class M_IniHelperGUI:
         present_section.append("    run = CommandListPassWindowInfo")
         present_section.new_line()
 
+        present_section.append("    $Button_outer_x = $x_size_Button + $Button_frame_pad * 2")
+        present_section.append("    $Button_outer_y = $y_size_Button + $Button_frame_pad * 2")
+        present_section.new_line()
+
         present_section.append("    if $Button_amount > $Button_horizontal_max")
-        present_section.append("        $x_size = (($x_size_Button + $gap) * $Button_horizontal_max) + $gap * 3")
+        present_section.append("        $x_size = (($Button_outer_x + $gap) * $Button_horizontal_max) + $gap * 3")
         present_section.append("    else")
-        present_section.append("        $x_size = (($x_size_Button + $gap) * $Button_amount) + $gap * 3")
+        present_section.append("        $x_size = (($Button_outer_x + $gap) * $Button_amount) + $gap * 3")
         present_section.append("    endif")
-        present_section.append("    $y_size = (($y_size_Button + $gap) * ((($Button_amount - 1) // $Button_horizontal_max) + 1) + $gap * 3 + ($y_size_Button * 0.66) * 2) * res_width / res_height")
+        present_section.append("    $y_size = (($Button_outer_y + $gap) * ((($Button_amount - 1) // $Button_horizontal_max) + 1) + $gap * 3 + ($Button_outer_y * 0.66) * 2) * res_width / res_height")
         present_section.new_line()
 
         present_section.append("    if $x_Title_size > $x_size")
@@ -166,6 +182,10 @@ class M_IniHelperGUI:
         present_section.append("    endif")
         present_section.append("    if $final_x_off == -1")
         present_section.append("        $final_x_off = 0.5 - $x_size/2 + -0.01701")
+        present_section.append("    endif")
+        present_section.append("    $ui_fx_phase = $ui_fx_phase + $ui_fx_speed")
+        present_section.append("    if $ui_fx_phase >= 4096")
+        present_section.append("        $ui_fx_phase = $ui_fx_phase - 4096")
         present_section.append("    endif")
         present_section.new_line()
 
@@ -232,6 +252,22 @@ class M_IniHelperGUI:
         commandlist_section.append("endif")
         commandlist_section.new_line()
 
+        commandlist_section.append("[CommandListSetUIShaderParamsDefault]")
+        commandlist_section.append("; 默认贴图直出")
+        commandlist_section.append("x88 = 0")
+        commandlist_section.append("y88 = 0")
+        commandlist_section.append("x89 = 0")
+        commandlist_section.append("y89 = 0")
+        commandlist_section.new_line()
+
+        commandlist_section.append("[CommandListSetUIShaderParamsBorder]")
+        commandlist_section.append("; 唯一动态样式：统一炫彩边框")
+        commandlist_section.append("x88 = 5")
+        commandlist_section.append("y88 = $ui_fx_phase")
+        commandlist_section.append("x89 = $ui_fx_intensity")
+        commandlist_section.append("y89 = 0")
+        commandlist_section.new_line()
+
         commandlist_section.append("[CommandListPassWindowInfo]")
         commandlist_section.append("if window_width >= 640")
         commandlist_section.append("    $res_width = window_width")
@@ -256,24 +292,25 @@ class M_IniHelperGUI:
         commandlist_section.new_line()
 
         commandlist_section.append("[CommandListButtonBlock]")
-        commandlist_section.append("$Button_x = $final_x_off + (($x_size_Button + $gap) * (($Button_number - 1) % $Button_horizontal_max ) + $gap * 2)")
-        commandlist_section.append("$Button_y = $final_y_off + ((($y_size_Button + $gap)  * (($Button_number - 1) // $Button_horizontal_max) + $y_offset_button ) * res_width / res_height)")
-        commandlist_section.append("run = CommandListDrawButton")
-        commandlist_section.append("$ButtonLayerGeneration = !$ButtonLayerGeneration")
-        commandlist_section.append("run = CommandListDrawButton")
-        commandlist_section.append("; Calling this now to get Button effect over button")
-        commandlist_section.append("if cursor_y > $Button_y && cursor_y < $Button_y + ($y_size_Button * res_width / res_height)")
+        commandlist_section.append("$Button_frame_x = $final_x_off + (($Button_outer_x + $gap) * (($Button_number - 1) % $Button_horizontal_max ) + $gap * 2)")
+        commandlist_section.append("$Button_frame_y = $final_y_off + ((($Button_outer_y + $gap)  * (($Button_number - 1) // $Button_horizontal_max) + $y_offset_button ) * res_width / res_height)")
+        commandlist_section.append("$Button_x = $Button_frame_x + $Button_frame_pad")
+        commandlist_section.append("$Button_y = $Button_frame_y + ($Button_frame_pad * res_width / res_height)")
+        commandlist_section.append("run = CommandListDrawButtonBase")
+        commandlist_section.append("run = CommandListDrawButtonFrame")
+        commandlist_section.append("; Hover / press glow is drawn before icon so the item art stays readable")
+        commandlist_section.append("if cursor_y > $Button_frame_y && cursor_y < $Button_frame_y + ($Button_outer_y * res_width / res_height)")
         commandlist_section.append("    ; BUTTON")
         commandlist_section.append("    if $Button_amount >= $Button_number")
-        commandlist_section.append("        if cursor_x > $Button_x && cursor_x < $Button_x + $x_size_Button")
+        commandlist_section.append("        if cursor_x > $Button_frame_x && cursor_x < $Button_frame_x + $Button_outer_x")
         commandlist_section.append("            if $mouse_clicked")
         commandlist_section.append("                $Button_now = $Button_number")
         commandlist_section.append("                run = CommandListSetButtonCondition")
         commandlist_section.append("            endif")
-        commandlist_section.append("            run = CommandListDrawButtonEffect")
         commandlist_section.append("        endif")
         commandlist_section.append("    endif")
         commandlist_section.append("endif")
+        commandlist_section.append("run = CommandListDrawButtonIcon")
         commandlist_section.new_line()
 
         commandlist_section.append("[CommandListCheckMouse]")
@@ -296,7 +333,7 @@ class M_IniHelperGUI:
         commandlist_section.append("endif")
         commandlist_section.new_line()
 
-        commandlist_section.append("[CommandListDrawButtonEffect]")
+        commandlist_section.append("[CommandListDrawButtonBase]")
         commandlist_section.append("x87 = $x_size_Button")
         commandlist_section.append("y87 = $y_size_Button * res_width / res_height")
         commandlist_section.append("z87 = $Button_x")
@@ -304,15 +341,25 @@ class M_IniHelperGUI:
         commandlist_section.append("if $is_dragging && $Button_now == $Button_number")
         commandlist_section.append("    w87 = $Button_y + $press_effect")
         commandlist_section.append("endif")
-        commandlist_section.append("if $is_dragging == 0")
-        commandlist_section.append("    ps-t100 = ResourceUIButtonSelect")
-        commandlist_section.append("else")
-        commandlist_section.append("    ps-t100 = ResourceButtonPush")
-        commandlist_section.append("endif")
+        commandlist_section.append("ps-t100 = ResourceOutlineButton")
+        commandlist_section.append("run = CommandListSetUIShaderParamsDefault")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
-        commandlist_section.append("[CommandListDrawButton]")
+        commandlist_section.append("[CommandListDrawButtonFrame]")
+        commandlist_section.append("x87 = $Button_outer_x")
+        commandlist_section.append("y87 = $Button_outer_y * res_width / res_height")
+        commandlist_section.append("z87 = $Button_frame_x")
+        commandlist_section.append("w87 = $Button_frame_y")
+        commandlist_section.append("if $is_dragging && $Button_now == $Button_number")
+        commandlist_section.append("    w87 = $Button_frame_y + $press_effect")
+        commandlist_section.append("endif")
+        commandlist_section.append("ps-t100 = ResourceOutlineButton")
+        commandlist_section.append("run = CommandListSetUIShaderParamsBorder")
+        commandlist_section.append("run = CustomShaderElement")
+        commandlist_section.new_line()
+
+        commandlist_section.append("[CommandListDrawButtonIcon]")
         commandlist_section.append("x87 = $x_size_Button")
         commandlist_section.append("y87 = $y_size_Button * res_width / res_height")
         commandlist_section.append("z87 = $Button_x")
@@ -320,11 +367,8 @@ class M_IniHelperGUI:
         commandlist_section.append("if $is_dragging && $Button_now == $Button_number")
         commandlist_section.append("    w87 = $Button_y + $press_effect")
         commandlist_section.append("endif")
-        commandlist_section.append("if $ButtonLayerGeneration")
-        commandlist_section.append("    ps-t100 = ResourceOutlineButton")
-        commandlist_section.append("else")
-        commandlist_section.append("    run = CommandListSetButtonIcon")
-        commandlist_section.append("endif")
+        commandlist_section.append("run = CommandListSetButtonIcon")
+        commandlist_section.append("run = CommandListSetUIShaderParamsDefault")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
@@ -334,6 +378,7 @@ class M_IniHelperGUI:
         commandlist_section.append("z87 = $final_x_off")
         commandlist_section.append("w87 = $final_y_off")
         commandlist_section.append("ps-t100 = ResourceUIBackground")
+        commandlist_section.append("run = CommandListSetUIShaderParamsDefault")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
@@ -343,6 +388,7 @@ class M_IniHelperGUI:
         commandlist_section.append("z87 = $final_x_off")
         commandlist_section.append("w87 = $final_y_off")
         commandlist_section.append("ps-t100 = ResourceUITitle")
+        commandlist_section.append("run = CommandListSetUIShaderParamsDefault")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
@@ -352,6 +398,7 @@ class M_IniHelperGUI:
         commandlist_section.append("z87 = $final_x_off + $x_size - $x_Credit_size")
         commandlist_section.append("w87 = $final_y_off + ($y_size - $y_Credit_size)")
         commandlist_section.append("ps-t100 = ResourceUICredit")
+        commandlist_section.append("run = CommandListSetUIShaderParamsDefault")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
@@ -361,6 +408,7 @@ class M_IniHelperGUI:
         commandlist_section.append("z87 = $final_x_off")
         commandlist_section.append("w87 = $final_y_off")
         commandlist_section.append("ps-t100 = ResourceUIColorBorder")
+        commandlist_section.append("run = CommandListSetUIShaderParamsBorder")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
@@ -370,6 +418,7 @@ class M_IniHelperGUI:
         commandlist_section.append("z87 = $final_x_off")
         commandlist_section.append("w87 = $final_y_off + $y_size - $UI_Thickness")
         commandlist_section.append("ps-t100 = ResourceUIColorBorder")
+        commandlist_section.append("run = CommandListSetUIShaderParamsBorder")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
@@ -379,6 +428,7 @@ class M_IniHelperGUI:
         commandlist_section.append("z87 = $final_x_off")
         commandlist_section.append("w87 = $final_y_off + $y_Title_size - $UI_Thickness")
         commandlist_section.append("ps-t100 = ResourceUIColorBorder")
+        commandlist_section.append("run = CommandListSetUIShaderParamsBorder")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
@@ -388,6 +438,7 @@ class M_IniHelperGUI:
         commandlist_section.append("z87 = $final_x_off")
         commandlist_section.append("w87 = $final_y_off + $y_size - $y_Credit_size - $UI_Thickness")
         commandlist_section.append("ps-t100 = ResourceUIColorBorder")
+        commandlist_section.append("run = CommandListSetUIShaderParamsBorder")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
@@ -397,6 +448,7 @@ class M_IniHelperGUI:
         commandlist_section.append("z87 = $final_x_off")
         commandlist_section.append("w87 = $final_y_off")
         commandlist_section.append("ps-t100 = ResourceUIColorBorder")
+        commandlist_section.append("run = CommandListSetUIShaderParamsBorder")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
@@ -406,6 +458,7 @@ class M_IniHelperGUI:
         commandlist_section.append("z87 = $final_x_off + $x_size - $UI_Thickness")
         commandlist_section.append("w87 = $final_y_off")
         commandlist_section.append("ps-t100 = ResourceUIColorBorder")
+        commandlist_section.append("run = CommandListSetUIShaderParamsBorder")
         commandlist_section.append("run = CustomShaderElement")
         commandlist_section.new_line()
 
