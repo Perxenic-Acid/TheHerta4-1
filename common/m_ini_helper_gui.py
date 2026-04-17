@@ -48,7 +48,7 @@ class M_IniHelperGUI:
             return
         else:
             # 在这里把所有的res下面的东西，复制到当前生成的Mod文件夹的res目录下
-            res_path = os.path.join(GlobalConfig.path_generate_mod_folder(),"res\\")
+            res_path = os.path.join(GlobalConfig.path_generate_mod_folder(), "res")
             if not os.path.exists(res_path):
                 os.makedirs(res_path)
 
@@ -56,9 +56,10 @@ class M_IniHelperGUI:
 
             # 获取当前插件的工作目录
             plugin_directory = os.path.dirname(script_path)
+            addon_root_directory = os.path.dirname(plugin_directory)
 
             # 构建保存文件的路径
-            res_source_path = os.path.join(plugin_directory, 'res\\')
+            res_source_path = os.path.join(addon_root_directory, "resources")
 
             cls.copy_files(res_source_path,res_path)
 
