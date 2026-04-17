@@ -70,6 +70,11 @@ float get_border_mask(float2 safe_size)
 
 float3 apply_neon_border(float3 base_rgb, float2 uv, float2 safe_size, float phase, float intensity)
 {
+	if (intensity <= 0.001)
+	{
+		return base_rgb;
+	}
+
 	float is_horizontal = step(safe_size.y, safe_size.x);
 	float long_axis = lerp(uv.y, uv.x, is_horizontal);
 	float thin_axis_dist = lerp(abs(uv.x * 2 - 1), abs(uv.y * 2 - 1), is_horizontal);
@@ -112,7 +117,8 @@ void main(vs2ps input, out float4 result : SV_Target0)
 
 	float2 safe_size = max(SIZE, float2(0.0001, 0.0001));
 	float blend_mask = saturate(get_border_mask(safe_size) * resolved_alpha * 1.25);
-	float3 final_rgb = lerp(base.rgb, apply_neon_border(base.rgb, uv, safe_size, UI_PHASE, UI_INTENSITY), blend_mask);
+	float effect_enabled = step(0.001, UI_INTENSITY);
+	float3 final_rgb = lerp(base.rgb, apply_neon_border(base.rgb, uv, safe_size, UI_PHASE, UI_INTENSITY), blend_mask * effect_enabled);
 	result = float4(final_rgb, resolved_alpha);
 }
 #endif

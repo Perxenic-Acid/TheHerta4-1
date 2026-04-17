@@ -514,8 +514,6 @@ class SSMTNode_Result_Output(SSMTNodeBase):
         if GlobalConfig.logic_name == LogicName.GIMI:
             layout.prop(context.scene.global_properties, "gimi_use_orfix")
 
-        layout.prop(context.scene.global_properties, "generate_branch_mod_gui",text="生成分支架构Mod面板(测试中)")
-
         layout.prop(context.scene.global_properties, "open_mod_folder_after_generate_mod",text="生成Mod后打开Mod所在文件夹")
 
         layout.prop(context.scene.global_properties, "use_specific_generate_mod_folder_path")

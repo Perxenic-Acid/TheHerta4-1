@@ -42,12 +42,16 @@ class SSMTNode_ShapeKey(SSMTNodeBase):
 class SSMTNode_ShapeKey_Output(SSMTNodeBase):
     '''ShapeKey Output Node'''
     bl_idname = 'SSMTNode_ShapeKey_Output'
-    bl_label = 'Generate ShapeKey Buffer'
+    bl_label = '生成形态键Buffer'
     bl_icon = 'EXPORT'
 
     def init(self, context):
         self.inputs.new('SSMTSocketObject', "Group 1")
-        self.width = 200
+        self.width = 240
+
+    def draw_buttons(self, context, layout):
+        info_box = layout.box()
+        info_box.label(text="检测到该节点时，生成形态键Mod", icon='INFO')
 
     def update(self):
         # 类似 Join Geometry 的逻辑：总保持最后一个为空，方便连接新的

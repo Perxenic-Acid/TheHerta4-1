@@ -121,7 +121,19 @@ class GlobalProterties(bpy.types.PropertyGroup):
 
     @classmethod
     def generate_branch_mod_gui(cls):
-        return cls._instance().generate_branch_mod_gui
+        try:
+            from ..blueprint.blueprint_export_helper import BlueprintExportHelper
+            return BlueprintExportHelper.has_mod_panel_node()
+        except Exception:
+            return False
+
+    @classmethod
+    def generate_branch_mod_gui_flow_effect(cls):
+        try:
+            from ..blueprint.blueprint_export_helper import BlueprintExportHelper
+            return BlueprintExportHelper.is_mod_panel_flow_effect_enabled()
+        except Exception:
+            return False
 
     @classmethod
     def recalculate_tangent(cls):

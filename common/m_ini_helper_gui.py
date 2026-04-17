@@ -119,7 +119,7 @@ class M_IniHelperGUI:
         constants_section.append("; 流光边框控制参数")
         constants_section.append("global persist $ui_fx_phase = 0")
         constants_section.append("global $ui_fx_speed = 0.006")
-        constants_section.append("global $ui_fx_intensity = 1")
+        constants_section.append("global $ui_fx_intensity = " + ("1" if GlobalProterties.generate_branch_mod_gui_flow_effect() else "0"))
         constants_section.new_line()
 
         constants_section.append(";设置按钮总数")

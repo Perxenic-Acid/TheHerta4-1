@@ -15,6 +15,7 @@ from .blueprint import blueprint_node_obj
 from .blueprint import blueprint_node_base
 from .blueprint import blueprint_node_menu
 from .blueprint import blueprint_node_shapekey
+from .blueprint import blueprint_node_panel
 
 from .ui import ui_func_export
 
@@ -130,6 +131,7 @@ def register():
     ui_func_export.register()
     blueprint_node_menu.register()
     blueprint_node_shapekey.register()
+    blueprint_node_panel.register()
 
 
 
@@ -139,6 +141,7 @@ def unregister():
     ui_func_export.unregister()
     blueprint_node_menu.unregister()
     blueprint_node_shapekey.unregister()
+    blueprint_node_panel.unregister()
     blueprint_node_base.unregister()
 
     ui_panel_fast_texture.unregister()
