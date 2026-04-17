@@ -1,5 +1,8 @@
+import os
+
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
+from bpy_extras.io_utils import ImportHelper
 
 from .logic_name import LogicName
 from .global_config import GlobalConfig
@@ -500,7 +503,35 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class SSMT_OT_SelectGenerateModFolder(bpy.types.Operator, ImportHelper):
+    '''选择生成 Mod 的目标文件夹'''
+    bl_idname = "ssmt.select_generate_mod_folder"
+    bl_label = "选择生成Mod文件夹"
+
+    directory: bpy.props.StringProperty(subtype='DIR_PATH') # type: ignore
+    filter_folder: bpy.props.BoolProperty(default=True, options={'HIDDEN'}) # type: ignore
+    filter_image: bpy.props.BoolProperty(default=False, options={'HIDDEN'}) # type: ignore
+
+    def invoke(self, context, event):
+        current_directory = context.scene.global_properties.generate_mod_folder_path
+        if current_directory:
+            self.directory = bpy.path.abspath(current_directory)
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    def execute(self, context):
+        selected_directory = bpy.path.abspath(self.directory).rstrip("\\/")
+        if not selected_directory:
+            self.report({'ERROR'}, "请选择有效的文件夹")
+            return {'CANCELLED'}
+
+        os.makedirs(selected_directory, exist_ok=True)
+        context.scene.global_properties.generate_mod_folder_path = selected_directory
+        self.report({'INFO'}, f"生成Mod文件夹已设置为: {selected_directory}")
+        return {'FINISHED'}
+
 classes = (
+    SSMT_OT_SelectGenerateModFolder,
     SSMT_OT_RefreshNodeObjectIDs,
     SSMT_OT_SelectNodeObject,
     SSMT_OT_StartPickObject,
