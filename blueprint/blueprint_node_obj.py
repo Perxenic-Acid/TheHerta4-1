@@ -9,6 +9,7 @@ from bpy_extras.io_utils import ImportHelper
 from ..common.logic_name import LogicName
 from ..common.global_config import GlobalConfig
 from ..common.global_properties import GlobalProterties
+from ..utils.translate_utils import iface_, rpt_
 from .blueprint_export_helper import BlueprintExportHelper
 from .blueprint_node_base import SSMTBlueprintTree, SSMTNodeBase
 
@@ -179,11 +180,11 @@ class SSMT_OT_RefreshNodeObjectIDs(bpy.types.Operator):
         refresh_summary = refresh_all_object_info_nodes(include_all_blueprints=True, source="manual")
 
         if refresh_summary["missing_count"] > 0:
-            self.report({'WARNING'}, f"已刷新 {refresh_summary['updated_count']} 个物体节点，另有 {refresh_summary['missing_count']} 个节点未找到对应物体，耗时 {refresh_summary['elapsed_ms']:.3f} ms")
+            self.report({'WARNING'}, rpt_("已刷新 {updated_count} 个物体节点，另有 {missing_count} 个节点未找到对应物体，耗时 {elapsed_ms:.3f} ms").format(updated_count=refresh_summary['updated_count'], missing_count=refresh_summary['missing_count'], elapsed_ms=refresh_summary['elapsed_ms']))
         elif refresh_summary["updated_count"] > 0:
-            self.report({'INFO'}, f"已刷新 {refresh_summary['updated_count']} 个物体节点，耗时 {refresh_summary['elapsed_ms']:.3f} ms")
+            self.report({'INFO'}, rpt_("已刷新 {updated_count} 个物体节点，耗时 {elapsed_ms:.3f} ms").format(updated_count=refresh_summary['updated_count'], elapsed_ms=refresh_summary['elapsed_ms']))
         else:
-            self.report({'INFO'}, f"所有物体节点都已是最新状态，耗时 {refresh_summary['elapsed_ms']:.3f} ms")
+            self.report({'INFO'}, rpt_("所有物体节点都已是最新状态，耗时 {elapsed_ms:.3f} ms").format(elapsed_ms=refresh_summary['elapsed_ms']))
         
         return {'FINISHED'}
 
@@ -191,7 +192,7 @@ class SSMT_OT_RefreshNodeObjectIDs(bpy.types.Operator):
 class SSMT_OT_SelectNodeObject(bpy.types.Operator):
     '''Select this object in 3D View'''
     bl_idname = "ssmt.select_node_object"
-    bl_label = "Select Object"
+    bl_label = "选择对象"
     
     object_name: bpy.props.StringProperty() # type: ignore
     object_id: bpy.props.StringProperty() # type: ignore
@@ -214,9 +215,9 @@ class SSMT_OT_SelectNodeObject(bpy.types.Operator):
                 
             obj.select_set(True)
             context.view_layer.objects.active = obj
-            self.report({'INFO'}, f"Selected: {obj.name}")
+            self.report({'INFO'}, rpt_("已选中对象: {name}").format(name=obj.name))
         else:
-            self.report({'WARNING'}, "Object not found")
+            self.report({'WARNING'}, rpt_("未找到对象"))
         
         return {'FINISHED'}
 
@@ -224,7 +225,7 @@ class SSMT_OT_SelectNodeObject(bpy.types.Operator):
 class SSMT_OT_StartPickObject(bpy.types.Operator):
     '''Start picking an object from 3D View'''
     bl_idname = "ssmt.start_pick_object"
-    bl_label = "Pick Object"
+    bl_label = "选取对象"
     bl_description = "点击后在3D视图中选择一个物体"
     
     node_name: bpy.props.StringProperty() # type: ignore
@@ -235,12 +236,12 @@ class SSMT_OT_StartPickObject(bpy.types.Operator):
         tree = getattr(context.space_data, "edit_tree", None) or getattr(context.space_data, "node_tree", None)
         
         if not tree:
-            self.report({'WARNING'}, "无法获取节点树上下文")
+            self.report({'WARNING'}, rpt_("无法获取节点树上下文"))
             return {'CANCELLED'}
         
         _picking_node_name = self.node_name
         _picking_tree_name = tree.name
-        self.report({'INFO'}, "请在3D视图中点击选择一个物体")
+        self.report({'INFO'}, rpt_("请在3D视图中点击选择一个物体"))
         
         bpy.ops.ssmt.pick_object_modal('INVOKE_DEFAULT')
         
@@ -250,7 +251,7 @@ class SSMT_OT_StartPickObject(bpy.types.Operator):
 class SSMT_OT_PickObjectModal(bpy.types.Operator):
     '''Modal operator for picking objects in 3D View'''
     bl_idname = "ssmt.pick_object_modal"
-    bl_label = "Pick Object"
+    bl_label = "选取对象"
     bl_options = {'REGISTER', 'INTERNAL'}
     
     def invoke(self, context, event):
@@ -294,7 +295,7 @@ class SSMT_OT_PickObjectModal(bpy.types.Operator):
                         if node:
                             node.object_name = current_obj.name
                             node.object_id = ensure_object_persistent_id(current_obj)
-                            self.report({'INFO'}, f"已选择物体: {current_obj.name}")
+                            self.report({'INFO'}, rpt_("已选择物体: {name}").format(name=current_obj.name))
                     
                     _picking_node_name = None
                     _picking_tree_name = None
@@ -306,13 +307,13 @@ class SSMT_OT_PickObjectModal(bpy.types.Operator):
 def draw_view3d_header(self, context):
     global _picking_node_name
     if _picking_node_name:
-        self.layout.label(text="请在3D视图中点击选择一个物体...", icon='EYEDROPPER')
+        self.layout.label(text=iface_("请在3D视图中点击选择一个物体..."), icon='EYEDROPPER')
 
 
 class SSMTNode_Object_Info(SSMTNodeBase):
     '''Object Info Node'''
     bl_idname = 'SSMTNode_Object_Info'
-    bl_label = 'Object Info'
+    bl_label = '物体信息'
     bl_icon = 'OBJECT_DATAMODE'
     bl_width_min = 300
 
@@ -336,7 +337,7 @@ class SSMTNode_Object_Info(SSMTNodeBase):
                 if len(obj_name_total_split) >= 2:
                     self.alias_name = ".".join(obj_name_total_split[1:])
         else:
-            self.label = "Object Info"
+            self.label = "物体信息"
 
         self.update_node_width([self.object_name, self.draw_ib, self.index_count, self.first_index, self.alias_name])
 
@@ -350,18 +351,18 @@ class SSMTNode_Object_Info(SSMTNodeBase):
         else:
             self.object_id = ""
 
-    object_name: bpy.props.StringProperty(name="Object Name", default="", update=update_object_name) #type: ignore
-    object_id: bpy.props.StringProperty(name="Object ID", default="") #type: ignore
-    original_object_name: bpy.props.StringProperty(name="Original Object Name", default="") #type: ignore
+    object_name: bpy.props.StringProperty(name="物体名称", default="", update=update_object_name) #type: ignore
+    object_id: bpy.props.StringProperty(name="物体ID", default="") #type: ignore
+    original_object_name: bpy.props.StringProperty(name="原始物体名称", default="") #type: ignore
 
 
     draw_ib: bpy.props.StringProperty(name="DrawIB", default="") # type: ignore
     index_count: bpy.props.StringProperty(name="IndexCount", default="") # type: ignore
     first_index: bpy.props.StringProperty(name="FirstIndex", default="") # type: ignore
-    alias_name: bpy.props.StringProperty(name="Alias Name", default="") # type: ignore
+    alias_name: bpy.props.StringProperty(name="别名", default="") # type: ignore
 
     def init(self, context):
-        self.outputs.new('SSMTSocketObject', "Object")
+        self.outputs.new('SSMTSocketObject', iface_("对象"))
 
     def draw_buttons(self, context, layout):
         row = layout.row(align=True)
@@ -377,29 +378,29 @@ class SSMTNode_Object_Info(SSMTNodeBase):
             op.object_id = self.object_id
 
         # Display as read-only labels to prevent user edits in the UI
-        layout.label(text=f"DrawIB: {self.draw_ib}")
-        layout.label(text=f"IndexCount: {self.index_count}")
-        layout.label(text=f"FirstIndex: {self.first_index}")
-        layout.label(text=f"Alias Name: {self.alias_name}")
+        layout.label(text=f"{iface_('DrawIB: ')}{self.draw_ib}")
+        layout.label(text=f"{iface_('IndexCount: ')}{self.index_count}")
+        layout.label(text=f"{iface_('FirstIndex: ')}{self.first_index}")
+        layout.label(text=f"{iface_('别名: ')}{self.alias_name}")
 
 
 class SSMTNode_Object_Group(SSMTNodeBase):
     '''单纯用于分组的节点，可以接受任何节点作为输入，放在一个组里'''
     bl_idname = 'SSMTNode_Object_Group'
-    bl_label = 'Group'
+    bl_label = '分组'
     bl_icon = 'GROUP'
 
     def init(self, context):
-        self.inputs.new('SSMTSocketObject', "Input 1")
-        self.outputs.new('SSMTSocketObject', "Output")
+        self.inputs.new('SSMTSocketObject', iface_("输入 1"))
+        self.outputs.new('SSMTSocketObject', iface_("输出"))
         self.width = 200
 
     def draw_buttons(self, context, layout):
-        layout.operator("ssmt.view_group_objects", text="查看递归解析预览", icon='HIDE_OFF').node_name = self.name
+        layout.operator("ssmt.view_group_objects", text=iface_("查看递归解析预览"), icon='HIDE_OFF').node_name = self.name
 
     def update(self):
         if self.inputs and self.inputs[-1].is_linked:
-            self.inputs.new('SSMTSocketObject', f"Input {len(self.inputs) + 1}")
+            self.inputs.new('SSMTSocketObject', iface_("输入 {count}").format(count=len(self.inputs) + 1))
         
         if len(self.inputs) > 1 and not self.inputs[-1].is_linked and not self.inputs[-2].is_linked:
              self.inputs.remove(self.inputs[-1])
@@ -410,7 +411,7 @@ class SSMTNode_Object_Group(SSMTNodeBase):
 class SSMT_OT_SwitchKey_AddSocket(bpy.types.Operator):
     '''Add a new socket to the switch node'''
     bl_idname = "ssmt.switch_add_socket"
-    bl_label = "Add Socket"
+    bl_label = "添加插槽"
     
     node_name: bpy.props.StringProperty() # type: ignore
 
@@ -420,14 +421,14 @@ class SSMT_OT_SwitchKey_AddSocket(bpy.types.Operator):
              return {'CANCELLED'}
         node = tree.nodes.get(self.node_name)
         if node:
-             node.inputs.new('SSMTSocketObject', f"Status {len(node.inputs)}")
+               node.inputs.new('SSMTSocketObject', iface_("状态 {count}").format(count=len(node.inputs)))
         return {'FINISHED'}
 
 
 class SSMT_OT_SwitchKey_RemoveSocket(bpy.types.Operator):
     '''Remove the last socket from the switch node'''
     bl_idname = "ssmt.switch_remove_socket"
-    bl_label = "Remove Socket"
+    bl_label = "移除插槽"
     
     node_name: bpy.props.StringProperty() # type: ignore
 
@@ -444,7 +445,7 @@ class SSMT_OT_SwitchKey_RemoveSocket(bpy.types.Operator):
 class SSMTNode_SwitchKey(SSMTNodeBase):
     '''【按键切换】会把每个连入的分支分配到单独的变量'''
     bl_idname = 'SSMTNode_SwitchKey'
-    bl_label = 'Switch Key'
+    bl_label = '按键切换'
     bl_icon = 'GROUP'
 
     def update_key_name(self, context):
@@ -453,44 +454,44 @@ class SSMTNode_SwitchKey(SSMTNodeBase):
     def update_comment(self, context):
         self.update_node_width([self.key_name, self.comment])
     
-    key_name: bpy.props.StringProperty(name="Key Name", default="", update=update_key_name) # type: ignore
+    key_name: bpy.props.StringProperty(name="按键名称", default="", update=update_key_name) # type: ignore
     comment: bpy.props.StringProperty(name="备注", description="备注信息，会以注释形式生成到配置表中", default="", update=update_comment) # type: ignore
     
     def init(self, context):
         self.label = "按键切换"
-        self.inputs.new('SSMTSocketObject', "Status 0")
-        self.outputs.new('SSMTSocketObject', "Output")
+        self.inputs.new('SSMTSocketObject', iface_("状态 0"))
+        self.outputs.new('SSMTSocketObject', iface_("输出"))
         self.width = 200
         self.use_custom_color = True
         self.color = (0.34, 0.54, 0.34)
 
     def draw_buttons(self, context, layout):
         row = layout.row(align=True)
-        row.prop(self, "key_name", text="按键")
+        row.prop(self, "key_name", text=iface_("按键"))
         row.operator("wm.url_open", text="", icon='HELP').url = "https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes"
         
-        layout.prop(self, "comment", text="备注")
+        layout.prop(self, "comment", text=iface_("备注"))
         
         row = layout.row(align=True)
-        op_add = row.operator("ssmt.switch_add_socket", text="Add", icon='ADD')
+        op_add = row.operator("ssmt.switch_add_socket", text=iface_("添加"), icon='ADD')
         op_add.node_name = self.name
         
-        op_rem = row.operator("ssmt.switch_remove_socket", text="Remove", icon='REMOVE')
+        op_rem = row.operator("ssmt.switch_remove_socket", text=iface_("移除"), icon='REMOVE')
         op_rem.node_name = self.name
 
 
 class SSMTNode_Result_Output(SSMTNodeBase):
     '''Result Output Node'''
     bl_idname = 'SSMTNode_Result_Output'
-    bl_label = 'Generate Mod'
+    bl_label = '生成Mod'
     bl_icon = 'EXPORT'
 
     def init(self, context):
-        self.inputs.new('SSMTSocketObject', "Group 1")
+        self.inputs.new('SSMTSocketObject', iface_("组 1"))
         self.width = 400
 
     def draw_buttons(self, context, layout):
-        layout.operator("ssmt.generate_mod_blueprint", text="Generate Mod", icon='EXPORT')
+        layout.operator("ssmt.generate_mod_blueprint", text=iface_("生成Mod"), icon='EXPORT')
         
         if GlobalConfig.logic_name == LogicName.WWMI:
             layout.prop(context.scene.global_properties, "ignore_muted_shape_keys")
@@ -498,15 +499,15 @@ class SSMTNode_Result_Output(SSMTNodeBase):
             layout.prop(context.scene.global_properties, "export_add_missing_vertex_groups")
 
         layout.prop(context.scene.global_properties, 
-                    "forbid_auto_texture_ini",text="禁止自动贴图流程")
+                    "forbid_auto_texture_ini",text=iface_("禁止自动贴图流程"))
 
         if GlobalConfig.logic_name != LogicName.GF2:
             layout.prop(context.scene.global_properties,
-                        "recalculate_tangent",text="向量归一化法线存入TANGENT(全局)")
+                        "recalculate_tangent",text=iface_("向量归一化法线存入TANGENT(全局)"))
 
         if GlobalConfig.logic_name == LogicName.HIMI:
             layout.prop(context.scene.global_properties,
-                        "recalculate_color",text="算术平均归一化法线存入COLOR(全局)")
+                        "recalculate_color",text=iface_("算术平均归一化法线存入COLOR(全局)"))
 
         if GlobalConfig.logic_name == LogicName.ZZMI:
             layout.prop(context.scene.global_properties, "zzz_use_slot_fix")
@@ -514,13 +515,13 @@ class SSMTNode_Result_Output(SSMTNodeBase):
         if GlobalConfig.logic_name == LogicName.GIMI:
             layout.prop(context.scene.global_properties, "gimi_use_orfix")
 
-        layout.prop(context.scene.global_properties, "open_mod_folder_after_generate_mod",text="生成Mod后打开Mod所在文件夹")
+        layout.prop(context.scene.global_properties, "open_mod_folder_after_generate_mod",text=iface_("生成Mod后打开Mod所在文件夹"))
 
         layout.prop(context.scene.global_properties, "use_specific_generate_mod_folder_path")
 
         if GlobalProterties.use_specific_generate_mod_folder_path():
             box = layout.box()
-            box.label(text="当前生成Mod位置文件夹:")
+            box.label(text=iface_("当前生成Mod位置文件夹:"))
             box.label(text=context.scene.global_properties.generate_mod_folder_path)
 
             layout.operator("ssmt.select_generate_mod_folder", icon='FILE_FOLDER')
@@ -528,11 +529,11 @@ class SSMTNode_Result_Output(SSMTNodeBase):
         # 添加返回上一层级按钮
         layout.separator()
         row = layout.row(align=True)
-        row.operator("ssmt.blueprint_nest_navigate", text="返回上一层级", icon='BACK')
+        row.operator("ssmt.blueprint_nest_navigate", text=iface_("返回上一层级"), icon='BACK')
 
     def update(self):
         if self.inputs and self.inputs[-1].is_linked:
-            self.inputs.new('SSMTSocketObject', f"Group {len(self.inputs) + 1}")
+            self.inputs.new('SSMTSocketObject', iface_("组 {count}").format(count=len(self.inputs) + 1))
         
         if len(self.inputs) > 1 and not self.inputs[-1].is_linked and not self.inputs[-2].is_linked:
              self.inputs.remove(self.inputs[-1])
@@ -541,7 +542,7 @@ class SSMTNode_Result_Output(SSMTNodeBase):
 class SSMT_OT_View_Group_Objects(bpy.types.Operator):
     '''递归解析当前组下面所有的物体并在当前3D视图中展示，点击切换局部视图，注意组节点最好不要包含按键切换，否则会同时展示所有切换分支内容'''
     bl_idname = "ssmt.view_group_objects"
-    bl_label = "View Group Objects"
+    bl_label = "查看组内物体"
     
     node_name: bpy.props.StringProperty() # type: ignore
 
@@ -563,7 +564,7 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
                 break
         
         if not view_3d_area:
-            self.report({'WARNING'}, "No 3D View found")
+            self.report({'WARNING'}, rpt_("未找到3D视图"))
             return {'CANCELLED'}
 
         in_local_view = False
@@ -575,7 +576,7 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
         if in_local_view:
             with context.temp_override(area=view_3d_area):
                 bpy.ops.view3d.localview()
-            self.report({'INFO'}, "Exited local view")
+            self.report({'INFO'}, rpt_("已退出局部视图"))
             return {'FINISHED'}
 
         objects_to_show = set()
@@ -604,7 +605,7 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
         collect_objects(node)
         
         if not objects_to_show:
-            self.report({'WARNING'}, "No objects found in this group")
+            self.report({'WARNING'}, rpt_("该分组中未找到任何物体"))
             return {'CANCELLED'}
 
         def deselect_all_safe():
@@ -630,7 +631,7 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
                 except Exception as e:
                     print(f"View setup warning: {e}")
 
-        self.report({'INFO'}, f"Showing {len(objects_to_show)} objects in local view")
+        self.report({'INFO'}, rpt_("已在局部视图中显示 {count} 个物体").format(count=len(objects_to_show)))
         return {'FINISHED'}
 
 
@@ -653,12 +654,12 @@ class SSMT_OT_SelectGenerateModFolder(bpy.types.Operator, ImportHelper):
     def execute(self, context):
         selected_directory = bpy.path.abspath(self.directory).rstrip("\\/")
         if not selected_directory:
-            self.report({'ERROR'}, "请选择有效的文件夹")
+            self.report({'ERROR'}, rpt_("请选择有效的文件夹"))
             return {'CANCELLED'}
 
         os.makedirs(selected_directory, exist_ok=True)
         context.scene.global_properties.generate_mod_folder_path = selected_directory
-        self.report({'INFO'}, f"生成Mod文件夹已设置为: {selected_directory}")
+        self.report({'INFO'}, rpt_("生成Mod文件夹已设置为: {path}").format(path=selected_directory))
         return {'FINISHED'}
 
 classes = (

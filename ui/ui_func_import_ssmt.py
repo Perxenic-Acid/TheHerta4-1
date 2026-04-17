@@ -11,7 +11,7 @@ from bpy_extras.io_utils import ImportHelper
 from ..utils.json_utils import JsonUtils
 from ..utils.collection_utils import CollectionUtils
 from ..utils.timer_utils import TimerUtils
-from ..utils.translate_utils import TR
+from ..utils.translate_utils import rpt_
 
 from ..common.global_config import GlobalConfig
 from ..common.ssmt_import_helper import SSMTImportHelper
@@ -199,7 +199,7 @@ def ImprotFromWorkSpaceFull(self, context):
 
 class SSMT4ImportAllFromCurrentWorkSpaceBlueprint(bpy.types.Operator):
     bl_idname = "ssmt4.import_all_from_workspace"
-    bl_label = TR.translate("一键导入SSMT工作空间内容")
+    bl_label = "一键导入SSMT工作空间内容"
     bl_description = "一键导入当前工作空间文件夹下所有的内容"
     bl_options = {'REGISTER','UNDO'}
 
@@ -207,9 +207,9 @@ class SSMT4ImportAllFromCurrentWorkSpaceBlueprint(bpy.types.Operator):
         # print("Current WorkSpace: " + GlobalConfig.workspacename)
         # print("Current Game: " + GlobalConfig.gamename)
         if GlobalConfig.workspacename == "":
-            self.report({"ERROR"},"Please select your WorkSpace in SSMT before import.")
+            self.report({"ERROR"}, rpt_("请先在SSMT中选择当前工作空间后再导入。"))
         elif not os.path.exists(GlobalConfig.path_workspace_folder()):
-            self.report({"ERROR"},"WorkSpace Folder Didn't exists, Please create a WorkSpace in SSMT before import " + GlobalConfig.path_workspace_folder())
+            self.report({"ERROR"}, rpt_("工作空间文件夹不存在，请先在SSMT中创建工作空间: {path}").format(path=GlobalConfig.path_workspace_folder()))
         else:
             TimerUtils.Start("ImportFromWorkSpaceBlueprint")
             ImprotFromWorkSpaceFull(self, context)
@@ -220,7 +220,7 @@ class SSMT4ImportAllFromCurrentWorkSpaceBlueprint(bpy.types.Operator):
 
 class SSMT4ImportRaw(bpy.types.Operator, ImportHelper):
     bl_idname = "ssmt4.import_raw"
-    bl_label = TR.translate("导入SSMT格式模型")
+    bl_label = "导入SSMT格式模型"
     bl_description = "导入SSMT格式的模型文件, 只需选择.json文件即可"
     bl_options = {'REGISTER','UNDO'}
 

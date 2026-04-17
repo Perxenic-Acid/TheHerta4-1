@@ -2,6 +2,7 @@ import bpy
 
 
 from .common import global_properties
+from .utils import translate_utils
 
 
 # UI界面
@@ -112,6 +113,7 @@ class HertaUpdatePreference(bpy.types.AddonPreferences):
 def register():
     # 1. Configs
     global_properties.register()
+    translate_utils.register()
     
     # 2. Addon Updater (local classes)
     addon_updater_ops.register(bl_info)
@@ -156,6 +158,7 @@ def unregister():
     addon_updater_ops.unregister()
 
     # 1. Configs
+    translate_utils.unregister()
     global_properties.unregister()
 
 

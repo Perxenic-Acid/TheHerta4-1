@@ -1,6 +1,7 @@
 
 import bpy
 
+from ..utils.translate_utils import iface_
 from .blueprint_node_base import SSMTNodeBase
 
 
@@ -8,7 +9,7 @@ from .blueprint_node_base import SSMTNodeBase
 class SSMTNode_ShapeKey(SSMTNodeBase):
     '''ShapeKey Node'''
     bl_idname = 'SSMTNode_ShapeKey'
-    bl_label = 'Shape Key'
+    bl_label = '形态键'
     bl_icon = 'SHAPEKEY_DATA'
 
     def update_shapekey_name(self, context):
@@ -20,22 +21,22 @@ class SSMTNode_ShapeKey(SSMTNodeBase):
     def update_comment(self, context):
         self.update_node_width([self.shapekey_name, self.key, self.comment])
     
-    shapekey_name: bpy.props.StringProperty(name="ShapeKey Name", default="", update=update_shapekey_name) # type: ignore
-    key: bpy.props.StringProperty(name="Key", default="", update=update_key) # type: ignore
+    shapekey_name: bpy.props.StringProperty(name="形态键名称", default="", update=update_shapekey_name) # type: ignore
+    key: bpy.props.StringProperty(name="按键", default="", update=update_key) # type: ignore
     comment: bpy.props.StringProperty(name="备注", description="备注信息，会以注释形式生成到配置表中", default="", update=update_comment) # type: ignore
     
     def init(self, context):
-        self.outputs.new('SSMTSocketObject', "Output")
+        self.outputs.new('SSMTSocketObject', "输出")
         self.width = 200
 
     def draw_buttons(self, context, layout):
-        layout.prop(self, "shapekey_name", text="Name")
+        layout.prop(self, "shapekey_name", text=iface_("名称"))
         
         row = layout.row(align=True)
-        row.prop(self, "key", text="Key")
+        row.prop(self, "key", text=iface_("按键"))
         row.operator("wm.url_open", text="", icon='HELP').url = "https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes"
         
-        layout.prop(self, "comment", text="备注")
+        layout.prop(self, "comment", text=iface_("备注"))
 
 
 # 结果输出节点
@@ -46,17 +47,17 @@ class SSMTNode_ShapeKey_Output(SSMTNodeBase):
     bl_icon = 'EXPORT'
 
     def init(self, context):
-        self.inputs.new('SSMTSocketObject', "Group 1")
+        self.inputs.new('SSMTSocketObject', iface_("组 1"))
         self.width = 240
 
     def draw_buttons(self, context, layout):
         info_box = layout.box()
-        info_box.label(text="检测到该节点时，生成形态键Mod", icon='INFO')
+        info_box.label(text=iface_("检测到该节点时，生成形态键Mod"), icon='INFO')
 
     def update(self):
         # 类似 Join Geometry 的逻辑：总保持最后一个为空，方便连接新的
         if self.inputs and self.inputs[-1].is_linked:
-            self.inputs.new('SSMTSocketObject', f"Group {len(self.inputs) + 1}")
+            self.inputs.new('SSMTSocketObject', iface_("组 {count}").format(count=len(self.inputs) + 1))
         
         # 移除中间断开的连接
         # 保留 inputs[0](至少一个Group)

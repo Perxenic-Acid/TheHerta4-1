@@ -11,7 +11,7 @@ from ...utils.obj_utils import ObjUtils
 from .mesh_import_helper import MigotoBinaryFile, MeshImportHelper
 from ...common.global_config import GlobalConfig
 
-from ...utils.translate_utils import TR
+from ...utils.translate_utils import rpt_
 from ...utils.json_utils import JsonUtils
 from ...utils.collection_utils import CollectionUtils,CollectionColor
 
@@ -47,7 +47,7 @@ class SWORD_UL_FastImportTextureList(UIList):
 # 选择文件夹操作符
 class Sword_ImportTexture_WM_OT_SelectImageFolder(Operator, ImportHelper):
     bl_idname = "wm.select_image_folder"
-    bl_label = TR.translate("选择预览贴图所在的文件夹位置")
+    bl_label = "选择预览贴图所在的文件夹位置"
     
     directory: StringProperty(subtype='DIR_PATH') # type: ignore
     filter_folder: BoolProperty(default=True, options={'HIDDEN'}) # type: ignore
@@ -81,7 +81,7 @@ class Sword_ImportTexture_WM_OT_SelectImageFolder(Operator, ImportHelper):
                     except Exception as e:
                         print(f"Could not load preview for {filename}: {e}")
         
-        self.report({'INFO'}, f"Scanned {image_count} images.")
+        self.report({'INFO'}, rpt_("已扫描 {count} 张图片。").format(count=image_count))
         return {'FINISHED'}
     
 
@@ -115,12 +115,12 @@ def reload_textures_from_folder(picture_folder_path:str):
 # 自动检测并设置DedupedTextures_jpg文件夹
 class Sword_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
     bl_idname = "wm.auto_detect_texture_folder"
-    bl_label = TR.translate("自动检测提取的贴图文件夹")
+    bl_label = "自动检测提取的贴图文件夹"
     
     def execute(self, context):
         selected_objects = context.selected_objects
         if not selected_objects:
-            self.report({'ERROR'}, "No objects selected.")
+            self.report({'ERROR'}, rpt_("没有选中的对象！"))
             return {'CANCELLED'}
         
         # 获取第一个选中的对象
@@ -141,7 +141,7 @@ class Sword_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
         
         # 检查路径是否存在
         if not deduped_textures_jpg_exists and not deduped_textures_png_exists and not deduped_textures_tga_exists:
-            self.report({'ERROR'}, TR.translate("未找到当前DrawIB: " + obj_name.split("-")[0] + "的DedupedTextures转换后的贴图文件夹，请确保此IB在当前工作空间中已经正常提取出来了"))
+            self.report({'ERROR'}, rpt_("未找到当前DrawIB: {draw_ib}的DedupedTextures转换后的贴图文件夹，请确保此IB在当前工作空间中已经正常提取出来了").format(draw_ib=obj_name.split("-")[0]))
             return {'CANCELLED'}
         
         # 清空之前的列表和预览
@@ -169,7 +169,7 @@ class Sword_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
                     except Exception as e:
                         print(f"Could not load preview for {filename}: {e}")
         
-        self.report({'INFO'}, f"Auto-detected and loaded {image_count} images from DedupedTextures_jpg folder.")
+        self.report({'INFO'}, rpt_("已自动检测并从 DedupedTextures_jpg 文件夹加载 {count} 张图片。").format(count=image_count))
         return {'FINISHED'}
 
 
@@ -184,7 +184,7 @@ class Sword_ImportTexture_WM_OT_ApplyImageToMaterial(Operator):
         selected_index = scene.sword_image_list_index
         
         if selected_index < 0 or selected_index >= len(scene.sword_image_list):
-            self.report({'ERROR'}, "No image selected in the list.")
+            self.report({'ERROR'}, rpt_("列表中未选择任何图片。"))
             return {'CANCELLED'}
         
         selected_image = scene.sword_image_list[selected_index]
@@ -195,7 +195,7 @@ class Sword_ImportTexture_WM_OT_ApplyImageToMaterial(Operator):
         
         selected_objects = context.selected_objects
         if not selected_objects:
-            self.report({'ERROR'}, "No objects selected.")
+            self.report({'ERROR'}, rpt_("没有选中的对象！"))
             return {'CANCELLED'}
         
         applied_count = 0
@@ -259,13 +259,13 @@ class Sword_ImportTexture_WM_OT_ApplyImageToMaterial(Operator):
 
             applied_count += 1
         
-        self.report({'INFO'}, f"Applied {selected_image.name} to {applied_count} object(s).")
+        self.report({'INFO'}, rpt_("已将 {image_name} 应用到 {count} 个物体。").format(image_name=selected_image.name, count=applied_count))
         return {'FINISHED'}
 
 
 class SwordImportAllReversed(bpy.types.Operator):
     bl_idname = "ssmt.import_all_reverse"
-    bl_label = TR.translate("一键导入逆向出来的全部模型")
+    bl_label = "一键导入逆向出来的全部模型"
     bl_description = "把上一次一键逆向出来的所有模型全部导入到Blender，然后你可以手动筛选并删除错误的数据类型，流程上更加方便。"
 
     def execute(self, context):
@@ -320,7 +320,7 @@ class SwordImportAllReversed(bpy.types.Operator):
 class Import3DMigotoRaw(bpy.types.Operator, ImportHelper):
     """Import raw 3DMigoto vertex and index buffers"""
     bl_idname = "import_mesh.migoto_raw_buffers_mmt"
-    bl_label = TR.translate("导入.fmt .ib .vb格式模型")
+    bl_label = "导入.fmt .ib .vb格式模型"
     bl_description = "导入3Dmigoto格式的 .ib .vb .fmt文件，只需选择.fmt文件即可"
     bl_options = {'REGISTER','UNDO'}
 

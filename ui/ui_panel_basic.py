@@ -6,7 +6,7 @@ import bpy
 from ..common.global_config import GlobalConfig
 from ..common.logic_name import LogicName
 
-from ..utils.translate_utils import TR
+from ..utils.translate_utils import iface_
 
 from .ui_func_import_ssmt import SSMT4ImportAllFromCurrentWorkSpaceBlueprint, SSMT4ImportRaw
 
@@ -16,7 +16,7 @@ class PanelBasicInformation(bpy.types.Panel):
     基础信息面板
     此面板实时刷新并读取全局配置文件中的路径
     '''
-    bl_label = TR.translate("基础信息面板")
+    bl_label = "基础信息面板"
     bl_idname = "VIEW3D_PT_CATTER_Buttons_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -27,10 +27,10 @@ class PanelBasicInformation(bpy.types.Panel):
         
         GlobalConfig.read_from_main_json_ssmt4()
 
-        layout.label(text=TR.translate("SSMT缓存文件夹路径: ") + GlobalConfig.ssmtlocation)
-        layout.label(text=TR.translate("当前配置名称: ") + GlobalConfig.gamename)
-        layout.label(text=TR.translate("当前游戏预设: ") + GlobalConfig.logic_name)
-        layout.label(text=TR.translate("当前工作空间: ") + GlobalConfig.workspacename)
+        layout.label(text=iface_("SSMT缓存文件夹路径: ") + GlobalConfig.ssmtlocation)
+        layout.label(text=iface_("当前配置名称: ") + GlobalConfig.gamename)
+        layout.label(text=iface_("当前游戏预设: ") + GlobalConfig.logic_name)
+        layout.label(text=iface_("当前工作空间: ") + GlobalConfig.workspacename)
         layout.prop(context.scene.global_properties,"use_mirror_workflow",text="使用非镜像工作流")
         
         if len(context.selected_objects) != 0:

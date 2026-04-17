@@ -311,7 +311,7 @@ bpy.utils.register_class(PropertyCollectionModifierItem)
 class WWMI_ApplyModifierForObjectWithShapeKeysOperator(bpy.types.Operator):
     bl_idname = "wwmi_tools.apply_modifier_for_object_with_shape_keys"
     bl_label = "在有形态键的模型上应用修改器"
-    bl_description = "Apply selected modifiers and remove from the stack for object with shape keys (Solves 'Modifier cannot be applied to a mesh with shape keys' error when pushing 'Apply' button in 'Object modifiers'). Sourced by Przemysław Bągard"
+    bl_description = "在带有形态键的模型上应用选中的修改器，并将其从堆栈中移除，用于解决“带形态键的网格无法应用修改器”的问题。"
  
     def item_list(self, context):
         return [(modifier.name, modifier.name, modifier.name) for modifier in bpy.context.object.modifiers]
@@ -321,7 +321,7 @@ class WWMI_ApplyModifierForObjectWithShapeKeysOperator(bpy.types.Operator):
     ) # type: ignore
     
     disable_armatures: BoolProperty(
-        name="Don't include armature deformations",
+        name="不包含骨架变形",
         default=True,
     ) # type: ignore
  
@@ -334,7 +334,7 @@ class WWMI_ApplyModifierForObjectWithShapeKeysOperator(bpy.types.Operator):
         selectedModifiers = [o.name for o in self.my_collection if o.checked]
         
         if not selectedModifiers:
-            self.report({'ERROR'}, 'No modifier selected!')
+            self.report({'ERROR'}, '未选择任何修改器！')
             return {'FINISHED'}
         
         success, errorInfo = ShapeKeyUtils.apply_modifiers_for_object_with_shape_keys(context, selectedModifiers, self.disable_armatures)
@@ -347,11 +347,10 @@ class WWMI_ApplyModifierForObjectWithShapeKeysOperator(bpy.types.Operator):
     def draw(self, context):
         if context.object.data.shape_keys and context.object.data.shape_keys.animation_data:
             self.layout.separator()
-            self.layout.label(text="Warning:")
-            self.layout.label(text="              Object contains animation data")
-            self.layout.label(text="              (like drivers, keyframes etc.)")
-            self.layout.label(text="              assigned to shape keys.")
-            self.layout.label(text="              Those data will be lost!")
+            self.layout.label(text="警告:")
+            self.layout.label(text="              该物体的形态键包含动画数据")
+            self.layout.label(text="              （例如驱动、关键帧等）")
+            self.layout.label(text="              应用修改器后这些数据会丢失！")
             self.layout.separator()
         #self.layout.prop(self, "my_enum")
         box = self.layout.box()
@@ -404,7 +403,7 @@ class RecalculateCOLORWithVectorNormalizedNormal(bpy.types.Operator):
 class RenameAmatureFromGame(bpy.types.Operator):
     bl_idname = "object.rename_amature_from_game"
     bl_label = "重命名选中Amature的骨骼名称(GI)(测试)"
-    bl_description = "用于把游戏里解包出来的骨骼重命名，方便我们直接一键绑定到提取出的Mod模型上，Credit to Leotorrez"
+    bl_description = "用于把游戏里解包出来的骨骼重命名，方便我们直接一键绑定到提取出的Mod模型上，感谢 Leotorrez。"
     def execute(self, context):
         # Copied from https://github.com/zeroruka/GI-Bones 
         # Select the armature and then run script
@@ -500,19 +499,19 @@ class ModelVertexGroupRenameByLocation(bpy.types.Operator):
 
 class ExtractSubmeshOperator(bpy.types.Operator):
     bl_idname = "mesh.extract_submesh"
-    bl_label = "Split By DrawIndexed"
+    bl_label = "根据DrawIndexed值分割模型"
     bl_options = {'REGISTER', 'UNDO'}
 
     start_index: bpy.props.IntProperty(
-        name="Start Index",
-        description="Starting index in the index buffer",
+        name="起始索引",
+        description="索引缓冲区中的起始索引",
         default=0,
         min=0
     ) # type: ignore
 
     index_count: bpy.props.IntProperty(
-        name="Index Count",
-        description="Number of indices to include (must be multiple of 3)",
+        name="索引数量",
+        description="要包含的索引数量，必须是 3 的倍数",
         default=3,
         min=3
     ) # type: ignore
@@ -520,7 +519,7 @@ class ExtractSubmeshOperator(bpy.types.Operator):
     def execute(self, context):
         obj = context.active_object
         if not obj or obj.type != 'MESH':
-            self.report({'ERROR'}, "Select a mesh object")
+            self.report({'ERROR'}, "请选择一个网格对象")
             return {'CANCELLED'}
 
         # 获取原始网格
@@ -533,11 +532,11 @@ class ExtractSubmeshOperator(bpy.types.Operator):
         
         # 验证输入
         if start + count > len(original_mesh.loops):
-            self.report({'ERROR'}, f"Index range exceeds buffer, max loop count: {len(original_mesh.loops)}")
+            self.report({'ERROR'}, f"索引范围超出缓冲区，最大 loop 数量为: {len(original_mesh.loops)}")
             return {'CANCELLED'}
             
         if count % 3 != 0:
-            self.report({'ERROR'}, "Index count must be multiple of 3")
+            self.report({'ERROR'}, "索引数量必须是 3 的倍数")
             return {'CANCELLED'}
 
         # 创建网格副本

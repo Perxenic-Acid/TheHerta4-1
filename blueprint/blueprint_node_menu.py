@@ -3,6 +3,7 @@ import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 
 from ..common.global_config import GlobalConfig
+from ..utils.translate_utils import iface_, rpt_
 
 from .blueprint_node_base import SSMTBlueprintTree, SSMTNodeBase
 
@@ -16,7 +17,7 @@ class SSMT_OT_CreateGroupFromSelection(bpy.types.Operator):
     def execute(self, context):
         selected_objects = context.selected_objects
         if not selected_objects:
-            self.report({'WARNING'}, "没有选择任何物体")
+            self.report({'WARNING'}, rpt_("没有选择任何物体"))
             return {'CANCELLED'}
 
         # 获取当前活动的蓝图树
@@ -50,7 +51,7 @@ class SSMT_OT_CreateGroupFromSelection(bpy.types.Operator):
             node_tree = bpy.data.node_groups.get(workspace_name)
         
         if not node_tree or node_tree.bl_idname != 'SSMTBlueprintTreeType':
-            self.report({'WARNING'}, "未找到有效的蓝图树，请先打开蓝图编辑器")
+            self.report({'WARNING'}, rpt_("未找到有效的蓝图树，请先打开蓝图编辑器"))
             return {'CANCELLED'}
 
         # 计算节点位置偏移，防止重叠
@@ -96,7 +97,7 @@ class SSMT_OT_CreateInternalSwitch(bpy.types.Operator):
     def execute(self, context):
         selected_objects = context.selected_objects
         if not selected_objects:
-            self.report({'WARNING'}, "没有选择任何物体")
+            self.report({'WARNING'}, rpt_("没有选择任何物体"))
             return {'CANCELLED'}
         
         import re
@@ -115,11 +116,11 @@ class SSMT_OT_CreateInternalSwitch(bpy.types.Operator):
                 objects_without_sequence.append(obj)
         
         if objects_without_sequence:
-            self.report({'WARNING'}, f"以下物体没有序列号: {', '.join([obj.name for obj in objects_without_sequence])}")
+            self.report({'WARNING'}, rpt_("以下物体没有序列号: {names}").format(names=', '.join([obj.name for obj in objects_without_sequence])))
             return {'CANCELLED'}
         
         if not objects_with_sequence:
-            self.report({'WARNING'}, "没有找到带序列号的物体")
+            self.report({'WARNING'}, rpt_("没有找到带序列号的物体"))
             return {'CANCELLED'}
         
         objects_with_sequence.sort(key=lambda x: x[0])
@@ -155,7 +156,7 @@ class SSMT_OT_CreateInternalSwitch(bpy.types.Operator):
             node_tree = bpy.data.node_groups.get(workspace_name)
         
         if not node_tree or node_tree.bl_idname != 'SSMTBlueprintTreeType':
-            self.report({'WARNING'}, "未找到有效的蓝图树，请先打开蓝图编辑器")
+            self.report({'WARNING'}, rpt_("未找到有效的蓝图树，请先打开蓝图编辑器"))
             return {'CANCELLED'}
         
         nodes = node_tree.nodes
@@ -192,30 +193,30 @@ class SSMT_OT_CreateInternalSwitch(bpy.types.Operator):
         
         switch_node.select = True
         
-        self.report({'INFO'}, f"已创建 {len(obj_nodes)} 个物体节点并连接到切换节点")
+        self.report({'INFO'}, rpt_("已创建 {count} 个物体节点并连接到切换节点").format(count=len(obj_nodes)))
         return {'FINISHED'}
 
 
 def draw_objects_context_menu_add(self, context):
     layout = self.layout
     layout.separator()
-    layout.menu("SSMT_MT_ObjectContextMenuSub", text="SSMT蓝图架构", icon='NODETREE')
+    layout.menu("SSMT_MT_ObjectContextMenuSub", text=iface_("SSMT蓝图架构"), icon='NODETREE')
 
 class SSMT_MT_ObjectContextMenuSub(bpy.types.Menu):
     bl_label = "SSMT蓝图架构"
     
     def draw(self, context):
         layout = self.layout
-        layout.operator("ssmt.create_group_from_selection", text="将所选物体新建到组节点", icon='GROUP')
-        layout.operator("ssmt.create_internal_switch", text="创建内部切换", icon='ARROW_LEFTRIGHT')
+        layout.operator("ssmt.create_group_from_selection", text=iface_("将所选物体新建到组节点"), icon='GROUP')
+        layout.operator("ssmt.create_internal_switch", text=iface_("创建内部切换"), icon='ARROW_LEFTRIGHT')
 
 class SSMT_MT_NodeMenu_ShapeKey(bpy.types.Menu):
     bl_label = "形态键"
     
     def draw(self, context):
         layout = self.layout
-        layout.operator("node.add_node", text="形态键", icon='SHAPEKEY_DATA').type = "SSMTNode_ShapeKey"
-        layout.operator("node.add_node", text="生成形态键Buffer", icon='EXPORT').type = "SSMTNode_ShapeKey_Output"
+        layout.operator("node.add_node", text=iface_("形态键"), icon='SHAPEKEY_DATA').type = "SSMTNode_ShapeKey"
+        layout.operator("node.add_node", text=iface_("生成形态键Buffer"), icon='EXPORT').type = "SSMTNode_ShapeKey_Output"
 
 
 class SSMT_MT_NodeMenu_ModPanel(bpy.types.Menu):
@@ -223,7 +224,7 @@ class SSMT_MT_NodeMenu_ModPanel(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        layout.operator("node.add_node", text="生成Mod面板", icon='MENU_PANEL').type = "SSMTNode_ModPanel"
+        layout.operator("node.add_node", text=iface_("生成Mod面板"), icon='MENU_PANEL').type = "SSMTNode_ModPanel"
 
 
 class SSMT_OT_AlignNodes(bpy.types.Operator):
@@ -236,18 +237,18 @@ class SSMT_OT_AlignNodes(bpy.types.Operator):
         # 获取当前节点树
         space_data = getattr(context, "space_data", None)
         if not space_data or space_data.type != 'NODE_EDITOR':
-            self.report({'ERROR'}, "请在节点编辑器中使用此功能")
+            self.report({'ERROR'}, rpt_("请在节点编辑器中使用此功能"))
             return {'CANCELLED'}
 
         node_tree = getattr(space_data, "edit_tree", None) or getattr(space_data, "node_tree", None)
         if not node_tree:
-            self.report({'ERROR'}, "未找到节点树")
+            self.report({'ERROR'}, rpt_("未找到节点树"))
             return {'CANCELLED'}
 
         # 获取选中的节点
         selected_nodes = [node for node in node_tree.nodes if node.select]
         if len(selected_nodes) < 2:
-            self.report({'WARNING'}, "请至少选择2个节点")
+            self.report({'WARNING'}, rpt_("请至少选择2个节点"))
             return {'CANCELLED'}
 
         # 第一步：将节点按列分组（基于X坐标）
@@ -263,7 +264,7 @@ class SSMT_OT_AlignNodes(bpy.types.Operator):
         # 第四步：调整节点顺序以匹配连接关系
         self.adjust_node_order_by_connections(selected_nodes, node_tree)
 
-        self.report({'INFO'}, f"已将 {len(selected_nodes)} 个节点结构化对齐，分为 {len(columns)} 列")
+        self.report({'INFO'}, rpt_("已将 {node_count} 个节点结构化对齐，分为 {column_count} 列").format(node_count=len(selected_nodes), column_count=len(columns)))
         return {'FINISHED'}
     
     def group_nodes_by_columns(self, nodes):
@@ -413,18 +414,18 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
         # 获取当前节点树
         space_data = getattr(context, "space_data", None)
         if not space_data or space_data.type != 'NODE_EDITOR':
-            self.report({'ERROR'}, "请在节点编辑器中使用此功能")
+            self.report({'ERROR'}, rpt_("请在节点编辑器中使用此功能"))
             return {'CANCELLED'}
 
         node_tree = getattr(space_data, "edit_tree", None) or getattr(space_data, "node_tree", None)
         if not node_tree:
-            self.report({'ERROR'}, "未找到节点树")
+            self.report({'ERROR'}, rpt_("未找到节点树"))
             return {'CANCELLED'}
 
         # 获取选中的节点
         selected_nodes = [node for node in node_tree.nodes if node.select]
         if len(selected_nodes) < 2:
-            self.report({'WARNING'}, "请至少选择2个节点")
+            self.report({'WARNING'}, rpt_("请至少选择2个节点"))
             return {'CANCELLED'}
 
         # 统计节点类型分布
@@ -435,13 +436,13 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
 
         # 检查节点类型数量
         if len(type_count_dict) > 2:
-            self.report({'ERROR'}, f"所选节点类型过多（{len(type_count_dict)}种），请选择1-2种类型的节点")
+            self.report({'ERROR'}, rpt_("所选节点类型过多（{count}种），请选择1-2种类型的节点").format(count=len(type_count_dict)))
             return {'CANCELLED'}
 
         # 判断连接模式
         if len(type_count_dict) == 1:
             # 只有一种类型：无法连接
-            self.report({'ERROR'}, "所选节点类型相同，无法连接")
+            self.report({'ERROR'}, rpt_("所选节点类型相同，无法连接"))
             return {'CANCELLED'}
         else:
             # 两种类型：判断是一对一还是多对一
@@ -505,13 +506,13 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
             # B有输出，A没有输入，B->A
             source_nodes, target_nodes = nodes_b, nodes_a
         else:
-            self.report({'ERROR'}, "无法确定连接方向，请检查节点端口配置")
+            self.report({'ERROR'}, rpt_("无法确定连接方向，请检查节点端口配置"))
             return {'CANCELLED'}
 
         # 检查目标节点是否有输入端口
         for node in target_nodes:
             if len(node.inputs) == 0:
-                self.report({'ERROR'}, f"节点 '{node.name}' 没有输入端口")
+                self.report({'ERROR'}, rpt_("节点 '{node_name}' 没有输入端口").format(node_name=node.name))
                 return {'CANCELLED'}
 
         # 清除现有连接
@@ -542,10 +543,10 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
             if not available_input:
                 try:
                     if hasattr(target_node, 'update'):
-                        target_node.inputs.new('SSMTSocketObject', f"Input {len(target_node.inputs) + 1}")
+                        target_node.inputs.new('SSMTSocketObject', iface_("输入 {count}").format(count=len(target_node.inputs) + 1))
                         available_input = target_node.inputs[-1]
                 except:
-                    self.report({'WARNING'}, f"节点 '{target_node.name}' 没有可用的输入端口")
+                    self.report({'WARNING'}, rpt_("节点 '{node_name}' 没有可用的输入端口").format(node_name=target_node.name))
                     continue
 
             # 创建连接
@@ -560,7 +561,7 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
 
         # 提供反馈
         total_connections = len(connection_info)
-        self.report({'INFO'}, f"一对一连接：成功连接 {total_connections} 个节点对")
+        self.report({'INFO'}, rpt_("一对一连接：成功连接 {count} 个节点对").format(count=total_connections))
         print(f"一对一连接完成，共创建 {total_connections} 个连接:")
         for info in connection_info:
             print(f"  {info}")
@@ -583,12 +584,12 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
         # 检查节点是否有合适的输入/输出端口
         for node in majority_nodes:
             if len(node.outputs) == 0:
-                self.report({'ERROR'}, f"多数节点 '{node.name}' 没有输出端口")
+                self.report({'ERROR'}, rpt_("多数节点 '{node_name}' 没有输出端口").format(node_name=node.name))
                 return {'CANCELLED'}
 
         for node in minority_nodes:
             if len(node.inputs) == 0:
-                self.report({'ERROR'}, f"少数节点 '{node.name}' 没有输入端口")
+                self.report({'ERROR'}, rpt_("少数节点 '{node_name}' 没有输入端口").format(node_name=node.name))
                 return {'CANCELLED'}
 
         # 清除现有连接（只清除选中节点之间的连接）
@@ -631,10 +632,10 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
                     try:
                         # 某些节点（如Group、Output）支持动态添加端口
                         if hasattr(minority_node, 'update'):
-                            minority_node.inputs.new('SSMTSocketObject', f"Input {len(minority_node.inputs) + 1}")
+                            minority_node.inputs.new('SSMTSocketObject', iface_("输入 {count}").format(count=len(minority_node.inputs) + 1))
                             available_input = minority_node.inputs[-1]
                     except:
-                        self.report({'WARNING'}, f"节点 '{minority_node.name}' 没有可用的输入端口")
+                        self.report({'WARNING'}, rpt_("节点 '{node_name}' 没有可用的输入端口").format(node_name=minority_node.name))
                         majority_index += 1
                         continue
 
@@ -652,7 +653,7 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
 
         # 提供成功反馈
         total_connections = len(connection_info)
-        self.report({'INFO'}, f"多对一连接：成功连接 {total_connections} 个节点对")
+        self.report({'INFO'}, rpt_("多对一连接：成功连接 {count} 个节点对").format(count=total_connections))
         print(f"多对一连接完成，共创建 {total_connections} 个连接:")
         for info in connection_info:
             print(f"  {info}")
@@ -665,17 +666,17 @@ def draw_node_add_menu(self, context):
         return
     
     layout = self.layout
-    layout.operator("node.add_node", text="Object Info", icon='OBJECT_DATAMODE').type = "SSMTNode_Object_Info"
-    layout.operator("node.add_node", text="Group", icon='GROUP').type = "SSMTNode_Object_Group"
-    layout.operator("node.add_node", text="Mod Output", icon='EXPORT').type = "SSMTNode_Result_Output"
-    layout.operator("node.add_node", text="Switch Key", icon='GROUP').type = "SSMTNode_SwitchKey"
-    layout.menu("SSMT_MT_NodeMenu_ShapeKey", text="形态键", icon='SHAPEKEY_DATA')
-    layout.menu("SSMT_MT_NodeMenu_ModPanel", text="Mod面板", icon='MENU_PANEL')
+    layout.operator("node.add_node", text=iface_("物体信息"), icon='OBJECT_DATAMODE').type = "SSMTNode_Object_Info"
+    layout.operator("node.add_node", text=iface_("分组"), icon='GROUP').type = "SSMTNode_Object_Group"
+    layout.operator("node.add_node", text=iface_("生成Mod"), icon='EXPORT').type = "SSMTNode_Result_Output"
+    layout.operator("node.add_node", text=iface_("按键切换"), icon='GROUP').type = "SSMTNode_SwitchKey"
+    layout.menu("SSMT_MT_NodeMenu_ShapeKey", text=iface_("形态键"), icon='SHAPEKEY_DATA')
+    layout.menu("SSMT_MT_NodeMenu_ModPanel", text=iface_("Mod面板"), icon='MENU_PANEL')
     layout.separator()
 
     # Frame节点没有任何功能，它是Blender自带的一种辅助节点，用于在节点编辑器中组织和分组节点
     # 反正就当一个区域划分来用就行了
-    layout.operator("node.add_node", text="Frame", icon='FILE_PARENT').type = "NodeFrame"
+    layout.operator("node.add_node", text=iface_("框架"), icon='FILE_PARENT').type = "NodeFrame"
     layout.separator()
 
 
@@ -689,10 +690,10 @@ def draw_node_context_menu(self, context):
     
     layout = self.layout
     layout.separator()
-    layout.operator("ssmt.align_nodes", text="矩阵对齐节点", icon='GRID')
-    layout.operator("ssmt.batch_connect_nodes", text="批量连接节点", icon='LINKED')
+    layout.operator("ssmt.align_nodes", text=iface_("矩阵对齐节点"), icon='GRID')
+    layout.operator("ssmt.batch_connect_nodes", text=iface_("批量连接节点"), icon='LINKED')
     layout.separator()
-    layout.operator("ssmt.refresh_node_object_ids", text="刷新物体节点信息", icon='FILE_REFRESH')
+    layout.operator("ssmt.refresh_node_object_ids", text=iface_("刷新物体节点信息"), icon='FILE_REFRESH')
 
 
 def register():

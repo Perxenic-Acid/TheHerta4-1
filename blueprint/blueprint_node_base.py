@@ -6,7 +6,6 @@
 import bpy
 from bpy.types import NodeTree, Node, NodeSocket
 
-from ..utils.translate_utils import TR
 from ..common.global_config import GlobalConfig
 
 
@@ -15,7 +14,7 @@ from ..common.global_config import GlobalConfig
 class SSMTSocketObject(NodeSocket):
     '''Custom Socket for Object Data'''
     bl_idname = 'SSMTSocketObject'
-    bl_label = 'Object Socket'
+    bl_label = '物体插槽'
 
     def draw_color(self, context, node):
         return (0.0, 0.8, 0.8, 1.0) # Cyan/Teal
@@ -27,7 +26,7 @@ class SSMTSocketObject(NodeSocket):
 class SSMTBlueprintTree(NodeTree):
     '''SSMT Mod Logic Blueprint'''
     bl_idname = 'SSMTBlueprintTreeType'
-    bl_label = 'SSMT BluePrint'
+    bl_label = 'SSMT蓝图'
     bl_icon = 'NODETREE'
 
 
@@ -72,8 +71,8 @@ class SSMTNodeBase(Node):
 
 class THEHERTA3_OT_OpenPersistentBlueprint(bpy.types.Operator):
     bl_idname = "theherta3.open_persistent_blueprint"
-    bl_label = TR.translate("打开蓝图界面")
-    bl_description = TR.translate("打开一个独立的蓝图窗口，用于配置Mod逻辑")
+    bl_label = "打开蓝图界面"
+    bl_description = "打开一个独立的蓝图窗口，用于配置Mod逻辑"
     
     def execute(self, context):
         # 1. 获取或创建蓝图树

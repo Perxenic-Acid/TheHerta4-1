@@ -1,50 +1,201 @@
 import bpy
-
-class TR:
-    '''
-    中文为主要语言，这个类的作用是将中文翻译成其他语言。
-    因为开发人员只有我自己，所以只添加英文翻译。
-    '''
-    
-    # 翻译字典 - key为中文，value为英文翻译（只保留3个作为演示）
-    _translations = {
-
-        # SSMT基础面板
-        "一键导入当前工作空间内容": "Import All From WorkSpace",
-        "生成Mod": "Generate Mod", 
-        "导入.fmt .ib .vb格式模型": "Import .fmt .ib .vb Model",
+from bpy.app.translations import pgettext_iface as iface_
+from bpy.app.translations import pgettext_rpt as rpt_
+from bpy.app.translations import pgettext_tip as tip_
 
 
-    }
+_TRANSLATIONS_ZH_TO_EN = {
+    ("*", "物体插槽"): "Object Socket",
+    ("*", "SSMT蓝图"): "SSMT Blueprint",
+    ("*", "生成Mod"): "Generate Mod",
+    ("*", "根据当前工作空间对应的蓝图架构生成对应的Mod文件"): "Generate the Mod files that match the current workspace blueprint.",
+    ("*", "生成Mod成功！"): "Generate Mod Success!",
+    ("*", "打开蓝图界面"): "Open Blueprint",
+    ("*", "打开一个独立的蓝图窗口，用于配置Mod逻辑"): "Open a standalone blueprint window for configuring Mod logic.",
+    ("*", "选择对象"): "Select Object",
+    ("*", "选取对象"): "Pick Object",
+    ("*", "物体信息"): "Object Info",
+    ("*", "将所选物体新建到组节点"): "Create Group from Selected Objects",
+    ("*", "创建内部切换"): "Create Internal Switch",
+    ("*", "分组"): "Group",
+    ("*", "添加插槽"): "Add Socket",
+    ("*", "移除插槽"): "Remove Socket",
+    ("*", "按键切换"): "Switch Key",
+    ("*", "查看组内物体"): "View Group Objects",
+    ("*", "查看递归解析预览"): "Preview Recursive Objects",
+    ("*", "框架"): "Frame",
+    ("*", "SSMT蓝图架构"): "SSMT Blueprint Graph",
+    ("*", "形态键"): "Shape Key",
+    ("*", "形态键名称"): "Shape Key Name",
+    ("*", "按键"): "Key",
+    ("*", "按键名称"): "Key Name",
+    ("*", "名称"): "Name",
+    ("*", "备注"): "Comment",
+    ("*", "输出"): "Output",
+    ("*", "对象"): "Object",
+    ("*", "输入 1"): "Input 1",
+    ("*", "输入 {count}"): "Input {count}",
+    ("*", "状态 0"): "Status 0",
+    ("*", "状态 {count}"): "Status {count}",
+    ("*", "组 1"): "Group 1",
+    ("*", "组 {count}"): "Group {count}",
+    ("*", "DrawIB: "): "DrawIB: ",
+    ("*", "IndexCount: "): "IndexCount: ",
+    ("*", "FirstIndex: "): "FirstIndex: ",
+    ("*", "别名: "): "Alias: ",
+    ("*", "生成形态键Buffer"): "Generate ShapeKey Buffer",
+    ("*", "检测到该节点时，生成形态键Mod"): "When this node is present, generate the Shape Key Mod.",
+    ("*", "生成Mod面板"): "Generate Mod Panel",
+    ("*", "流光边框效果"): "Flowing Border Effect",
+    ("*", "勾选后，生成的Mod面板启用流光边框效果"): "Enable the flowing border effect for the generated Mod panel.",
+    ("*", "检测到该节点时生成Mod面板"): "When this node is present, generate the Mod panel.",
+    ("*", "流光效果"): "Flow Effect",
+    ("*", "没有选中的对象！"): "No objects selected.",
+    ("*", "没有选择任何物体"): "No objects selected",
+    ("*", "列表中未选择任何图片。"): "No image selected in the list.",
+    ("*", "已将 {image_name} 应用到 {count} 个物体。"): "Applied {image_name} to {count} object(s).",
+    ("*", "已扫描 {count} 张图片。"): "Scanned {count} images.",
+    ("*", "已自动检测并从 DedupedTextures_jpg 文件夹加载 {count} 张图片。"): "Auto-detected and loaded {count} images from DedupedTextures_jpg folder.",
+    ("*", "未找到当前蓝图，请在蓝图编辑器中点击“生成Mod”"): "Current blueprint not found. Please click 'Generate Mod' in the blueprint editor.",
+    ("*", "已选中对象: {name}"): "Selected object: {name}",
+    ("*", "已选择物体: {name}"): "Picked object: {name}",
+    ("*", "未找到对象"): "Object not found",
+    ("*", "未找到3D视图"): "No 3D View found",
+    ("*", "已退出局部视图"): "Exited local view",
+    ("*", "该分组中未找到任何物体"): "No objects found in this group",
+    ("*", "已在局部视图中显示 {count} 个物体"): "Showing {count} objects in local view",
+    ("*", "未找到有效的蓝图树，请先打开蓝图编辑器"): "No valid blueprint tree found. Please open the blueprint editor first.",
+    ("*", "以下物体没有序列号: {names}"): "These objects do not have sequence numbers: {names}",
+    ("*", "没有找到带序列号的物体"): "No objects with sequence numbers were found",
+    ("*", "已创建 {count} 个物体节点并连接到切换节点"): "Created {count} object nodes and connected them to the switch node",
+    ("*", "矩阵对齐节点"): "Align Nodes in Grid",
+    ("*", "批量连接节点"): "Batch Connect Nodes",
+    ("*", "请在节点编辑器中使用此功能"): "Please use this feature in the node editor",
+    ("*", "未找到节点树"): "Node tree not found",
+    ("*", "请至少选择2个节点"): "Please select at least 2 nodes",
+    ("*", "已将 {node_count} 个节点结构化对齐，分为 {column_count} 列"): "Aligned {node_count} nodes into a structured layout with {column_count} columns",
+    ("*", "所选节点类型过多（{count}种），请选择1-2种类型的节点"): "Too many selected node types ({count}). Please select 1 or 2 types of nodes.",
+    ("*", "所选节点类型相同，无法连接"): "The selected nodes are the same type and cannot be connected",
+    ("*", "无法确定连接方向，请检查节点端口配置"): "Cannot determine connection direction. Please check the node socket configuration.",
+    ("*", "节点 '{node_name}' 没有输入端口"): "Node '{node_name}' has no input socket",
+    ("*", "节点 '{node_name}' 没有可用的输入端口"): "Node '{node_name}' has no available input socket",
+    ("*", "一对一连接：成功连接 {count} 个节点对"): "One-to-one connection: successfully connected {count} node pairs",
+    ("*", "多数节点 '{node_name}' 没有输出端口"): "Majority node '{node_name}' has no output socket",
+    ("*", "少数节点 '{node_name}' 没有输入端口"): "Minority node '{node_name}' has no input socket",
+    ("*", "多对一连接：成功连接 {count} 个节点对"): "Many-to-one connection: successfully connected {count} node pairs",
+    ("*", "刷新物体节点信息"): "Refresh Object Node Info",
+    ("*", "已刷新 {updated_count} 个物体节点，另有 {missing_count} 个节点未找到对应物体，耗时 {elapsed_ms:.3f} ms"): "Refreshed {updated_count} object nodes, {missing_count} nodes could not find their objects, took {elapsed_ms:.3f} ms",
+    ("*", "已刷新 {updated_count} 个物体节点，耗时 {elapsed_ms:.3f} ms"): "Refreshed {updated_count} object nodes, took {elapsed_ms:.3f} ms",
+    ("*", "所有物体节点都已是最新状态，耗时 {elapsed_ms:.3f} ms"): "All object nodes are already up to date, took {elapsed_ms:.3f} ms",
+    ("*", "点击后在3D视图中选择一个物体"): "Click to pick an object in the 3D View",
+    ("*", "无法获取节点树上下文"): "Cannot get node tree context",
+    ("*", "请在3D视图中点击选择一个物体"): "Please click an object in the 3D View",
+    ("*", "请在3D视图中点击选择一个物体..."): "Please click an object in the 3D View...",
+    ("*", "当前生成Mod位置文件夹:"): "Current Generate Mod Folder:",
+    ("*", "返回上一层级"): "Back to Previous Level",
+    ("*", "请选择有效的文件夹"): "Please select a valid folder",
+    ("*", "生成Mod文件夹已设置为: {path}"): "Generate Mod folder set to: {path}",
+    ("*", "禁止自动贴图流程"): "Disable Auto Texture Workflow",
+    ("*", "向量归一化法线存入TANGENT(全局)"): "Store Vector-Normalized Normals in TANGENT (Global)",
+    ("*", "算术平均归一化法线存入COLOR(全局)"): "Store Arithmetic-Average Normals in COLOR (Global)",
+    ("*", "生成Mod后打开Mod所在文件夹"): "Open Mod Folder After Generating Mod",
+    ("*", "基础信息面板"): "Basic Information Panel",
+    ("*", "SSMT缓存文件夹路径: "): "SSMT Cache Folder: ",
+    ("*", "当前配置名称: "): "Current Config Name: ",
+    ("*", "当前游戏预设: "): "Current Game Preset: ",
+    ("*", "当前工作空间: "): "Current Workspace: ",
+    ("*", "一键导入SSMT工作空间内容"): "Import All From SSMT Workspace",
+    ("*", "一键导入当前工作空间文件夹下所有的内容"): "Import everything from the current workspace folder with one click.",
+    ("*", "导入SSMT格式模型"): "Import SSMT Model",
+    ("*", "导入SSMT格式的模型文件, 只需选择.json文件即可"): "Import an SSMT model file. You only need to select the .json file.",
+    ("*", "请先在SSMT中选择当前工作空间后再导入。") : "Please select the current workspace in SSMT before importing.",
+    ("*", "工作空间文件夹不存在，请先在SSMT中创建工作空间: {path}"): "Workspace folder does not exist. Please create a workspace in SSMT first: {path}",
+    ("*", "读取DedupedTextures"): "Load DedupedTextures",
+    ("*", "读取当前Component专属贴图"): "Load Current Component Textures",
+    ("*", "未找到当前DrawIB: {draw_ib}的DedupedTextures转换后的贴图文件夹，请确保此IB在当前工作空间中已经正常提取出来了"): "Could not find the converted DedupedTextures folder for DrawIB {draw_ib}. Please make sure this IB has been extracted correctly in the current workspace.",
+    ("*", "选择预览贴图所在的文件夹位置"): "Select Preview Texture Folder",
+    ("*", "自动检测提取的贴图文件夹"): "Auto Detect Extracted Texture Folder",
+    ("*", "一键导入逆向出来的全部模型"): "Import All Reversed Models",
+    ("*", "把上一次一键逆向出来的所有模型全部导入到Blender，然后你可以手动筛选并删除错误的数据类型，流程上更加方便。"): "Import all models generated by the last reverse pass into Blender, then manually filter and delete incorrect data types for a smoother workflow.",
+    ("*", "导入.fmt .ib .vb格式模型"): "Import .fmt .ib .vb Model",
+    ("*", "导入3Dmigoto格式的 .ib .vb .fmt文件，只需选择.fmt文件即可"): "Import 3Dmigoto .ib .vb .fmt files. You only need to select the .fmt file.",
+    ("*", "根据UV松散块儿分割模型"): "Split Model by UV Loose Parts",
+    ("*", "功能与Edit界面的Split => Split by Loose Parts相似，但是分割模型为松散块儿并放入新集合。"): "Similar to Edit > Split > Split by Loose Parts, but splits the model into loose parts and puts them into a new collection.",
+    ("*", "根据共享与孤立顶点组分割模型"): "Split Model by Shared and Isolated Vertex Groups",
+    ("*", "把模型根据共享的顶点组分开，方便快速分离身体上的小物件，方便后续刷权重不受小物件影响。") : "Split the model by shared vertex groups to quickly separate small attachments and avoid affecting later weight painting.",
+    ("*", "删除模型中的松散点"): "Delete Loose Points",
+    ("*", "删除模型中的松散点，避免影响后续的模型处理。"): "Delete loose points in the model to avoid affecting later processing.",
+    ("*", "清除自定义拆分法向"): "Clear Custom Split Normals",
+    ("*", "WWMI 逆向得到的模型，有时顶点法线会歪，用这个处理一下就行。"): "Models reversed from WWMI sometimes have skewed vertex normals. Use this to fix them.",
+    ("*", "用模型名称作为前缀重命名顶点组"): "Rename Vertex Groups with Model Name Prefix",
+    ("*", "用模型名称作为前缀重命名顶点组，方便后续合并到一个物体后同名称的顶点组不会合在一起冲突，便于后续一键绑定骨骼。") : "Rename vertex groups with the model name as a prefix so groups with the same name do not conflict after merging into one object.",
+    ("*", "移除所有顶点组"): "Remove All Vertex Groups",
+    ("*", "移除当前选中obj的所有顶点组"): "Remove all vertex groups from the selected object.",
+    ("*", "移除未使用的空顶点组"): "Remove Unused Empty Vertex Groups",
+    ("*", "移除当前选中obj的所有空顶点组，也就是移除未使用的顶点组"): "Remove all empty vertex groups from the selected object, that is, remove unused vertex groups.",
+    ("*", "合并具有相同数字前缀名称的顶点组"): "Merge Vertex Groups with the Same Numeric Prefix",
+    ("*", "把当前选中obj的所有数字前缀名称相同的顶点组进行合并"): "Merge all vertex groups on the selected object that share the same numeric prefix.",
+    ("*", "填充数字顶点组的间隙"): "Fill Numeric Vertex Group Gaps",
+    ("*", "把当前选中obj的所有数字顶点组的间隙用数字命名的空顶点组填补上，比如有顶点组1,2,5,8则填补后得到1,2,3,4,5,6,7,8"): "Fill numeric vertex group gaps on the selected object with empty numbered vertex groups. For example, 1,2,5,8 becomes 1,2,3,4,5,6,7,8.",
+    ("*", "根据顶点组生成基础骨骼"): "Generate Basic Bones from Vertex Groups",
+    ("*", "把当前选中的obj的每个顶点组都生成一个默认位置的骨骼，方便接下来手动调整骨骼位置和父级关系来绑骨，虹汐哥改进版本"): "Generate a bone at a default position for each vertex group on the selected object, making it easier to adjust bones manually and bind later.",
+    ("*", "移除非数字名称的顶点组"): "Remove Non-Numeric Vertex Groups",
+    ("*", "把当前选中的obj的所有不是纯数字命名的顶点组都移除"): "Remove all vertex groups on the selected object that are not named with pure numbers.",
+    ("*", "根据顶点组将模型打碎为松散块儿"): "Break Model into Loose Parts by Vertex Groups",
+    ("*", "把当前选中的obj按顶点组进行分割，适用于部分精细刷权重并重新组合模型的场景"): "Split the selected object by vertex groups. Useful for precise weight painting and recombining models.",
+    ("*", "重置模型x,y,z的旋转角度为0"): "Reset Model Rotation on X, Y, Z to 0",
+    ("*", "把当前选中的obj的x,y,z的旋转角度全部归0"): "Reset the selected object's X, Y, and Z rotation to 0.",
+    ("*", "平滑法线存UV(近似)"): "Store Smooth Normals in UV (Approximate)",
+    ("*", "平滑法线存UV算法，可用于修复ZZZ,WWMI的某些UV(只是近似实现60%的效果)"): "Store smooth normals in UV. Can be used to fix some UV issues in ZZZ and WWMI, though the effect is approximate.",
+    ("*", "在有形态键的模型上应用修改器"): "Apply Modifiers on a Model with Shape Keys",
+    ("*", "在带有形态键的模型上应用选中的修改器，并将其从堆栈中移除，用于解决“带形态键的网格无法应用修改器”的问题。"): "Apply selected modifiers on a model with shape keys and remove them from the stack to solve the issue where modifiers cannot be applied to a mesh with shape keys.",
+    ("*", "不包含骨架变形"): "Don't Include Armature Deformations",
+    ("*", "警告:"): "Warning:",
+    ("*", "该物体的形态键包含动画数据"): "This object's shape keys contain animation data.",
+    ("*", "（例如驱动、关键帧等）"): "(such as drivers, keyframes, etc.)",
+    ("*", "应用修改器后这些数据会丢失！"): "These data will be lost after applying modifiers!",
+    ("*", "未选择任何修改器！"): "No modifier selected!",
+    ("*", "使用向量相加归一化算法重计算TANGENT"): "Recalculate TANGENT with Vector-Sum Normalization",
+    ("*", "近似修复轮廓线算法，可以达到99%的轮廓线相似度，适用于GI,HSR,ZZZ,HI3 2.0之前的老角色"): "An approximate outline-fix algorithm that can reach 99% outline similarity. Suitable for GI, HSR, ZZZ, and older HI3 characters before 2.0.",
+    ("*", "使用算术平均归一化算法重计算COLOR"): "Recalculate COLOR with Arithmetic-Average Normalization",
+    ("*", "近似修复轮廓线算法，可以达到99%的轮廓线相似度，仅适用于HI3 2.0新角色"): "An approximate outline-fix algorithm that can reach 99% outline similarity. Suitable only for new HI3 2.0 characters.",
+    ("*", "重命名选中Amature的骨骼名称(GI)(测试)"): "Rename Bones of Selected Armature (GI) (Test)",
+    ("*", "用于把游戏里解包出来的骨骼重命名，方便我们直接一键绑定到提取出的Mod模型上，感谢 Leotorrez。"): "Rename bones unpacked from the game so they can be bound to extracted Mod models more easily. Thanks to Leotorrez.",
+    ("*", "重置模型在x,y,z轴上的位置为0"): "Reset Model Location on X, Y, Z to 0",
+    ("*", "把当前选中的obj的x,y,z轴上的位置全部重置为0，使模型回到坐标原点"): "Reset the selected object's X, Y, and Z location to 0 so the model returns to the origin.",
+    ("*", "根据顶点组名称对顶点组进行排序"): "Sort Vertex Groups by Name",
+    ("*", "和Blender顶点组权重那里自带的Sort=>By Name功能一样，放在这里方便快速调用"): "The same as Blender's built-in Sort > By Name for vertex groups, placed here for quick access.",
+    ("*", "将目标obj的顶点组按位置对应关系改名"): "Rename Target Object Vertex Groups by Positional Mapping",
+    ("*", "先选中一个源obj，再选中一个目标obj，再点击此按钮，会根据顶点组对应位置把目标obj的顶点组改名为源obj的顶点组名称，目标obj的顶点组中，和源obj顶点组位置相近的顶点组将被改名为源obj对应位置的顶点组的名称，未能识别的顶点组将被命名为unknown"): "First select a source object, then a target object, and click this button. Vertex groups on the target object will be renamed to match source vertex groups based on positional correspondence. Unmatched groups will be named 'unknown'.",
+    ("*", "根据DrawIndexed值分割模型"): "Split Model by DrawIndexed Values",
+    ("*", "起始索引"): "Start Index",
+    ("*", "索引缓冲区中的起始索引"): "Starting index in the index buffer",
+    ("*", "索引数量"): "Index Count",
+    ("*", "要包含的索引数量，必须是 3 的倍数"): "Number of indices to include. Must be a multiple of 3.",
+    ("*", "请选择一个网格对象"): "Select a mesh object",
+    ("*", "索引范围超出缓冲区，最大 loop 数量为: {count}"): "Index range exceeds buffer. Maximum loop count: {count}",
+    ("*", "索引数量必须是 3 的倍数"): "Index count must be a multiple of 3",
+}
 
-    @classmethod
-    def _get_blender_language(cls) -> str:
-        """获取Blender当前使用的语言设置"""
-        try:
-            # 获取Blender的用户偏好设置中的语言
-            return bpy.context.preferences.view.language
-        except:
-            # 如果获取失败，默认返回中文
-            return "zh_CN"
 
-    @classmethod
-    def _is_chinese_language(cls) -> bool:
-        """判断当前是否为中文语言环境"""
-        current_lang = cls._get_blender_language()
-        # 中文语言代码通常以'zh'开头（如zh_CN, zh_TW等）
-        return current_lang.startswith('zh')
+translations_dict = {
+    "en_US": _TRANSLATIONS_ZH_TO_EN,
+    "en_GB": _TRANSLATIONS_ZH_TO_EN,
+}
 
-    @classmethod
-    def translate(cls, text: str) -> str:
-        """
-        翻译文本
-        如果是中文环境，返回原文；否则返回英文翻译
-        """
-        if cls._is_chinese_language():
-            return text
-        else:
-            # 如果在翻译字典中找到对应的英文翻译，返回翻译后的文本
-            # 如果没找到，返回原文（避免未翻译的文本显示为空）
-            return cls._translations.get(text, text)
+
+def register():
+    try:
+        bpy.app.translations.unregister(__name__)
+    except (ValueError, RuntimeError):
+        pass
+    bpy.app.translations.register(__name__, translations_dict)
+
+
+def unregister():
+    try:
+        bpy.app.translations.unregister(__name__)
+    except (ValueError, RuntimeError):
+        pass
 
 

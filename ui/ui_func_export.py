@@ -1,8 +1,8 @@
 import bpy
 
 from ..utils.timer_utils import TimerUtils
-from ..utils.translate_utils import TR
 from ..utils.command_utils import CommandUtils
+from ..utils.translate_utils import rpt_
 
 from ..common.global_config import GlobalConfig
 from ..common.global_key_count_helper import GlobalKeyCountHelper
@@ -26,7 +26,7 @@ from ..blueprint.blueprint_node_obj import refresh_all_object_info_nodes
 
 class SSMTGenerateModBlueprint(bpy.types.Operator):
     bl_idname = "ssmt.generate_mod_blueprint"
-    bl_label = TR.translate("生成Mod")
+    bl_label = "生成Mod"
     bl_description = "根据当前工作空间对应的蓝图架构生成对应的Mod文件"
     bl_options = {'REGISTER','UNDO'}
 
@@ -40,7 +40,7 @@ class SSMTGenerateModBlueprint(bpy.types.Operator):
         # 1.在这里直接解析蓝图，得到的蓝图对象用于初始化各个游戏对应的导出器
         tree = BlueprintExportHelper.get_current_blueprint_tree(context=context)
         if not tree:
-            self.report({'ERROR'}, "未找到当前蓝图，请在蓝图编辑器中点击 Generate Mod")
+            self.report({'ERROR'}, "未找到当前蓝图，请在蓝图编辑器中点击“生成Mod”")
             return {'CANCELLED'}
 
         BlueprintExportHelper.set_runtime_blueprint_tree(tree)
@@ -98,7 +98,7 @@ class SSMTGenerateModBlueprint(bpy.types.Operator):
         
         TimerUtils.End("GenerateMod Mod")
         
-        self.report({'INFO'},TR.translate("Generate Mod Success!"))
+        self.report({'INFO'}, rpt_("生成Mod成功！"))
         CommandUtils.OpenGeneratedModFolder()
         
         return {'FINISHED'}

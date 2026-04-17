@@ -16,7 +16,7 @@ import bpy.utils.previews
 
 from ..common.global_config import GlobalConfig
 
-from ..utils.translate_utils import TR
+from ..utils.translate_utils import rpt_
 from ..utils.json_utils import JsonUtils
 from ..utils.collection_utils import CollectionUtils,CollectionColor
 
@@ -53,12 +53,12 @@ class SSMT_UL_FastImportTextureList(UIList):
 # 自动检测并设置DedupedTextures文件夹
 class SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
     bl_idname = "ssmt.auto_detect_texture_folder"
-    bl_label = TR.translate("读取DedupedTextures")
+    bl_label = "读取DedupedTextures"
     
     def execute(self, context):
         selected_objects = context.selected_objects
         if not selected_objects:
-            self.report({'ERROR'}, "No objects selected.")
+            self.report({'ERROR'}, rpt_("没有选中的对象！"))
             return {'CANCELLED'}
         
         # 获取第一个选中的对象
@@ -74,7 +74,7 @@ class SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
 
         # 检查路径是否存在
         if not deduped_textures_exists:
-            self.report({'ERROR'}, TR.translate("未找到当前DrawIB: " + obj_name.split("-")[0] + "的DedupedTextures转换后的贴图文件夹，请确保此IB在当前工作空间中已经正常提取出来了"))
+            self.report({'ERROR'}, rpt_("未找到当前DrawIB: {draw_ib}的DedupedTextures转换后的贴图文件夹，请确保此IB在当前工作空间中已经正常提取出来了").format(draw_ib=obj_name.split("-")[0]))
             return {'CANCELLED'}
         
         # 清空之前的列表和预览
@@ -108,12 +108,12 @@ class SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
 
 class SSMT_FastTexture_ComponentOnly(Operator):
     bl_idname = "ssmt.fast_texture_component_only"
-    bl_label = TR.translate("读取当前Component专属贴图")
+    bl_label = "读取当前Component专属贴图"
     
     def execute(self, context):
         selected_objects = context.selected_objects
         if not selected_objects:
-            self.report({'ERROR'}, "No objects selected.")
+            self.report({'ERROR'}, rpt_("没有选中的对象！"))
             return {'CANCELLED'}
         
         # 获取第一个选中的对象
@@ -135,7 +135,7 @@ class SSMT_FastTexture_ComponentOnly(Operator):
         deduped_textures_exists = os.path.exists(deduped_textures_folder_path)
         # 检查路径是否存在
         if not deduped_textures_exists:
-            self.report({'ERROR'}, TR.translate("未找到当前DrawIB: " + obj_name.split("-")[0] + "的DedupedTextures转换后的贴图文件夹，请确保此IB在当前工作空间中已经正常提取出来了"))
+            self.report({'ERROR'}, rpt_("未找到当前DrawIB: {draw_ib}的DedupedTextures转换后的贴图文件夹，请确保此IB在当前工作空间中已经正常提取出来了").format(draw_ib=obj_name.split("-")[0]))
             return {'CANCELLED'}
         
         # 现在，读取ComponentName_DrawCallIndexList.json以及TrianglelistDedupedFileName.json
@@ -202,7 +202,7 @@ class SSMT_ImportTexture_WM_OT_ApplyImageToMaterial(Operator):
         selected_index = scene.image_list_index
         
         if selected_index < 0 or selected_index >= len(scene.image_list):
-            self.report({'ERROR'}, "No image selected in the list.")
+            self.report({'ERROR'}, rpt_("列表中未选择任何图片。"))
             return {'CANCELLED'}
         
         selected_image = scene.image_list[selected_index]
@@ -213,7 +213,7 @@ class SSMT_ImportTexture_WM_OT_ApplyImageToMaterial(Operator):
         
         selected_objects = context.selected_objects
         if not selected_objects:
-            self.report({'ERROR'}, "No objects selected.")
+            self.report({'ERROR'}, rpt_("没有选中的对象！"))
             return {'CANCELLED'}
         
         applied_count = 0
@@ -276,7 +276,7 @@ class SSMT_ImportTexture_WM_OT_ApplyImageToMaterial(Operator):
 
             applied_count += 1
         
-        self.report({'INFO'}, f"Applied {selected_image.name} to {applied_count} object(s).")
+        self.report({'INFO'}, rpt_("已将 {image_name} 应用到 {count} 个物体。").format(image_name=selected_image.name, count=applied_count))
         return {'FINISHED'}
 
 
