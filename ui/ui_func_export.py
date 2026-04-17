@@ -5,6 +5,7 @@ from ..utils.translate_utils import TR
 from ..utils.command_utils import CommandUtils
 
 from ..common.global_config import GlobalConfig
+from ..common.global_key_count_helper import GlobalKeyCountHelper
 from ..common.logic_name import LogicName
 
 from .universal.efmi import ExportEFMI
@@ -31,6 +32,10 @@ class SSMTGenerateModBlueprint(bpy.types.Operator):
 
     def execute(self, context):
         TimerUtils.Start("GenerateMod Mod")
+
+        # 每次生成 Mod 都必须重置全局按键计数，
+        # 否则会沿用上一次导出的 $swapkey / $active 索引，导致本次 ini 变量编号错乱。
+        GlobalKeyCountHelper.initialize()
 
         # 1.在这里直接解析蓝图，得到的蓝图对象用于初始化各个游戏对应的导出器
         tree = BlueprintExportHelper.get_current_blueprint_tree(context=context)
