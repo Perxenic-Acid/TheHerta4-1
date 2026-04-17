@@ -11,7 +11,7 @@ from ...utils.obj_utils import ObjUtils
 from .mesh_import_helper import MigotoBinaryFile, MeshImportHelper
 from ...common.global_config import GlobalConfig
 
-from ...utils.translate_utils import rpt_
+from ...utils.translate_utils import iface_, rpt_
 from ...utils.json_utils import JsonUtils
 from ...utils.collection_utils import CollectionUtils,CollectionColor
 
@@ -20,8 +20,8 @@ preview_collections = {}
 
 # 定义图片列表项
 class Sword_ImportTexture_ImageListItem(PropertyGroup):
-    name: StringProperty(name="Image Name") # type: ignore
-    filepath: StringProperty(name="File Path") # type: ignore
+    name: StringProperty(name="图片名称") # type: ignore
+    filepath: StringProperty(name="文件路径") # type: ignore
 
 # 自定义UI列表显示图片和缩略图
 class SWORD_UL_FastImportTextureList(UIList):
@@ -400,14 +400,14 @@ class Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
         
         # 显示图片数量信息
         if scene.sword_image_list:
-            layout.label(text=f"Found {len(scene.sword_image_list)} images")
+            layout.label(text=iface_("已找到 {count} 张图片").format(count=len(scene.sword_image_list)))
         
         # 显示图片列表
         if scene.sword_image_list:
             row = layout.row()
             row.template_list(
                 "SWORD_UL_FastImportTextureList",  # 修正为正确的类名
-                "Image List", 
+                iface_("图片列表"), 
                 scene, 
                 "sword_image_list", 
                 scene, 
@@ -415,7 +415,7 @@ class Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
                 rows=6
             )
         else:
-            layout.label(text="No images found. Select a folder first.")
+            layout.label(text=iface_("未找到图片，请先选择文件夹。"))
         
         # 应用材质按钮
         row = layout.row()
@@ -428,7 +428,7 @@ class Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
             
             if selected_item.name in pcoll:
                 box = layout.box()
-                box.label(text="Preview:")
+                box.label(text=iface_("预览:"))
                 box.template_icon(icon_value=pcoll[selected_item.name].icon_id, scale=10.0)
 
 

@@ -26,6 +26,7 @@ import traceback
 
 import bpy
 from bpy.app.handlers import persistent
+from bpy.app.translations import pgettext_iface as iface_
 
 # Safely import the updater.
 # Prevents popups for users with invalid python installs e.g. missing libraries
@@ -73,6 +74,7 @@ except Exception as e:
 # be unique among any other addons that could exist (using this updater code),
 # to avoid clashes in operator registration.
 updater.addon = "ssmt_theherta_plugin"
+UPDATER_DISPLAY_NAME = "TheHerta4"
 
 
 # -----------------------------------------------------------------------------
@@ -110,7 +112,7 @@ def get_user_preferences(context=None):
 # Simple popup to prompt use to check for update & offer install if available.
 class AddonUpdaterInstallPopup(bpy.types.Operator):
     """Check and install update if available"""
-    bl_label = "更新 {x} 插件".format(x=updater.addon)
+    bl_label = "更新 {x} 插件".format(x=UPDATER_DISPLAY_NAME)
     bl_idname = updater.addon + ".updater_install_popup"
     bl_description = "弹窗检查当前可用更新"
     bl_options = {'REGISTER', 'INTERNAL'}
@@ -211,10 +213,10 @@ class AddonUpdaterInstallPopup(bpy.types.Operator):
 
 # User preference check-now operator
 class AddonUpdaterCheckNow(bpy.types.Operator):
-    bl_label = "检查 " + updater.addon + " 更新"
+    bl_label = "检查 " + UPDATER_DISPLAY_NAME + " 更新"
     bl_idname = updater.addon + ".updater_check_now"
     bl_description = "为插件 {} 检查更新".format(
-        updater.addon)
+        UPDATER_DISPLAY_NAME)
     bl_options = {'REGISTER', 'INTERNAL'}
 
     def execute(self, context):
@@ -243,10 +245,10 @@ class AddonUpdaterCheckNow(bpy.types.Operator):
 
 
 class AddonUpdaterUpdateNow(bpy.types.Operator):
-    bl_label = "立即更新 " + updater.addon + " 插件"
+    bl_label = "立即更新 " + UPDATER_DISPLAY_NAME + " 插件"
     bl_idname = updater.addon + ".updater_update_now"
     bl_description = "将 {x} 插件更新到最新版本".format(
-        x=updater.addon)
+        x=UPDATER_DISPLAY_NAME)
     bl_options = {'REGISTER', 'INTERNAL'}
 
     # If true, run clean install - ie remove all files before adding new
@@ -305,10 +307,10 @@ class AddonUpdaterUpdateNow(bpy.types.Operator):
 
 
 class AddonUpdaterUpdateTarget(bpy.types.Operator):
-    bl_label = updater.addon + " 目标版本"
+    bl_label = UPDATER_DISPLAY_NAME + " 目标版本"
     bl_idname = updater.addon + ".updater_update_target"
     bl_description = "安装 {x} 插件的指定版本".format(
-        x=updater.addon)
+        x=UPDATER_DISPLAY_NAME)
     bl_options = {'REGISTER', 'INTERNAL'}
 
     def target_version(self, context):
@@ -319,7 +321,7 @@ class AddonUpdaterUpdateTarget(bpy.types.Operator):
         ret = []
         i = 0
         for tag in updater.tags:
-            ret.append((tag, tag, "选择安装版本 " + tag))
+            ret.append((tag, tag, iface_("选择安装版本 {tag}").format(tag=tag)))
             i += 1
         return ret
 
@@ -985,7 +987,8 @@ def update_settings_ui(self, context, element=None):
 
     elif updater.update_ready and updater.manual_only:
         col.scale_y = 2
-        dl_now_txt = "下载 " + str(updater.update_version)
+        dl_now_txt = iface_("下载 {version}").format(
+            version=str(updater.update_version))
         col.operator("wm.url_open",
                      text=dl_now_txt).url = updater.website
     else:  # i.e. that updater.update_ready == False.
@@ -1017,7 +1020,7 @@ def update_settings_ui(self, context, element=None):
                 last_date = "日期未找到"
             else:
                 last_date = updater.json["backup_date"]
-        backup_text = "还原插件备份 ({})".format(last_date)
+        backup_text = iface_("还原插件备份 ({date})").format(date=last_date)
         col.operator(AddonUpdaterRestoreBackup.bl_idname, text=backup_text)
 
     row = box.row()
@@ -1027,7 +1030,8 @@ def update_settings_ui(self, context, element=None):
         row.label(text=updater.error_msg)
     elif last_check:
         last_check = last_check[0: last_check.index(".")]
-        row.label(text="最近一次检查: " + last_check)
+        row.label(text=iface_("最近一次检查: {last_check}").format(
+            last_check=last_check))
     else:
         row.label(text="最近一次检查: 从未")
 

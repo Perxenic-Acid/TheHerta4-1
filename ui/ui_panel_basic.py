@@ -31,7 +31,7 @@ class PanelBasicInformation(bpy.types.Panel):
         layout.label(text=iface_("当前配置名称: ") + GlobalConfig.gamename)
         layout.label(text=iface_("当前游戏预设: ") + GlobalConfig.logic_name)
         layout.label(text=iface_("当前工作空间: ") + GlobalConfig.workspacename)
-        layout.prop(context.scene.global_properties,"use_mirror_workflow",text="使用非镜像工作流")
+        layout.prop(context.scene.global_properties,"use_mirror_workflow")
         
         if len(context.selected_objects) != 0:
             obj = context.selected_objects[0]
@@ -41,9 +41,9 @@ class PanelBasicInformation(bpy.types.Panel):
             recalculate_tangent = obj.get("3DMigoto:RecalculateTANGENT", False)
             recalculate_color = obj.get("3DMigoto:RecalculateCOLOR", False)
 
-            layout.label(text="GameType: " + gametypename)
-            layout.label(text="RecalculateTANGENT: " + str(recalculate_tangent))
-            layout.label(text="RecalculateCOLOR: " + str(recalculate_color))
+            layout.label(text=iface_("游戏类型: ") + gametypename)
+            layout.label(text=iface_("重计算TANGENT: ") + str(recalculate_tangent))
+            layout.label(text=iface_("重计算COLOR: ") + str(recalculate_color))
             
         # SSMT蓝图
         layout.operator("theherta3.open_persistent_blueprint", icon='NODETREE')

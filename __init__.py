@@ -31,7 +31,7 @@ bl_info = {
     "name": "TheHerta4",
     "description": "Blender Plugin of SSMT4",
     "blender": (4, 5, 0),
-    "version": (4, 0, 9),
+    "version": (4, 0, 10),
     "location": "View3D",
     "category": "Generic"
 }
@@ -107,7 +107,7 @@ class HertaUpdatePreference(bpy.types.AddonPreferences):
         max=59) # type: ignore
     def draw(self, context):
         layout = self.layout
-        layout.prop(self, "自动检查更新")
+        layout.prop(self, "auto_check_update")
         addon_updater_ops.update_settings_ui(self, context)
 
 def register():
