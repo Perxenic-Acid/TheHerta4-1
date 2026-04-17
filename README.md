@@ -1,15 +1,13 @@
 
-# TheHerta4 ![Downloads](https://img.shields.io/github/downloads/StarBobis/TheHerta4/total?style=flat-square&logo=github)  ![GitHub Repo stars](https://img.shields.io/github/stars/StarBobis/TheHerta4?style=social)
-
+# TheHerta4
 SSMT4的Blender插件
 
-![GitHub Releases (by Release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?style=for-the-badge&logo=github&color=green)
+# 更完整的版本
 
-# 仍在开发中
+此仓库仅负责实现基础的导入导出功能，复杂的蓝图节点在fork版本中进行开发，你可以使用希尔维护的TheHerta版本以体验完整特性：
 
-在此仓库开发完成发布Release版本之前，请优先考虑使用希尔维护的TheHerta3版本：
-
-https://github.com/xuhuan9102/TheHerta3
+- https://github.com/xuhuan9102/TheHerta3
+- https://github.com/xuhuan9102/TheHerta4
 
 # 说明
 
@@ -45,5 +43,6 @@ TheHerta3中的蓝图架构设计与导出流程高度耦合导致无法轻易�
 # Fork分支列表
 
 - https://github.com/xuhuan9102/TheHerta3
+- https://github.com/xuhuan9102/TheHerta4
 
 如果你有自己维护的分支，可以提交PR修改README在此处添加你维护的分支版。
