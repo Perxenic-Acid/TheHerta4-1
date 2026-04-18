@@ -234,7 +234,12 @@ class MeshCreateHelper:
             ObjUtils.apply_mirror_workflow(obj)
 
         bpy.context.view_layer.update()
-        bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+        if not bpy.app.background:
+            try:
+                if bpy.ops.wm.redraw_timer.poll():
+                    bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+            except RuntimeError:
+                pass
 
         TimerUtils.End("Import 3Dmigoto Raw")
         return obj
@@ -309,33 +314,69 @@ class MeshCreateHelper:
     @staticmethod
     def import_vertex_groups(mesh, obj, blend_indices, blend_weights, component):
         for semantic_index, bone_indices_list in blend_indices.items():
-            arr = numpy.array(bone_indices_list)
-            arr = numpy.where(arr == 65535, -1, arr)
+            arr = numpy.asarray(bone_indices_list)
+            if arr.dtype.kind == 'f':
+                arr = numpy.rint(arr).astype(numpy.int64)
+            else:
+                arr = arr.astype(numpy.int64, copy=False)
+
+            arr[arr == 65535] = -1
             blend_indices[semantic_index] = arr
 
         assert len(blend_indices) == len(blend_weights)
         if blend_indices:
+            max_valid_group_id = -1
+            for bone_indices_array in blend_indices.values():
+                flattened_indices = numpy.asarray(bone_indices_array, dtype=numpy.int64).ravel()
+                non_negative_indices = flattened_indices[flattened_indices >= 0]
+                if non_negative_indices.size > 0:
+                    max_valid_group_id = max(max_valid_group_id, int(non_negative_indices.max()))
+
+            if max_valid_group_id < 0:
+                return
+
             if component is None:
-                num_vertex_groups = max(itertools.chain(*itertools.chain(*blend_indices.values()))) + 1
+                num_vertex_groups = max_valid_group_id + 1
             else:
-                num_vertex_groups = max(component.vg_map.values()) + 1
+                mapped_group_ids = {int(group_id) for group_id in component.vg_map.values()}
+                if not mapped_group_ids:
+                    return
+                num_vertex_groups = max(mapped_group_ids) + 1
 
             print("num_vertex_groups: " + str(num_vertex_groups))
 
             if num_vertex_groups > 10000:
                 raise Fatal("检测到在当前导入的数据类型" + obj.get('3DMigoto:GameTypeName', "") + "描述下，BLENDINDICES顶点组数量为: " + str(num_vertex_groups) + " 基本不可能是正常情况，请更换其他数据类型重新导入")
 
+            vertex_group_by_id = {}
             for i in range(num_vertex_groups):
-                obj.vertex_groups.new(name=str(i))
+                vertex_group_by_id[i] = obj.vertex_groups.new(name=str(i))
+
             for vertex in mesh.vertices:
                 for semantic_index in sorted(blend_indices.keys()):
                     for i, w in zip(blend_indices[semantic_index][vertex.index], blend_weights[semantic_index][vertex.index]):
-                        if w == 0.0:
+                        if i < 0 or w == 0.0:
                             continue
+
                         if component is None:
-                            obj.vertex_groups[i].add((vertex.index,), w, 'REPLACE')
+                            target_group_id = int(i)
                         else:
-                            obj.vertex_groups[component.vg_map[str(i)]].add((vertex.index,), w, 'REPLACE')
+                            mapped_group_id = component.vg_map.get(str(int(i)))
+                            if mapped_group_id is None:
+                                continue
+                            target_group_id = int(mapped_group_id)
+
+                        if target_group_id < 0:
+                            continue
+
+                        vertex_group = vertex_group_by_id.get(target_group_id)
+                        if vertex_group is None:
+                            vertex_group = obj.vertex_groups.get(str(target_group_id))
+                            if vertex_group is None:
+                                vertex_group = obj.vertex_groups.new(name=str(target_group_id))
+                            vertex_group_by_id[target_group_id] = vertex_group
+
+                        vertex_group.add((vertex.index,), float(w), 'REPLACE')
 
     @staticmethod
     def import_shapekeys(mesh, obj, shapekeys):

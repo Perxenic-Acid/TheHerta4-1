@@ -34,6 +34,7 @@ def ImprotFromWorkSpaceFull(self, context):
     # 读取时保存每个导入文件夹里导入的 GameType 名称到工作空间根目录的 Import.json
     # 生成 Mod 时会用它来确定应该进入哪个 TYPE_xxx 目录读取 SubmeshJson
     foldername_gametypename_dict = {}
+    successful_import_count = 0
 
     for submesh_folder_path in workspace_subfolders:
         submesh_folder_name = os.path.basename(submesh_folder_path)
@@ -59,6 +60,7 @@ def ImprotFromWorkSpaceFull(self, context):
                 if imported_obj is not None:
                     imported_obj.name = submesh_folder_name + this_alias
                     imported_obj.data.name = imported_obj.name
+                    successful_import_count += 1
 
                 # 如果能执行到这里，说明这个DrawIB成功导入了一个数据类型
                 # 然后要把这个DrawIB对应的GameType名称保存下来
@@ -71,9 +73,10 @@ def ImprotFromWorkSpaceFull(self, context):
             # 因为我们还没有添加多个数据类型时，让物体携带数据类型信息的机制
             # 所以这里暂时还是哪个导入成功了用哪个
             break
-            
 
-            
+    if successful_import_count == 0:
+        self.report({'ERROR'}, "当前工作空间没有成功导入任何模型，已跳过蓝图生成。")
+        return
 
     # 保存工作空间级 Import.json 选择记录
     save_import_json_path = os.path.join(GlobalConfig.path_workspace_folder(),"Import.json")
@@ -111,13 +114,14 @@ def ImprotFromWorkSpaceFull(self, context):
         
         # 此时 default_show_collection 应该在作用域内，因为它是上面的局部变量
         # 且导入的模型都放在这个集合里
-        if 'workspace_collection' in locals() and workspace_collection:
-             target_objects = workspace_collection.objects
+        if 'workspace_collection' in locals() and workspace_collection and len(workspace_collection.objects) > 0:
+            target_objects = list(workspace_collection.objects)
         else:
-             target_objects = [] # Fallback
+            target_objects = [] # Fallback
 
         if not target_objects:
-             print("Warning: Could not find Workspace collection to generate blueprint nodes.")
+            self.report({'ERROR'}, "已成功导入模型，但未在工作空间集合中找到对象，已跳过蓝图生成。")
+            return
 
         # 使用列表手动计算布局中心
         min_y = 0
