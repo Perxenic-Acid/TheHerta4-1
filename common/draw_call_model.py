@@ -7,11 +7,13 @@ from typing import Optional
 @dataclass
 class DrawCallModel:
     obj_name:str
+    submesh_name:str = ""
 
     # 传入obj_name后，解析出这些属性，方便后续使用
     match_draw_ib:str = field(init=False,repr=False,default="") # 用于匹配的DrawIB
     match_index_count:str = field(init=False,repr=False,default="") # 用于匹配的IndexCount
     match_first_index:str = field(init=False,repr=False,default="") # 用于匹配的FirstIndex
+    match_unique_str:str = field(init=False,repr=False,default="") # 用于工作空间目录匹配的唯一标识，不包含'.'后的显示后缀
     comment_alias_name:str = field(init=False,repr=False,default="") # 用于显示在注释中的自定义名称
 
     # 生效条件，在BlueprintModel解析的时候得到
@@ -26,6 +28,14 @@ class DrawCallModel:
     def __post_init__(self) -> None:
         objname_parse_error_tips = "Obj名称规则为: DrawIB-IndexCount-FirstIndex.AliasName,例如[67f829fc-2653-0.头发]第一个.前面的内容要符合规则,后面出现的内容是可以自定义的"
 
+        submesh_parse_result = self._try_parse_name(self.submesh_name)
+        if submesh_parse_result is not None:
+            self.match_draw_ib, self.match_index_count, self.match_first_index, self.match_unique_str, self.comment_alias_name = submesh_parse_result
+            return
+
+        obj_name_total_split = self.obj_name.split(".") if self.obj_name else []
+        self.comment_alias_name = ".".join(obj_name_total_split[1:]) if len(obj_name_total_split) > 1 else ""
+
         if "." not in self.obj_name:
             SSMTErrorUtils.raise_fatal("Obj名称解析错误: " + self.obj_name + "  不包含'.'分隔符\n" + objname_parse_error_tips)
 
@@ -34,20 +44,30 @@ class DrawCallModel:
 
         if len(obj_name_total_split) < 2:
             SSMTErrorUtils.raise_fatal("Obj名称解析错误: " + self.obj_name + "  不包含'.'分隔符\n" + objname_parse_error_tips)
-
-        self.comment_alias_name = ".".join(obj_name_total_split[1:]) if len(obj_name_total_split) > 1 else ""
-
         if len(obj_name_split) < 3:
             SSMTErrorUtils.raise_fatal("Obj名称解析错误: " + self.obj_name + "  '-'分隔符数量不足，至少需要2个\n" + objname_parse_error_tips)
 
         self.match_draw_ib = obj_name_split[0]
         self.match_index_count = obj_name_split[1]
         self.match_first_index = obj_name_split[2]
+        self.match_unique_str = self.match_draw_ib + "-" + self.match_index_count + "-" + self.match_first_index
+
+    def _try_parse_name(self, name: str):
+        normalized_name = str(name or "").strip()
+        if not normalized_name:
+            return None
+
+        name_prefix, _, alias_suffix = normalized_name.partition(".")
+        name_split = name_prefix.split("-")
+        if len(name_split) < 3:
+            return None
+
+        return name_split[0], name_split[1], name_split[2], name_prefix, alias_suffix
     
     def get_unique_str(self) -> str:
         # 这个唯一标识符是根据DrawIB、FirstIndex和IndexCount组成的字符串，作为一个整体来标识一个DrawCall
         # 同时也和提取出来的工作空间目录下对应的目录名称一致
-        return self.match_draw_ib + "-" + self.match_index_count+ "-" + self.match_first_index 
+        return self.match_unique_str
 
     def get_condition_str(self) -> str:
         if len(self.work_key_list) == 0:

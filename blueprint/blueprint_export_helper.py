@@ -1,6 +1,10 @@
+import os
+
 import bpy
 from ..common.global_config import GlobalConfig
 from ..common.m_key import M_Key
+from ..common.draw_call_model import DrawCallModel
+from ..common.workspace_helper import WorkSpaceHelper
 
 class BlueprintExportHelper:
 
@@ -75,6 +79,56 @@ class BlueprintExportHelper:
             return tree
 
         return None
+
+    @staticmethod
+    def get_tree_submesh_names(tree=None, context=None):
+        current_tree = tree or BlueprintExportHelper.get_current_blueprint_tree(context=context)
+        if not BlueprintExportHelper._is_valid_blueprint_tree(current_tree):
+            return []
+
+        return [str(item.name) for item in getattr(current_tree, "ssmt_submesh_items", []) if getattr(item, "name", "")]
+
+    @staticmethod
+    def set_tree_submesh_names(submesh_names, tree=None, context=None):
+        current_tree = tree or BlueprintExportHelper.get_current_blueprint_tree(context=context)
+        if not BlueprintExportHelper._is_valid_blueprint_tree(current_tree):
+            return []
+
+        normalized_names = []
+        seen_names = set()
+        for submesh_name in submesh_names:
+            normalized_name = str(submesh_name or "").strip()
+            if not normalized_name or normalized_name in seen_names:
+                continue
+            seen_names.add(normalized_name)
+            normalized_names.append(normalized_name)
+
+        current_tree.ssmt_submesh_items.clear()
+        for submesh_name in normalized_names:
+            item = current_tree.ssmt_submesh_items.add()
+            item.name = submesh_name
+
+        BlueprintExportHelper.set_runtime_blueprint_tree(current_tree)
+        return normalized_names
+
+    @staticmethod
+    def refresh_tree_submesh_list(tree=None, context=None):
+        current_tree = tree or BlueprintExportHelper.get_current_blueprint_tree(context=context)
+        if not BlueprintExportHelper._is_valid_blueprint_tree(current_tree):
+            return []
+
+        drawib_aliasname_dict = WorkSpaceHelper.get_drawib_aliasname_dict()
+
+        return BlueprintExportHelper.set_tree_submesh_names(
+            [
+                WorkSpaceHelper.get_display_submesh_name(
+                    os.path.basename(folder_path),
+                    drawib_aliasname_dict=drawib_aliasname_dict,
+                )
+                for folder_path in WorkSpaceHelper.get_submesh_folderpath_list()
+            ],
+            tree=current_tree,
+        )
 
     @staticmethod
     def find_node_in_all_blueprints(node_name):
@@ -183,11 +237,14 @@ class BlueprintExportHelper:
                     source_node = link.from_node
                     # 确保来源是 Object Info 节点
                     if source_node.bl_idname == 'SSMTNode_Object_Info':
-                        # 这里您可以返回整个节点对象，或者只返回需要的属性
-                        # 比如: (ObjName, DrawIB, Component)
+                        draw_ib = ""
+                        submesh_name = str(getattr(source_node, "submesh_name", "") or "")
+                        if submesh_name:
+                            draw_ib = DrawCallModel(obj_name=str(getattr(source_node, "object_name", "") or ""), submesh_name=submesh_name).match_draw_ib
+
                         info = {
                             "object_name": source_node.object_name,
-                            "draw_ib": source_node.draw_ib,
+                            "draw_ib": draw_ib,
                             "component": source_node.component,
                             "node": source_node
                         }

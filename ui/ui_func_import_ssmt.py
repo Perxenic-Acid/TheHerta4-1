@@ -16,6 +16,7 @@ from ..utils.translate_utils import rpt_
 from ..common.global_config import GlobalConfig
 from ..common.ssmt_import_helper import SSMTImportHelper
 from ..common.workspace_helper import WorkSpaceHelper
+from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
 
 # 全量导入逻辑
@@ -34,6 +35,7 @@ def ImprotFromWorkSpaceFull(self, context):
     # 读取时保存每个导入文件夹里导入的 GameType 名称到工作空间根目录的 Import.json
     # 生成 Mod 时会用它来确定应该进入哪个 TYPE_xxx 目录读取 SubmeshJson
     foldername_gametypename_dict = {}
+    foldername_imported_obj_dict = {}
     successful_import_count = 0
 
     for submesh_folder_path in workspace_subfolders:
@@ -50,16 +52,19 @@ def ImprotFromWorkSpaceFull(self, context):
 
             try:
                 print("尝试导入路径: " + import_folder_path)
-                draw_ib = submesh_folder_name.split("-")[0]
-                this_alias = "." + (drawib_aliasname_dict.get(draw_ib) or "自定义名称")
+                object_display_name = WorkSpaceHelper.get_object_display_name(
+                    submesh_folder_name,
+                    drawib_aliasname_dict=drawib_aliasname_dict,
+                )
                 json_file_path = os.path.join(import_folder_path, submesh_folder_name + ".json")
                 imported_obj = SSMTImportHelper.create_mesh_from_json(
                     json_file_path=json_file_path,
                     import_collection=workspace_collection,
                 )
                 if imported_obj is not None:
-                    imported_obj.name = submesh_folder_name + this_alias
+                    imported_obj.name = object_display_name
                     imported_obj.data.name = imported_obj.name
+                    foldername_imported_obj_dict[submesh_folder_name] = imported_obj
                     successful_import_count += 1
 
                 # 如果能执行到这里，说明这个DrawIB成功导入了一个数据类型
@@ -100,6 +105,16 @@ def ImprotFromWorkSpaceFull(self, context):
             print(f"Failed to create new node tree: {e}. Check if SSMTBlueprintTreeType is registered.")
             return
         tree.use_fake_user = True
+        BlueprintExportHelper.set_tree_submesh_names(
+            [
+                WorkSpaceHelper.get_display_submesh_name(
+                    os.path.basename(submesh_folder_path),
+                    drawib_aliasname_dict=drawib_aliasname_dict,
+                )
+                for submesh_folder_path in workspace_subfolders
+            ],
+            tree=tree,
+        )
         
         # 创建 Group 节点 (并在循环中连接)
         group_node = tree.nodes.new('SSMTNode_Object_Group')
@@ -130,48 +145,38 @@ def ImprotFromWorkSpaceFull(self, context):
             namesplits = submesh_folder_name.split('-')
             if len(namesplits) < 3:
                 continue
-            draw_ib = namesplits[0]
-            index_count = namesplits[1]
-            first_index = namesplits[2]
             
-            # 在导入集合中寻找属于当前 DrawIB 的对象
-            # 命名规则通常是: DrawIB-Part-Alias
-            found_objs = [obj for obj in target_objects if obj.name.startswith(submesh_folder_name)]
-            
-            for obj in found_objs:
-                 if obj.type == 'MESH':
-                    # 创建节点
-                    node = tree.nodes.new('SSMTNode_Object_Info')
-                    node.location = (current_x, current_y)
-                    
-                    # 填充属性
-                    node.object_name = obj.name
-                    node.draw_ib = draw_ib
-                    
-                    # 解析 Part 部分作为 Component (即 DrawIB-Part-Alias 中的 Part)
-                    name_parts = obj.name.split('-')
-                    if len(name_parts) >= 2:
-                        node.component = name_parts[1]
-                    else:
-                        node.component = "1"
+            imported_obj = foldername_imported_obj_dict.get(submesh_folder_name)
+            if imported_obj and imported_obj.type == 'MESH':
+                # 创建节点
+                node = tree.nodes.new('SSMTNode_Object_Info')
+                node.location = (current_x, current_y)
 
-                    node.alias_name = drawib_aliasname_dict.get(draw_ib, "自定义名称")
-                        
-                    node.label = obj.name # 设置节点标题方便识别
+                # 填充属性
+                node.object_name = imported_obj.name
+                node.original_object_name = imported_obj.name
 
-                    # ----------------------
-                    # 自动连线到 Group
-                    # ----------------------
-                    # 如果 Group 最后一个插槽已被占用，手动扩展一个
-                    if group_node.inputs[-1].is_linked:
-                        group_node.inputs.new('SSMTSocketObject', f"Input {len(group_node.inputs) + 1}")
-                    
-                    tree.links.new(node.outputs[0], group_node.inputs[-1])
-                    
-                    # 布局计算
-                    count += 1
-                    current_y -= y_gap
-                    min_y = min(min_y, current_y)
+                if len(namesplits) >= 2:
+                    node.component = namesplits[1]
+                else:
+                    node.component = "1"
+
+                node.submesh_name = WorkSpaceHelper.get_display_submesh_name(
+                    submesh_folder_name,
+                    drawib_aliasname_dict=drawib_aliasname_dict,
+                )
+
+                node.label = imported_obj.name
+
+                # 如果 Group 最后一个插槽已被占用，手动扩展一个
+                if group_node.inputs[-1].is_linked:
+                    group_node.inputs.new('SSMTSocketObject', f"Input {len(group_node.inputs) + 1}")
+
+                tree.links.new(node.outputs[0], group_node.inputs[-1])
+
+                count += 1
+                current_y -= y_gap
+                min_y = min(min_y, current_y)
 
         
         # 4. 放置 Group 和 Output 节点

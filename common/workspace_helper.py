@@ -18,6 +18,28 @@ class DedupedTextureInfo:
 class WorkSpaceHelper:
 
     @staticmethod
+    def get_object_display_name(submesh_folder_name: str, drawib_aliasname_dict: Dict[str, str] | None = None) -> str:
+        normalized_folder_name = str(submesh_folder_name or "").strip()
+        if not normalized_folder_name:
+            return ""
+
+        drawib_aliasname_dict = drawib_aliasname_dict or WorkSpaceHelper.get_drawib_aliasname_dict()
+        draw_ib = normalized_folder_name.split("-")[0]
+        return str(drawib_aliasname_dict.get(draw_ib) or "自定义名称").strip()
+
+    @staticmethod
+    def get_display_submesh_name(submesh_folder_name: str, drawib_aliasname_dict: Dict[str, str] | None = None) -> str:
+        normalized_folder_name = str(submesh_folder_name or "").strip()
+        if not normalized_folder_name:
+            return ""
+
+        alias_name = WorkSpaceHelper.get_object_display_name(
+            normalized_folder_name,
+            drawib_aliasname_dict=drawib_aliasname_dict,
+        )
+        return normalized_folder_name + "." + alias_name
+
+    @staticmethod
     def get_ordered_gpu_cpu_import_folderpath_list(submesh_folderpath:str)-> List[str]:
         # 导入时，要按照先GPU类型，再CPU类型进行排序
         gpu_import_folder_path_list = []

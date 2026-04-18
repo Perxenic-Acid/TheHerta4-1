@@ -141,7 +141,10 @@ class BluePrintModel:
 
 
         elif unknown_node.bl_idname == SSMTNode_Object_Info.bl_idname:
-            obj_model = DrawCallModel(obj_name=unknown_node.object_name)
+            obj_model = DrawCallModel(
+                obj_name=unknown_node.object_name,
+                submesh_name=getattr(unknown_node, 'submesh_name', ''),
+            )
             
             if hasattr(unknown_node, 'original_object_name') and unknown_node.original_object_name:
                 obj_model.display_name = unknown_node.original_object_name

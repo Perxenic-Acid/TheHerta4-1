@@ -229,11 +229,16 @@ class SSMT_OT_StartPickObject(bpy.types.Operator):
     bl_description = "点击后在3D视图中选择一个物体"
     
     node_name: bpy.props.StringProperty() # type: ignore
+    tree_name: bpy.props.StringProperty() # type: ignore
     
     def execute(self, context):
         global _picking_node_name, _picking_tree_name
         
         tree = getattr(context.space_data, "edit_tree", None) or getattr(context.space_data, "node_tree", None)
+        if not tree and self.tree_name:
+            tree = bpy.data.node_groups.get(self.tree_name)
+        if not tree:
+            tree = BlueprintExportHelper.get_current_blueprint_tree(context=context)
         
         if not tree:
             self.report({'WARNING'}, rpt_("无法获取节点树上下文"))
@@ -255,10 +260,14 @@ class SSMT_OT_PickObjectModal(bpy.types.Operator):
     bl_options = {'REGISTER', 'INTERNAL'}
     
     def invoke(self, context, event):
-        global _picking_node_name
+        global _picking_node_name, _picking_tree_name
         
         if not _picking_node_name:
             return {'CANCELLED'}
+
+        if not _picking_tree_name:
+            current_tree = BlueprintExportHelper.get_current_blueprint_tree(context=context)
+            _picking_tree_name = current_tree.name if current_tree else None
         
         self._initial_selected_objs = set(context.selected_objects)
         if context.selected_objects:
@@ -271,10 +280,36 @@ class SSMT_OT_PickObjectModal(bpy.types.Operator):
     
     def modal(self, context, event):
         global _picking_node_name, _picking_tree_name
-        
-        if event.type == 'ESC':
+
+        def clear_picking_state():
+            global _picking_node_name, _picking_tree_name
             _picking_node_name = None
             _picking_tree_name = None
+
+        def resolve_picking_node():
+            tree = None
+            if isinstance(_picking_tree_name, str) and _picking_tree_name:
+                tree = bpy.data.node_groups.get(_picking_tree_name)
+
+            if tree:
+                node = tree.nodes.get(_picking_node_name)
+                if node:
+                    return tree, node
+
+            current_tree = BlueprintExportHelper.get_current_blueprint_tree(context=context)
+            if current_tree:
+                node = current_tree.nodes.get(_picking_node_name)
+                if node:
+                    return current_tree, node
+
+            node = BlueprintExportHelper.find_node_in_all_blueprints(_picking_node_name)
+            if node:
+                return getattr(node, "id_data", None), node
+
+            return None, None
+        
+        if event.type == 'ESC':
+            clear_picking_state()
             return {'CANCELLED'}
         
         if event.type == 'LEFTMOUSE' and event.value == 'PRESS':
@@ -289,16 +324,19 @@ class SSMT_OT_PickObjectModal(bpy.types.Operator):
             if current_selected:
                 current_obj = current_selected[0]
                 if current_obj != self._last_selected_obj and current_obj not in self._initial_selected_objs:
-                    tree = bpy.data.node_groups.get(_picking_tree_name)
+                    tree, node = resolve_picking_node()
+                    if not node:
+                        clear_picking_state()
+                        self.report({'WARNING'}, rpt_("无法获取节点树上下文"))
+                        return {'CANCELLED'}
+
+                    node.object_name = current_obj.name
+                    node.object_id = ensure_object_persistent_id(current_obj)
                     if tree:
-                        node = tree.nodes.get(_picking_node_name)
-                        if node:
-                            node.object_name = current_obj.name
-                            node.object_id = ensure_object_persistent_id(current_obj)
-                            self.report({'INFO'}, rpt_("已选择物体: {name}").format(name=current_obj.name))
-                    
-                    _picking_node_name = None
-                    _picking_tree_name = None
+                        BlueprintExportHelper.set_runtime_blueprint_tree(tree)
+                    self.report({'INFO'}, rpt_("已选择物体: {name}").format(name=current_obj.name))
+
+                    clear_picking_state()
                     return {'FINISHED'}
         
         return {'PASS_THROUGH'}
@@ -317,29 +355,20 @@ class SSMTNode_Object_Info(SSMTNodeBase):
     bl_icon = 'OBJECT_DATAMODE'
     bl_width_min = 300
 
-    def _refresh_display_fields(self):
-        self.draw_ib = ""
-        self.index_count = ""
-        self.first_index = ""
-        self.alias_name = ""
+    def _get_effective_parse_name(self):
+        normalized_submesh_name = str(self.submesh_name or "").strip()
+        prefix_name = normalized_submesh_name.partition(".")[0]
+        if normalized_submesh_name and len(prefix_name.split("-")) >= 3:
+            return normalized_submesh_name
+        return self.object_name
 
+    def _refresh_display_fields(self):
         if self.object_name:
             self.label = self.object_name
-            if "-" in self.object_name:
-                obj_name_total_split = self.object_name.split(".")
-                obj_name_split = obj_name_total_split[0].split("-")
-
-                if len(obj_name_split) >= 3:
-                    self.draw_ib = obj_name_split[0]
-                    self.index_count = obj_name_split[1]
-                    self.first_index = obj_name_split[2]
-
-                if len(obj_name_total_split) >= 2:
-                    self.alias_name = ".".join(obj_name_total_split[1:])
         else:
             self.label = "物体信息"
 
-        self.update_node_width([self.object_name, self.draw_ib, self.index_count, self.first_index, self.alias_name])
+        self.update_node_width([self.object_name, self.submesh_name])
 
     def update_object_name(self, context):
         self._refresh_display_fields()
@@ -351,37 +380,37 @@ class SSMTNode_Object_Info(SSMTNodeBase):
         else:
             self.object_id = ""
 
+    def update_submesh_name(self, context):
+        self._refresh_display_fields()
+
     object_name: bpy.props.StringProperty(name="物体名称", default="", update=update_object_name) #type: ignore
     object_id: bpy.props.StringProperty(name="物体ID", default="") #type: ignore
     original_object_name: bpy.props.StringProperty(name="原始物体名称", default="") #type: ignore
-
-
-    draw_ib: bpy.props.StringProperty(name="DrawIB", default="") # type: ignore
-    index_count: bpy.props.StringProperty(name="IndexCount", default="") # type: ignore
-    first_index: bpy.props.StringProperty(name="FirstIndex", default="") # type: ignore
-    alias_name: bpy.props.StringProperty(name="别名", default="") # type: ignore
+    component: bpy.props.StringProperty(name="Component", default="") #type: ignore
+    submesh_name: bpy.props.StringProperty(name="Submesh", default="", update=update_submesh_name) #type: ignore
 
     def init(self, context):
         self.outputs.new('SSMTSocketObject', iface_("对象"))
 
     def draw_buttons(self, context, layout):
+        tree = self.id_data if getattr(self, "id_data", None) and getattr(self.id_data, "bl_idname", "") == 'SSMTBlueprintTreeType' else None
         row = layout.row(align=True)
 
         row.prop_search(self, "object_name", bpy.data, "objects", text="", icon='OBJECT_DATA')
         
         op = row.operator("ssmt.start_pick_object", text="", icon='EYEDROPPER')
         op.node_name = self.name
+        op.tree_name = tree.name if tree else ""
 
         if self.object_name or self.object_id:
             op = row.operator("ssmt.select_node_object", text="", icon='RESTRICT_SELECT_OFF')
             op.object_name = self.object_name
             op.object_id = self.object_id
 
-        # Display as read-only labels to prevent user edits in the UI
-        layout.label(text=f"{iface_('DrawIB: ')}{self.draw_ib}")
-        layout.label(text=f"{iface_('IndexCount: ')}{self.index_count}")
-        layout.label(text=f"{iface_('FirstIndex: ')}{self.first_index}")
-        layout.label(text=f"{iface_('别名: ')}{self.alias_name}")
+        if tree is not None:
+            layout.prop_search(self, "submesh_name", tree, "ssmt_submesh_items", text=iface_("Submesh"), icon='OUTLINER_COLLECTION')
+            if self.submesh_name and self.submesh_name not in BlueprintExportHelper.get_tree_submesh_names(tree=tree):
+                layout.label(text=iface_("当前 Submesh 不在列表中，导出时将回退到物体名解析"), icon='ERROR')
 
 
 class SSMTNode_Object_Group(SSMTNodeBase):

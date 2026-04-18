@@ -5,6 +5,7 @@ from bpy.types import NodeTree, Node, NodeSocket
 from ..common.global_config import GlobalConfig
 from ..utils.translate_utils import iface_, rpt_
 
+from .blueprint_export_helper import BlueprintExportHelper
 from .blueprint_node_base import SSMTBlueprintTree, SSMTNodeBase
 
 
@@ -194,6 +195,110 @@ class SSMT_OT_CreateInternalSwitch(bpy.types.Operator):
         switch_node.select = True
         
         self.report({'INFO'}, rpt_("已创建 {count} 个物体节点并连接到切换节点").format(count=len(obj_nodes)))
+        return {'FINISHED'}
+
+
+class SSMT_OT_RefreshBlueprintSubmeshList(bpy.types.Operator):
+    bl_idname = "ssmt.refresh_blueprint_submesh_list"
+    bl_label = "刷新 Submesh 列表"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        node_tree = BlueprintExportHelper.get_current_blueprint_tree(context=context)
+        if not node_tree:
+            self.report({'WARNING'}, rpt_("未找到有效的蓝图树，请先打开蓝图编辑器"))
+            return {'CANCELLED'}
+
+        submesh_names = BlueprintExportHelper.refresh_tree_submesh_list(tree=node_tree)
+        self.report({'INFO'}, rpt_("已刷新当前蓝图的 Submesh 列表，共 {count} 项").format(count=len(submesh_names)))
+        return {'FINISHED'}
+
+
+class SSMT_OT_BatchSetSelectedObjectNodeSubmesh(bpy.types.Operator):
+    bl_idname = "ssmt.batch_set_selected_object_node_submesh"
+    bl_label = "批量设为指定Submesh"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def _get_node_tree(self, context):
+        space_data = getattr(context, "space_data", None)
+        if space_data and getattr(space_data, "type", None) == 'NODE_EDITOR':
+            node_tree = getattr(space_data, "edit_tree", None) or getattr(space_data, "node_tree", None)
+            if node_tree and getattr(node_tree, "bl_idname", "") == 'SSMTBlueprintTreeType':
+                return node_tree
+        return BlueprintExportHelper.get_current_blueprint_tree(context=context)
+
+    def invoke(self, context, event):
+        node_tree = self._get_node_tree(context)
+        if not node_tree:
+            self.report({'WARNING'}, rpt_("未找到有效的蓝图树，请先打开蓝图编辑器"))
+            return {'CANCELLED'}
+
+        BlueprintExportHelper.set_runtime_blueprint_tree(node_tree)
+        submesh_names = BlueprintExportHelper.get_tree_submesh_names(tree=node_tree)
+        if not submesh_names:
+            self.report({'WARNING'}, rpt_("当前蓝图没有可用的 Submesh 列表，请先刷新 Submesh 列表"))
+            return {'CANCELLED'}
+
+        def draw_submesh_popup(menu, popup_context):
+            layout = menu.layout
+            for submesh_name in submesh_names:
+                op = layout.operator(
+                    "ssmt.apply_selected_object_node_submesh",
+                    text=submesh_name,
+                    icon='OUTLINER_COLLECTION',
+                )
+                op.target_submesh = submesh_name
+
+        context.window_manager.popup_menu(
+            draw_submesh_popup,
+            title=iface_("目标 Submesh"),
+            icon='OUTLINER_COLLECTION',
+        )
+        return {'FINISHED'}
+
+    def execute(self, context):
+        return self.invoke(context, None)
+
+
+class SSMT_OT_ApplySelectedObjectNodeSubmesh(bpy.types.Operator):
+    bl_idname = "ssmt.apply_selected_object_node_submesh"
+    bl_label = "设为指定Submesh"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    target_submesh: bpy.props.StringProperty(name="Submesh", default="") # type: ignore
+
+    def _get_node_tree(self, context):
+        space_data = getattr(context, "space_data", None)
+        if space_data and getattr(space_data, "type", None) == 'NODE_EDITOR':
+            node_tree = getattr(space_data, "edit_tree", None) or getattr(space_data, "node_tree", None)
+            if node_tree and getattr(node_tree, "bl_idname", "") == 'SSMTBlueprintTreeType':
+                return node_tree
+        return BlueprintExportHelper.get_current_blueprint_tree(context=context)
+
+    def execute(self, context):
+        node_tree = self._get_node_tree(context)
+        if not node_tree:
+            self.report({'WARNING'}, rpt_("未找到有效的蓝图树，请先打开蓝图编辑器"))
+            return {'CANCELLED'}
+
+        target_submesh = str(self.target_submesh or "").strip()
+
+        if not target_submesh:
+            self.report({'WARNING'}, rpt_("请选择一个有效的 Submesh"))
+            return {'CANCELLED'}
+
+        updated_count = 0
+        for node in node_tree.nodes:
+            if not node.select or getattr(node, "bl_idname", "") != 'SSMTNode_Object_Info':
+                continue
+            node.submesh_name = target_submesh
+            updated_count += 1
+
+        if updated_count == 0:
+            self.report({'WARNING'}, rpt_("当前未选中任何物体节点"))
+            return {'CANCELLED'}
+
+        self.report({'INFO'}, rpt_("已将 {count} 个物体节点设为 Submesh: {submesh}").format(count=updated_count, submesh=target_submesh))
         return {'FINISHED'}
 
 
@@ -692,6 +797,8 @@ def draw_node_context_menu(self, context):
     layout.separator()
     layout.operator("ssmt.align_nodes", text=iface_("矩阵对齐节点"), icon='GRID')
     layout.operator("ssmt.batch_connect_nodes", text=iface_("批量连接节点"), icon='LINKED')
+    layout.operator("ssmt.refresh_blueprint_submesh_list", text=iface_("刷新 Submesh 列表"), icon='FILE_REFRESH')
+    layout.operator("ssmt.batch_set_selected_object_node_submesh", text=iface_("批量设为指定Submesh"), icon='OUTLINER_COLLECTION')
     layout.separator()
     layout.operator("ssmt.refresh_node_object_ids", text=iface_("刷新物体节点信息"), icon='FILE_REFRESH')
 
@@ -699,6 +806,9 @@ def draw_node_context_menu(self, context):
 def register():
     bpy.utils.register_class(SSMT_OT_CreateGroupFromSelection)
     bpy.utils.register_class(SSMT_OT_CreateInternalSwitch)
+    bpy.utils.register_class(SSMT_OT_RefreshBlueprintSubmeshList)
+    bpy.utils.register_class(SSMT_OT_BatchSetSelectedObjectNodeSubmesh)
+    bpy.utils.register_class(SSMT_OT_ApplySelectedObjectNodeSubmesh)
     bpy.utils.register_class(SSMT_OT_AlignNodes)
     bpy.utils.register_class(SSMT_OT_BatchConnectNodes)
     bpy.utils.register_class(SSMT_MT_ObjectContextMenuSub)
@@ -721,5 +831,8 @@ def unregister():
     bpy.utils.unregister_class(SSMT_MT_ObjectContextMenuSub)
     bpy.utils.unregister_class(SSMT_OT_BatchConnectNodes)
     bpy.utils.unregister_class(SSMT_OT_AlignNodes)
+    bpy.utils.unregister_class(SSMT_OT_ApplySelectedObjectNodeSubmesh)
+    bpy.utils.unregister_class(SSMT_OT_BatchSetSelectedObjectNodeSubmesh)
+    bpy.utils.unregister_class(SSMT_OT_RefreshBlueprintSubmeshList)
     bpy.utils.unregister_class(SSMT_OT_CreateInternalSwitch)
     bpy.utils.unregister_class(SSMT_OT_CreateGroupFromSelection)

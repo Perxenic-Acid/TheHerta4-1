@@ -4,13 +4,17 @@
 方便阅读理解
 '''
 import bpy
-from bpy.types import NodeTree, Node, NodeSocket
+from bpy.types import NodeTree, Node, NodeSocket, PropertyGroup
 
 from ..common.global_config import GlobalConfig
 
 
 
 # Custom Socket Types
+class SSMTSubmeshListItem(PropertyGroup):
+    name: bpy.props.StringProperty(name="Submesh", default="") # type: ignore
+
+
 class SSMTSocketObject(NodeSocket):
     '''Custom Socket for Object Data'''
     bl_idname = 'SSMTSocketObject'
@@ -145,14 +149,18 @@ class THEHERTA3_OT_OpenPersistentBlueprint(bpy.types.Operator):
         return {'FINISHED'}
     
 def register():
+    bpy.utils.register_class(SSMTSubmeshListItem)
     bpy.utils.register_class(SSMTBlueprintTree)
     bpy.utils.register_class(SSMTSocketObject)
     bpy.utils.register_class(THEHERTA3_OT_OpenPersistentBlueprint)
+    SSMTBlueprintTree.ssmt_submesh_items = bpy.props.CollectionProperty(type=SSMTSubmeshListItem) # type: ignore[attr-defined]
 
 
 def unregister():
+    del SSMTBlueprintTree.ssmt_submesh_items
     bpy.utils.unregister_class(SSMTSocketObject)
     bpy.utils.unregister_class(THEHERTA3_OT_OpenPersistentBlueprint)
     bpy.utils.unregister_class(SSMTBlueprintTree)
+    bpy.utils.unregister_class(SSMTSubmeshListItem)
 
 
