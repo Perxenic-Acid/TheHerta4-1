@@ -1,8 +1,10 @@
 import bpy
-from bpy.app.translations import pgettext_iface as iface_
-from bpy.app.translations import pgettext_rpt as rpt_
-from bpy.app.translations import pgettext_tip as tip_
-from bpy.app.translations import contexts as i18n_contexts
+from bpy.app import translations as bpy_translations
+
+iface_ = bpy_translations.pgettext_iface
+tip_ = bpy_translations.pgettext_tip
+rpt_ = getattr(bpy_translations, "pgettext_rpt", tip_)
+i18n_contexts = bpy_translations.contexts
 
 
 _TRANSLATIONS_ZH_TO_EN_BASE = {
