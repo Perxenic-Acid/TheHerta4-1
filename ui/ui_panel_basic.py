@@ -5,9 +5,11 @@ import bpy
 
 from ..common.global_config import GlobalConfig
 from ..common.logic_name import LogicName
+from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
 from ..utils.translate_utils import iface_
 
+from .ui_func_export import SSMTGenerateSelectedBlueprintMod
 from .ui_func_import_ssmt import SSMT4ImportAllFromCurrentWorkSpaceBlueprint, SSMT4ImportRaw
 
 
@@ -24,14 +26,24 @@ class PanelBasicInformation(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
+        global_properties = context.scene.global_properties
         
         GlobalConfig.read_from_main_json_ssmt4()
+
+        preferred_blueprint_name = BlueprintExportHelper.get_preferred_blueprint_name(
+            selected_name=getattr(global_properties, "selected_blueprint_name", ""),
+            context=context,
+        )
+        if preferred_blueprint_name and global_properties.selected_blueprint_name != preferred_blueprint_name:
+            global_properties.selected_blueprint_name = preferred_blueprint_name
+        elif not preferred_blueprint_name and global_properties.selected_blueprint_name != "__NONE__":
+            global_properties.selected_blueprint_name = "__NONE__"
 
         layout.label(text=iface_("SSMT缓存文件夹路径: ") + GlobalConfig.ssmtlocation)
         layout.label(text=iface_("当前配置名称: ") + GlobalConfig.gamename)
         layout.label(text=iface_("当前游戏预设: ") + GlobalConfig.logic_name)
         layout.label(text=iface_("当前工作空间: ") + GlobalConfig.workspacename)
-        layout.prop(context.scene.global_properties,"use_mirror_workflow")
+        layout.prop(global_properties,"use_mirror_workflow")
         
         if len(context.selected_objects) != 0:
             obj = context.selected_objects[0]
@@ -44,19 +56,30 @@ class PanelBasicInformation(bpy.types.Panel):
             layout.label(text=iface_("游戏类型: ") + gametypename)
             layout.label(text=iface_("重计算TANGENT: ") + str(recalculate_tangent))
             layout.label(text=iface_("重计算COLOR: ") + str(recalculate_color))
-            
-        # SSMT蓝图
-        layout.operator("theherta3.open_persistent_blueprint", icon='NODETREE')
+
+        # 手动导入SSMT格式模型
         layout.operator(SSMT4ImportRaw.bl_idname,icon='IMPORT')
+        # 一键导入当前SSMT工作空间内容
         layout.operator(SSMT4ImportAllFromCurrentWorkSpaceBlueprint.bl_idname,icon='IMPORT')
+        
+        # SSMT蓝图下拉列表
+        layout.prop(global_properties, "selected_blueprint_name", text=iface_("SSMT蓝图"))
+
+        open_blueprint_operator = layout.operator("theherta3.open_persistent_blueprint", icon='NODETREE')
+        open_blueprint_operator.blueprint_name = preferred_blueprint_name
+
+        # 快速生成Mod按钮，省的去蓝图里点击了
+        quick_generate_row = layout.row()
+        quick_generate_row.operator(SSMTGenerateSelectedBlueprintMod.bl_idname, text=iface_("生成Mod"), icon='EXPORT')
+
 
 
         if GlobalConfig.logic_name == LogicName.WWMI:
-            layout.prop(context.scene.global_properties,"import_merged_vgmap")
-            layout.prop(context.scene.global_properties,"import_skip_empty_vertex_groups")
+            layout.prop(global_properties,"import_merged_vgmap")
+            layout.prop(global_properties,"import_skip_empty_vertex_groups")
 
         # 决定导入时是否调用法线贴图
-        layout.prop(context.scene.global_properties, "use_normal_map")
+        layout.prop(global_properties, "use_normal_map")
 
 
 

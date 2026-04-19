@@ -1,7 +1,30 @@
 import bpy
 
 
+_blueprint_enum_items_cache = []
+
+
+def _get_blueprint_enum_items(self, context):
+    global _blueprint_enum_items_cache
+
+    try:
+        from ..blueprint.blueprint_export_helper import BlueprintExportHelper
+        _blueprint_enum_items_cache = BlueprintExportHelper.get_blueprint_enum_items(context=context)
+    except Exception:
+        _blueprint_enum_items_cache = [
+            ("__NONE__", "当前没有蓝图", "当前没有可选蓝图，请先打开蓝图界面或执行一键导入"),
+        ]
+
+    return _blueprint_enum_items_cache
+
+
 class GlobalProterties(bpy.types.PropertyGroup):
+    selected_blueprint_name: bpy.props.EnumProperty(
+        name="当前蓝图",
+        description="选择要打开或快捷生成 Mod 的蓝图",
+        items=_get_blueprint_enum_items,
+    ) # type: ignore
+
     open_mod_folder_after_generate_mod: bpy.props.BoolProperty(
         name="生成后打开Mod文件夹",
         description="勾选后，在生成Mod完成后自动打开Mod文件夹",
@@ -178,6 +201,10 @@ class GlobalProterties(bpy.types.PropertyGroup):
     @classmethod
     def export_add_missing_vertex_groups(cls):
         return cls._instance().export_add_missing_vertex_groups
+
+    @classmethod
+    def selected_blueprint_name(cls):
+        return cls._instance().selected_blueprint_name
 
 
 def register():

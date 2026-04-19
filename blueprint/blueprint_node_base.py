@@ -77,18 +77,39 @@ class THEHERTA3_OT_OpenPersistentBlueprint(bpy.types.Operator):
     bl_idname = "theherta3.open_persistent_blueprint"
     bl_label = "打开蓝图界面"
     bl_description = "打开一个独立的蓝图窗口，用于配置Mod逻辑"
+
+    blueprint_name: bpy.props.StringProperty(
+        name="Blueprint Name",
+        default="",
+        options={'SKIP_SAVE'},
+    ) # type: ignore
     
     def execute(self, context):
         # 1. 获取或创建蓝图树
         GlobalConfig.read_from_main_json_ssmt4()
-        tree_name = GlobalConfig.workspacename
+        requested_tree_name = str(self.blueprint_name or "").strip()
+        tree_name = requested_tree_name or GlobalConfig.workspacename
         
         # 查找是否存在同名的 NodeGroup
         tree = bpy.data.node_groups.get(tree_name)
+        if tree and getattr(tree, "bl_idname", "") != 'SSMTBlueprintTreeType':
+            tree = None
+
+        if not tree and requested_tree_name:
+            from .blueprint_export_helper import BlueprintExportHelper
+            tree = BlueprintExportHelper.get_selected_blueprint_tree(requested_tree_name, context=context)
+
         if not tree:
             # 创建新的 NodeTree，类型必须是我们定义的 bl_idname
             tree = bpy.data.node_groups.new(name=tree_name, type='SSMTBlueprintTreeType')
             tree.use_fake_user = True
+
+        from .blueprint_export_helper import BlueprintExportHelper
+        BlueprintExportHelper.set_runtime_blueprint_tree(tree)
+
+        global_properties = getattr(getattr(context, "scene", None), "global_properties", None)
+        if global_properties and getattr(global_properties, "selected_blueprint_name", "") != tree.name:
+            global_properties.selected_blueprint_name = tree.name
         
         # 1.5 检查是否存在已开启的窗口
         # Blender API 无法直接控制 OS 窗口置顶。为了实现"如果存在则置顶"的效果，

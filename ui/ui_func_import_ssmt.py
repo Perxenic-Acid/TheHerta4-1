@@ -197,6 +197,12 @@ def ImprotFromWorkSpaceFull(self, context):
         if hasattr(group_node, "update"):
              group_node.update()
 
+        BlueprintExportHelper.set_runtime_blueprint_tree(tree)
+
+        global_properties = getattr(getattr(context, "scene", None), "global_properties", None)
+        if global_properties:
+            global_properties.selected_blueprint_name = tree.name
+
         print(f"Blueprint {tree_name} updated with imported objects.")
         
     except Exception as e:
