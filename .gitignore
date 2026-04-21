@@ -4,3 +4,4 @@ herta-blender_updater/
 theherta4_updater/
 test/
 references/
+.venv/
