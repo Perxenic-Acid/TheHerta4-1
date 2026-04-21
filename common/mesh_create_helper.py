@@ -497,10 +497,10 @@ class MeshCreateHelper:
             rgb_curve.inputs['Fac'].default_value = 1.0
         if hasattr(rgb_curve, 'mapping'):
             rgb_curve.mapping.initialize()
-            green_curve = rgb_curve.mapping.curves[2]
+            green_curve = rgb_curve.mapping.curves[1]
             if len(green_curve.points) >= 2:
-                green_curve.points[0].location = (0.0, 0.0)
-                green_curve.points[1].location = (1.0, 1.0)
+                green_curve.points[0].location = (0.0, 1.0)
+                green_curve.points[1].location = (1.0, 0.0)
             rgb_curve.mapping.update()
 
         norm_map = node_tree.nodes.new('ShaderNodeNormalMap')
