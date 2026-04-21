@@ -64,5 +64,10 @@ class MeshImportHelper:
         return MeshCreateHelper.import_shapekeys(mesh=mesh, obj=obj, shapekeys=shapekeys)
 
     @staticmethod
-    def create_bsdf_with_diffuse_linked(obj, mesh_name:str, directory:str):
-        return MeshCreateHelper.create_bsdf_with_diffuse_linked(obj=obj, mesh_name=mesh_name, directory=directory)
+    def create_bsdf_with_diffuse_linked(obj, mesh_name:str, directory:str, logic_name:str | None = None):
+        return MeshCreateHelper.create_bsdf_with_diffuse_linked(
+            obj=obj,
+            mesh_name=mesh_name,
+            directory=directory,
+            logic_name=logic_name,
+        )
