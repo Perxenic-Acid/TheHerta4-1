@@ -9,6 +9,10 @@ SSMT4的Blender插件
 - https://github.com/xuhuan9102/TheHerta3
 - https://github.com/xuhuan9102/TheHerta4
 
+# Support Development:
+
+<a href="https://afdian.com/a/NicoMico666"><img width="200" src="https://pic1.afdiancdn.com/static/img/welcome/button-sponsorme.png" alt=""></a>
+
 # 说明
 
 TheHerta3中的蓝图架构设计与导出流程高度耦合导致无法轻易修改和测试SSMT4中全新的全量提取设计
