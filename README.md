@@ -15,8 +15,8 @@ SSMT4的Blender插件
 此TheHerta4本体仓库仅负责实现基础的导入导出功能，复杂的蓝图节点在fork版本中进行开发
 你可以使用希尔维护的TheHerta版本以体验完整特性：
 
-- https://github.com/xuhuan9102/TheHerta3
-- https://github.com/xuhuan9102/TheHerta4
+- https://github.com/xuhuan9102/TheHerta3 ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/xuhuan9102/TheHerta3/latest/total?color=blue&label=最新版本下载量)
+- https://github.com/xuhuan9102/TheHerta4 ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/xuhuan9102/TheHerta4/latest/total?color=blue&label=最新版本下载量)
 
 如果需要在此仓库内容基础上进行大规模功能扩展，请Fork一份在自己的仓库中开发和发布，不要提交回此主仓库
 
