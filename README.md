@@ -1,5 +1,5 @@
 
-# TheHerta4
+# TheHerta4 ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?color=blue&label=下载量)
 
 SSMT4的Blender插件
 
