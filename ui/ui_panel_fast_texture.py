@@ -23,6 +23,20 @@ from ..utils.collection_utils import CollectionUtils,CollectionColor
 # 存储预览图集合
 fast_preview_collections = {}
 
+
+def get_workspace_preview_texture_folder():
+    GlobalConfig.read_from_main_json_ssmt4()
+
+    workspace_folder_path = GlobalConfig.path_workspace_folder()
+    use_jpg_folder = bpy.app.version <= (4, 2, 0)
+    folder_name = "DedupedTextures_jpg" if use_jpg_folder else "DedupedTextures"
+    preview_folder_path = os.path.join(workspace_folder_path, folder_name + "\\")
+
+    if os.path.exists(preview_folder_path):
+        return preview_folder_path, folder_name
+
+    return "", folder_name
+
 # 定义图片列表项
 class SSMT_ImportTexture_ImageListItem(PropertyGroup):
     name: StringProperty(name="图片名称") # type: ignore
@@ -56,25 +70,10 @@ class SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
     bl_label = "读取DedupedTextures"
     
     def execute(self, context):
-        selected_objects = context.selected_objects
-        if not selected_objects:
-            self.report({'ERROR'}, rpt_("没有选中的对象！"))
-            return {'CANCELLED'}
-        
-        # 获取第一个选中的对象
-        obj = selected_objects[0]
-        obj_name = obj.name 
-        
-        # 构建路径
-        selected_drawib_folder_path = os.path.join(GlobalConfig.path_workspace_folder(),  obj_name.split("-")[0] + "\\"  )
-        
-        deduped_textures_folder_path = os.path.join(selected_drawib_folder_path, "DedupedTextures\\")
+        deduped_textures_folder_path, folder_name = get_workspace_preview_texture_folder()
 
-        deduped_textures_exists = os.path.exists(deduped_textures_folder_path)
-
-        # 检查路径是否存在
-        if not deduped_textures_exists:
-            self.report({'ERROR'}, rpt_("未找到当前DrawIB: {draw_ib}的DedupedTextures转换后的贴图文件夹，请确保此IB在当前工作空间中已经正常提取出来了").format(draw_ib=obj_name.split("-")[0]))
+        if not deduped_textures_folder_path:
+            self.report({'ERROR'}, f"未找到当前工作空间下的 {folder_name} 文件夹")
             return {'CANCELLED'}
         
         # 清空之前的列表和预览
@@ -83,7 +82,7 @@ class SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
         pcoll.clear()
         
         # 支持的图片格式
-        image_extensions = ('.dds')
+        image_extensions = ('.dds', '.jpg', '.jpeg', '.png', '.tga', '.bmp', '.tiff', '.exr', '.hdr')
         
         # 遍历文件夹，收集图片文件
         image_count = 0
@@ -102,92 +101,7 @@ class SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
                     except Exception as e:
                         print(f"Could not load preview for {filename}: {e}")
 
-        return {'FINISHED'}
-
-
-
-class SSMT_FastTexture_ComponentOnly(Operator):
-    bl_idname = "ssmt.fast_texture_component_only"
-    bl_label = "读取当前Component专属贴图"
-    
-    def execute(self, context):
-        selected_objects = context.selected_objects
-        if not selected_objects:
-            self.report({'ERROR'}, rpt_("没有选中的对象！"))
-            return {'CANCELLED'}
-        
-        # 获取第一个选中的对象
-        obj = selected_objects[0]
-        obj_name = obj.name
-
-        obj_name_splits = obj_name.split("-")
-        if len(obj_name_splits) < 3:
-            self.report({'ERROR'}, rpt_("您当前选中的物体命名不符合SSMT模型制作规范: DrawIB-Component数-自定义名称，无法自动识别可用的贴图列表"))
-            return {'CANCELLED'}
-
-        draw_ib = obj_name_splits[0]
-        component_index = obj_name_splits[1]
-
-        # 构建路径
-        selected_drawib_folder_path = os.path.join(GlobalConfig.path_workspace_folder(),  draw_ib + "\\"  )
-        deduped_textures_folder_path = os.path.join(selected_drawib_folder_path, "DedupedTextures\\")
-
-        deduped_textures_exists = os.path.exists(deduped_textures_folder_path)
-        # 检查路径是否存在
-        if not deduped_textures_exists:
-            self.report({'ERROR'}, rpt_("未找到当前DrawIB: {draw_ib}的DedupedTextures转换后的贴图文件夹，请确保此IB在当前工作空间中已经正常提取出来了").format(draw_ib=obj_name.split("-")[0]))
-            return {'CANCELLED'}
-        
-        # 现在，读取ComponentName_DrawCallIndexList.json以及TrianglelistDedupedFileName.json
-        # 来共同确定当前Component可以选择的DedupedTextures贴图有哪些，这样就缩小了范围
-        # 如果不缩小范围的话，以WWMI为例，每一个Component用到的贴图是不同的，如果只是在DedupedTextures中进行寻找
-        # 就会有很多其它的贴图干扰项，大海捞针了。
-        component_name__drawcall_indexlist_json_path = os.path.join(selected_drawib_folder_path,"ComponentName_DrawCallIndexList.json")
-        trianglelist_deduped_filename_json_path = os.path.join(selected_drawib_folder_path,"TrianglelistDedupedFileName.json")
-
-        component_name__drawcall_indexlist_json_dict = JsonUtils.LoadFromFile(component_name__drawcall_indexlist_json_path)
-        trianglelist_deduped_filename_json_dict = JsonUtils.LoadFromFile(trianglelist_deduped_filename_json_path)
-
-        drawcall_list = component_name__drawcall_indexlist_json_dict["Component " + component_index]
-        print(drawcall_list)
-        
-        trianglelist_texture_filename_list:list[str] = trianglelist_deduped_filename_json_dict.keys()
-
-        available_deduped_texture_filename_set = set()
-        for trianglelist_texture_filename in trianglelist_texture_filename_list:
-            for drawcall in drawcall_list:
-                if trianglelist_texture_filename.startswith(drawcall):
-                    deduped_texture_filename = trianglelist_deduped_filename_json_dict[trianglelist_texture_filename]["FALogDedupedFileName"]
-                    available_deduped_texture_filename_set.add(deduped_texture_filename)
-
-        for available_deduped_texture_filename in available_deduped_texture_filename_set:
-            print(available_deduped_texture_filename)
-
-        
-        # 清空之前的列表和预览
-        bpy.context.scene.image_list.clear()
-        pcoll = fast_preview_collections["main"]
-        pcoll.clear()
-        
-        # 支持的图片格式
-        image_extensions = ('.dds')
-        
-        # 遍历文件夹，收集图片文件
-        image_count = 0
-        for filename in os.listdir(deduped_textures_folder_path):
-            if filename.lower().endswith(image_extensions):
-                full_path = os.path.join(deduped_textures_folder_path, filename)
-                if os.path.isfile(full_path) and filename in available_deduped_texture_filename_set:
-                    item = bpy.context.scene.image_list.add()
-                    item.name = filename
-                    item.filepath = full_path
-                    
-                    # 加载预览图
-                    try:
-                        thumb = pcoll.load(filename, full_path, 'IMAGE')
-                        image_count += 1
-                    except Exception as e:
-                        print(f"Could not load preview for {filename}: {e}")
+        self.report({'INFO'}, f"已从当前工作空间的 {folder_name} 文件夹加载 {image_count} 张图片。")
 
         return {'FINISHED'}
     
@@ -297,7 +211,6 @@ class SSMT_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
         row = layout.row()
 
         row.operator("ssmt.auto_detect_texture_folder")
-        layout.operator("ssmt.fast_texture_component_only")
         
         # 显示图片数量信息
         if scene.image_list:
@@ -344,7 +257,6 @@ def register():
     bpy.utils.register_class(SSMT_UL_FastImportTextureList)
     bpy.utils.register_class(SSMT_ImportTexture_WM_OT_ApplyImageToMaterial)
     bpy.utils.register_class(SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder)
-    bpy.utils.register_class(SSMT_FastTexture_ComponentOnly)
     bpy.utils.register_class(SSMT_ImportTexture_VIEW3D_PT_ImageMaterialPanel)
 
     bpy.types.Scene.image_list = CollectionProperty(type=SSMT_ImportTexture_ImageListItem)
@@ -366,7 +278,6 @@ def unregister():
     fast_preview_collections.clear()
 
     bpy.utils.unregister_class(SSMT_ImportTexture_VIEW3D_PT_ImageMaterialPanel)
-    bpy.utils.unregister_class(SSMT_FastTexture_ComponentOnly)
     bpy.utils.unregister_class(SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder)
     bpy.utils.unregister_class(SSMT_ImportTexture_WM_OT_ApplyImageToMaterial)
     bpy.utils.unregister_class(SSMT_UL_FastImportTextureList)
