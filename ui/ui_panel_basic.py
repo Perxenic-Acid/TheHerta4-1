@@ -63,9 +63,28 @@ class PanelBasicInformation(bpy.types.Panel):
         layout.operator(SSMT4ImportAllFromCurrentWorkSpaceBlueprint.bl_idname,icon='IMPORT')
         
         # SSMT蓝图下拉列表
-        layout.prop(global_properties, "selected_blueprint_name", text=iface_("SSMT蓝图"))
+        blueprint_row = layout.row(align=True)
+        blueprint_row.prop(global_properties, "selected_blueprint_name", text=iface_("SSMT蓝图"))
 
-        open_blueprint_operator = layout.operator("theherta3.open_persistent_blueprint", icon='NODETREE')
+        rename_blueprint_operator = blueprint_row.operator(
+            "theherta3.rename_persistent_blueprint",
+            text="",
+            icon='GREASEPENCIL',
+        )
+        rename_blueprint_operator.blueprint_name = preferred_blueprint_name or global_properties.selected_blueprint_name
+
+        delete_blueprint_operator = blueprint_row.operator(
+            "theherta3.delete_persistent_blueprint",
+            text="",
+            icon='TRASH',
+        )
+        delete_blueprint_operator.blueprint_name = preferred_blueprint_name or global_properties.selected_blueprint_name
+
+        open_blueprint_operator = blueprint_row.operator(
+            "theherta3.open_persistent_blueprint",
+            text="",
+            icon='NODETREE',
+        )
         open_blueprint_operator.blueprint_name = preferred_blueprint_name
 
         # 快速生成Mod按钮，省的去蓝图里点击了

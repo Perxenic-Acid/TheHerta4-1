@@ -159,6 +159,8 @@ class MeshCreateHelper:
                 pass
             elif element.SemanticName == "BINORMAL":
                 pass
+            elif element.SemanticName == "BITANGENT":
+                pass
             else:
                 raise Fatal("Unknown ElementName: " + element.ElementName)
             

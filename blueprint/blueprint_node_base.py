@@ -168,17 +168,179 @@ class THEHERTA3_OT_OpenPersistentBlueprint(bpy.types.Operator):
                         # 尝试调整视图 (可选)
                         
         return {'FINISHED'}
+
+
+class THEHERTA3_OT_DeletePersistentBlueprint(bpy.types.Operator):
+    bl_idname = "theherta3.delete_persistent_blueprint"
+    bl_label = "删除蓝图"
+    bl_description = "删除当前选中的蓝图"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    blueprint_name: bpy.props.StringProperty(
+        name="Blueprint Name",
+        default="",
+        options={'SKIP_SAVE'},
+    ) # type: ignore
+
+    def _get_target_tree(self, context):
+        from .blueprint_export_helper import BlueprintExportHelper
+
+        requested_tree_name = str(self.blueprint_name or "").strip()
+        if requested_tree_name == "__NONE__":
+            return None
+
+        return BlueprintExportHelper.get_selected_blueprint_tree(requested_tree_name, context=context)
+
+    def invoke(self, context, event):
+        target_tree = self._get_target_tree(context)
+        if not target_tree:
+            self.report({'WARNING'}, "当前没有蓝图可删除！")
+            return {'CANCELLED'}
+
+        self.blueprint_name = target_tree.name
+        return context.window_manager.invoke_props_dialog(self, width=360)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="确认删除当前选中的蓝图吗？", icon='TRASH')
+        layout.label(text=self.blueprint_name)
+        layout.label(text="删除后无法恢复，请确认不是误操作。", icon='ERROR')
+
+    def execute(self, context):
+        from .blueprint_export_helper import BlueprintExportHelper
+
+        target_tree = self._get_target_tree(context)
+        if not target_tree:
+            self.report({'WARNING'}, "当前没有蓝图可删除！")
+            return {'CANCELLED'}
+
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type != 'NODE_EDITOR':
+                    continue
+                for space in area.spaces:
+                    if space.type != 'NODE_EDITOR':
+                        continue
+                    if getattr(space, "node_tree", None) == target_tree:
+                        space.node_tree = None
+
+        if BlueprintExportHelper.runtime_blueprint_tree_name == target_tree.name:
+            BlueprintExportHelper.runtime_blueprint_tree_name = ""
+
+        deleted_blueprint_name = target_tree.name
+        bpy.data.node_groups.remove(target_tree)
+
+        global_properties = getattr(getattr(context, "scene", None), "global_properties", None)
+        preferred_blueprint_name = BlueprintExportHelper.get_preferred_blueprint_name(context=context)
+        if global_properties:
+            global_properties.selected_blueprint_name = preferred_blueprint_name or "__NONE__"
+
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                area.tag_redraw()
+
+        self.report({'INFO'}, "已删除蓝图: " + deleted_blueprint_name)
+        return {'FINISHED'}
+
+
+class THEHERTA3_OT_RenamePersistentBlueprint(bpy.types.Operator):
+    bl_idname = "theherta3.rename_persistent_blueprint"
+    bl_label = "重命名蓝图"
+    bl_description = "重命名当前选中的蓝图"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    blueprint_name: bpy.props.StringProperty(
+        name="Blueprint Name",
+        default="",
+        options={'SKIP_SAVE'},
+    ) # type: ignore
+
+    new_blueprint_name: bpy.props.StringProperty(
+        name="新蓝图名称",
+        default="",
+    ) # type: ignore
+
+    def _get_target_tree(self, context):
+        from .blueprint_export_helper import BlueprintExportHelper
+
+        requested_tree_name = str(self.blueprint_name or "").strip()
+        if requested_tree_name == "__NONE__":
+            return None
+
+        return BlueprintExportHelper.get_selected_blueprint_tree(requested_tree_name, context=context)
+
+    def invoke(self, context, event):
+        target_tree = self._get_target_tree(context)
+        if not target_tree:
+            self.report({'WARNING'}, "当前没有蓝图可重命名！")
+            return {'CANCELLED'}
+
+        self.blueprint_name = target_tree.name
+        self.new_blueprint_name = target_tree.name
+        return context.window_manager.invoke_props_dialog(self, width=360)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="请输入新的蓝图名称", icon='GREASEPENCIL')
+        layout.prop(self, "new_blueprint_name", text="名称")
+
+    def execute(self, context):
+        from .blueprint_export_helper import BlueprintExportHelper
+
+        target_tree = self._get_target_tree(context)
+        if not target_tree:
+            self.report({'WARNING'}, "当前没有蓝图可重命名！")
+            return {'CANCELLED'}
+
+        new_name = str(self.new_blueprint_name or "").strip()
+        if not new_name:
+            self.report({'ERROR'}, "蓝图名称不能为空！")
+            return {'CANCELLED'}
+
+        if new_name == "__NONE__":
+            self.report({'ERROR'}, "蓝图名称不能使用保留值 __NONE__！")
+            return {'CANCELLED'}
+
+        if new_name == target_tree.name:
+            self.report({'INFO'}, "蓝图名称未发生变化")
+            return {'CANCELLED'}
+
+        existing_tree = bpy.data.node_groups.get(new_name)
+        if existing_tree and existing_tree != target_tree:
+            self.report({'ERROR'}, "已存在同名蓝图，请使用其他名称！")
+            return {'CANCELLED'}
+
+        old_name = target_tree.name
+        target_tree.name = new_name
+
+        if BlueprintExportHelper.runtime_blueprint_tree_name == old_name:
+            BlueprintExportHelper.runtime_blueprint_tree_name = target_tree.name
+
+        global_properties = getattr(getattr(context, "scene", None), "global_properties", None)
+        if global_properties:
+            global_properties.selected_blueprint_name = target_tree.name
+
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                area.tag_redraw()
+
+        self.report({'INFO'}, "已将蓝图重命名为: " + target_tree.name)
+        return {'FINISHED'}
     
 def register():
     bpy.utils.register_class(SSMTSubmeshListItem)
     bpy.utils.register_class(SSMTBlueprintTree)
     bpy.utils.register_class(SSMTSocketObject)
     bpy.utils.register_class(THEHERTA3_OT_OpenPersistentBlueprint)
+    bpy.utils.register_class(THEHERTA3_OT_DeletePersistentBlueprint)
+    bpy.utils.register_class(THEHERTA3_OT_RenamePersistentBlueprint)
     SSMTBlueprintTree.ssmt_submesh_items = bpy.props.CollectionProperty(type=SSMTSubmeshListItem) # type: ignore[attr-defined]
 
 
 def unregister():
     del SSMTBlueprintTree.ssmt_submesh_items
+    bpy.utils.unregister_class(THEHERTA3_OT_RenamePersistentBlueprint)
+    bpy.utils.unregister_class(THEHERTA3_OT_DeletePersistentBlueprint)
     bpy.utils.unregister_class(SSMTSocketObject)
     bpy.utils.unregister_class(THEHERTA3_OT_OpenPersistentBlueprint)
     bpy.utils.unregister_class(SSMTBlueprintTree)
