@@ -52,7 +52,7 @@ def ImprotFromWorkSpaceFull(self, context):
 
             try:
                 print("尝试导入路径: " + import_folder_path)
-                object_display_name = WorkSpaceHelper.get_object_display_name(
+                object_display_name = WorkSpaceHelper.get_display_submesh_name(
                     submesh_folder_name,
                     drawib_aliasname_dict=drawib_aliasname_dict,
                 )
