@@ -91,12 +91,32 @@ class GlobalConfig:
         return os.path.join(GlobalConfig.path_total_workspace_folder(),GlobalConfig.gamename + "\\") 
 
     @classmethod
+    def _normalize_workspace_folder_path(cls, folder_path: str) -> str:
+        normalized = str(folder_path or "").strip()
+        if not normalized:
+            return ""
+
+        normalized = os.path.normpath(normalized)
+        if not normalized.endswith("\\"):
+            normalized = normalized + "\\"
+        return normalized
+
+    @classmethod
     def get_workspace_name(cls):
         try:
-            if GlobalProterties.use_specific_workspace_name():
+            workspace_source_mode = GlobalProterties.workspace_source_mode()
+
+            if workspace_source_mode == "SPECIFIC":
                 specified_workspace_name = GlobalProterties.specific_workspace_name()
                 if specified_workspace_name:
                     return specified_workspace_name
+
+            if workspace_source_mode == "CUSTOM":
+                custom_workspace_folder_path = cls._normalize_workspace_folder_path(
+                    GlobalProterties.custom_workspace_folder_path()
+                )
+                if custom_workspace_folder_path:
+                    return os.path.basename(custom_workspace_folder_path.rstrip("\\/"))
         except Exception:
             pass
 
@@ -104,6 +124,17 @@ class GlobalConfig:
     
     @classmethod
     def path_workspace_folder(cls):
+        try:
+            if GlobalProterties.workspace_source_mode() == "CUSTOM":
+                custom_workspace_folder_path = cls._normalize_workspace_folder_path(
+                    GlobalProterties.custom_workspace_folder_path()
+                )
+                if custom_workspace_folder_path:
+                    return custom_workspace_folder_path
+                return ""
+        except Exception:
+            pass
+
         return os.path.join(GlobalConfig.path_current_game_total_workspace_folder(), cls.get_workspace_name() + "\\")
     
     @classmethod

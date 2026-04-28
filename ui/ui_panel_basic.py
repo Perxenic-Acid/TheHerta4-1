@@ -60,13 +60,15 @@ class PanelBasicInformation(bpy.types.Panel):
         layout.label(text=iface_("当前游戏预设: ") + GlobalConfig.logic_name)
         layout.label(text=iface_("当前工作空间: ") + GlobalConfig.get_workspace_name())
 
-        layout.prop(global_properties, "use_specific_workspace_name")
-        if global_properties.use_specific_workspace_name:
+        layout.prop(global_properties, "workspace_source_mode")
+        if global_properties.workspace_source_mode == "SPECIFIC":
             workspace_row = layout.row(align=True)
             workspace_row.prop(global_properties, "specific_workspace_name", text=iface_("指定工作空间"))
             workspace_row.operator(SSMT4RefreshWorkspaceList.bl_idname, text="", icon='FILE_REFRESH')
+        elif global_properties.workspace_source_mode == "CUSTOM":
+            layout.prop(global_properties, "custom_workspace_folder_path", text=iface_("自定义目录"))
 
-        layout.prop(global_properties,"use_mirror_workflow")
+        # layout.prop(global_properties,"use_mirror_workflow")
         
         if len(context.selected_objects) != 0:
             obj = context.selected_objects[0]

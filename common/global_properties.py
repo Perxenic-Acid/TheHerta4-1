@@ -101,16 +101,28 @@ class GlobalProterties(bpy.types.PropertyGroup):
         subtype='DIR_PATH',
     ) # type: ignore
 
-    use_specific_workspace_name: bpy.props.BoolProperty(
-        name="使用指定工作空间",
-        description="勾选后使用下拉列表中选中的工作空间，而不是自动同步的工作空间",
-        default=False,
+    workspace_source_mode: bpy.props.EnumProperty(
+        name="工作空间模式",
+        description="控制当前使用的工作空间来源",
+        items=[
+            ("SYNC", "同步SSMT侧选项", "使用 SSMT 配置文件中当前同步的工作空间"),
+            ("SPECIFIC", "使用指定的工作空间", "从当前游戏配置下的工作空间列表中手动选择"),
+            ("CUSTOM", "使用自定义目录", "直接使用你指定的工作空间目录"),
+        ],
+        default="SYNC",
     ) # type: ignore
 
     specific_workspace_name: bpy.props.EnumProperty(
         name="指定工作空间",
         description="当前游戏配置下可选的工作空间列表",
         items=_get_workspace_enum_items,
+    ) # type: ignore
+
+    custom_workspace_folder_path: bpy.props.StringProperty(
+        name="自定义工作空间目录",
+        description="手动指定工作空间目录路径",
+        default="",
+        subtype='DIR_PATH',
     ) # type: ignore
 
     use_mirror_workflow: bpy.props.BoolProperty(
@@ -212,12 +224,16 @@ class GlobalProterties(bpy.types.PropertyGroup):
         return cls._instance().use_mirror_workflow
 
     @classmethod
-    def use_specific_workspace_name(cls):
-        return cls._instance().use_specific_workspace_name
+    def workspace_source_mode(cls):
+        return cls._instance().workspace_source_mode
 
     @classmethod
     def specific_workspace_name(cls):
         return cls._instance().specific_workspace_name
+
+    @classmethod
+    def custom_workspace_folder_path(cls):
+        return cls._instance().custom_workspace_folder_path
 
     @classmethod
     def use_normal_map(cls):
