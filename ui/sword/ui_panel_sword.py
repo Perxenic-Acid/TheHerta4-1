@@ -357,9 +357,15 @@ class SwordImportAllReversed(bpy.types.Operator):
                 filename_with_extension = os.path.basename(fmt_filepath)
                 # 去掉后缀
                 filename_without_extension = os.path.splitext(filename_with_extension)[0]
-                # 调用导入功能
-                mbf = MigotoBinaryFile(fmt_path=fmt_filepath,mesh_name=filename_without_extension)
-                MeshImportHelper.create_mesh_obj_from_mbf(mbf=mbf,import_collection=datatype_collection)
+                try:
+                    # 调用导入功能
+                    mbf = MigotoBinaryFile(fmt_path=fmt_filepath, mesh_name=filename_without_extension)
+                    MeshImportHelper.create_mesh_obj_from_mbf(mbf=mbf, import_collection=datatype_collection)
+                except Exception as e:
+                    error_msg = f"导入失败，已跳过: {fmt_filepath} | 错误: {e}"
+                    print(error_msg)
+                    self.report({'WARNING'}, error_msg)
+                    continue
 
                 
                 # Nico: 注意，鸣潮Mod逆向的模型导入后，可能会出现法线不正确的问题
