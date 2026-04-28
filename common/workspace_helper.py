@@ -24,8 +24,20 @@ class WorkSpaceHelper:
             return ""
 
         drawib_aliasname_dict = drawib_aliasname_dict or WorkSpaceHelper.get_drawib_aliasname_dict()
-        draw_ib = normalized_folder_name.split("-")[0]
-        return str(drawib_aliasname_dict.get(draw_ib) or "自定义名称").strip()
+        folder_prefix, _, folder_alias = normalized_folder_name.partition(".")
+        draw_ib = folder_prefix.split("-")[0]
+
+        # 优先使用 Config.json 里显式配置的别名。
+        configured_alias = str(drawib_aliasname_dict.get(draw_ib, "")).strip()
+        if configured_alias:
+            return configured_alias
+
+        # 如果名称里已经带了别名后缀，则沿用它。
+        if folder_alias.strip():
+            return folder_alias.strip()
+
+        # 无别名时回退为原始对象名称，避免写入“自定义名称”。
+        return folder_prefix
 
     @staticmethod
     def get_display_submesh_name(submesh_folder_name: str, drawib_aliasname_dict: Dict[str, str] | None = None) -> str:
@@ -37,7 +49,11 @@ class WorkSpaceHelper:
             normalized_folder_name,
             drawib_aliasname_dict=drawib_aliasname_dict,
         )
-        return normalized_folder_name + "." + alias_name
+        if not alias_name or alias_name == normalized_folder_name:
+            return normalized_folder_name
+
+        name_prefix, _, _ = normalized_folder_name.partition(".")
+        return name_prefix + "." + alias_name
 
     @staticmethod
     def get_ordered_gpu_cpu_import_folderpath_list(submesh_folderpath:str)-> List[str]:
