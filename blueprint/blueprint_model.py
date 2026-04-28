@@ -141,6 +141,13 @@ class BluePrintModel:
 
 
         elif unknown_node.bl_idname == SSMTNode_Object_Info.bl_idname:
+            obj = bpy.data.objects.get(unknown_node.object_name)
+
+            # 解析蓝图时提前过滤空网格，避免后续导出阶段触发全部顶点组已被锁定错误。
+            if obj is None or obj.type != 'MESH' or obj.data is None or len(obj.data.vertices) == 0:
+                LOG.info("BluePrintModel: 跳过空网格或无效对象: " + str(unknown_node.object_name))
+                return
+
             obj_model = DrawCallModel(
                 obj_name=unknown_node.object_name,
                 submesh_name=getattr(unknown_node, 'submesh_name', ''),
