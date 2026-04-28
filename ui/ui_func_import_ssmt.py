@@ -95,7 +95,7 @@ def ImprotFromWorkSpaceFull(self, context):
     # ==========================
     try:
         # 创建蓝图，名称为当前工作空间名称
-        tree_name = GlobalConfig.workspacename
+        tree_name = GlobalConfig.get_workspace_name()
         
         # Nico: 为了防止覆盖用户修改过的蓝图，始终创建新蓝图
         # 如果已存在同名蓝图，Blender会自动添加.001等后缀，从而保留旧蓝图
@@ -219,9 +219,9 @@ class SSMT4ImportAllFromCurrentWorkSpaceBlueprint(bpy.types.Operator):
     bl_options = {'REGISTER','UNDO'}
 
     def execute(self, context):
-        # print("Current WorkSpace: " + GlobalConfig.workspacename)
+        # print("Current WorkSpace: " + GlobalConfig.get_workspace_name())
         # print("Current Game: " + GlobalConfig.gamename)
-        if GlobalConfig.workspacename == "":
+        if GlobalConfig.get_workspace_name() == "":
             self.report({"ERROR"}, rpt_("请先在SSMT中选择当前工作空间后再导入。"))
         elif not os.path.exists(GlobalConfig.path_workspace_folder()):
             self.report({"ERROR"}, rpt_("工作空间文件夹不存在，请先在SSMT中创建工作空间: {path}").format(path=GlobalConfig.path_workspace_folder()))

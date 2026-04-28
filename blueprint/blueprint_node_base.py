@@ -88,7 +88,7 @@ class THEHERTA3_OT_OpenPersistentBlueprint(bpy.types.Operator):
         # 1. 获取或创建蓝图树
         GlobalConfig.read_from_main_json_ssmt4()
         requested_tree_name = str(self.blueprint_name or "").strip()
-        tree_name = requested_tree_name or GlobalConfig.workspacename
+        tree_name = requested_tree_name or GlobalConfig.get_workspace_name()
         
         # 查找是否存在同名的 NodeGroup
         tree = bpy.data.node_groups.get(tree_name)

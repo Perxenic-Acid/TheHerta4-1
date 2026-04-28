@@ -58,7 +58,7 @@ class BlueprintExportHelper:
         if runtime_tree:
             return runtime_tree.name
 
-        workspace_tree = BlueprintExportHelper.get_blueprint_tree_by_name(GlobalConfig.workspacename)
+        workspace_tree = BlueprintExportHelper.get_blueprint_tree_by_name(GlobalConfig.get_workspace_name())
         if workspace_tree:
             return workspace_tree.name
 
@@ -129,7 +129,7 @@ class BlueprintExportHelper:
             if BlueprintExportHelper._is_valid_blueprint_tree(tree):
                 return tree
 
-        tree_name = GlobalConfig.workspacename
+        tree_name = GlobalConfig.get_workspace_name()
         if not tree_name:
             return None
         

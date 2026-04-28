@@ -13,6 +13,22 @@ from .ui_func_export import SSMTGenerateSelectedBlueprintMod
 from .ui_func_import_ssmt import SSMT4ImportAllFromCurrentWorkSpaceBlueprint, SSMT4ImportRaw
 
 
+class SSMT4RefreshWorkspaceList(bpy.types.Operator):
+    bl_idname = "ssmt4.refresh_workspace_list"
+    bl_label = "刷新工作空间列表"
+    bl_description = "刷新当前游戏配置下的工作空间列表"
+
+    def execute(self, context):
+        GlobalConfig.read_from_main_json_ssmt4()
+
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                area.tag_redraw()
+
+        self.report({'INFO'}, iface_("已刷新工作空间列表"))
+        return {'FINISHED'}
+
+
 class PanelBasicInformation(bpy.types.Panel):
     '''
     基础信息面板
@@ -42,7 +58,14 @@ class PanelBasicInformation(bpy.types.Panel):
         layout.label(text=iface_("SSMT缓存文件夹路径: ") + GlobalConfig.ssmtlocation)
         layout.label(text=iface_("当前配置名称: ") + GlobalConfig.gamename)
         layout.label(text=iface_("当前游戏预设: ") + GlobalConfig.logic_name)
-        layout.label(text=iface_("当前工作空间: ") + GlobalConfig.workspacename)
+        layout.label(text=iface_("当前工作空间: ") + GlobalConfig.get_workspace_name())
+
+        layout.prop(global_properties, "use_specific_workspace_name")
+        if global_properties.use_specific_workspace_name:
+            workspace_row = layout.row(align=True)
+            workspace_row.prop(global_properties, "specific_workspace_name", text=iface_("指定工作空间"))
+            workspace_row.operator(SSMT4RefreshWorkspaceList.bl_idname, text="", icon='FILE_REFRESH')
+
         layout.prop(global_properties,"use_mirror_workflow")
         
         if len(context.selected_objects) != 0:
@@ -104,7 +127,9 @@ class PanelBasicInformation(bpy.types.Panel):
 
 
 def register():
+    bpy.utils.register_class(SSMT4RefreshWorkspaceList)
     bpy.utils.register_class(PanelBasicInformation)
 
 def unregister():
+    bpy.utils.unregister_class(SSMT4RefreshWorkspaceList)
     bpy.utils.unregister_class(PanelBasicInformation)

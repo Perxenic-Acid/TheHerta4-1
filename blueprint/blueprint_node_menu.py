@@ -48,7 +48,7 @@ class SSMT_OT_CreateGroupFromSelection(bpy.types.Operator):
         # 3. 如果仍然找不到，使用默认的workspace蓝图
         if not node_tree:
             GlobalConfig.read_from_main_json_ssmt4()
-            workspace_name = f"{GlobalConfig.workspacename}" if GlobalConfig.workspacename else "SSMT_Mod_Logic"
+            workspace_name = f"{GlobalConfig.get_workspace_name()}" if GlobalConfig.get_workspace_name() else "SSMT_Mod_Logic"
             node_tree = bpy.data.node_groups.get(workspace_name)
         
         if not node_tree or node_tree.bl_idname != 'SSMTBlueprintTreeType':
@@ -153,7 +153,7 @@ class SSMT_OT_CreateInternalSwitch(bpy.types.Operator):
         # 3. 如果仍然找不到，使用默认的workspace蓝图
         if not node_tree:
             GlobalConfig.read_from_main_json_ssmt4()
-            workspace_name = f"{GlobalConfig.workspacename}" if GlobalConfig.workspacename else "SSMT_Mod_Logic"
+            workspace_name = f"{GlobalConfig.get_workspace_name()}" if GlobalConfig.get_workspace_name() else "SSMT_Mod_Logic"
             node_tree = bpy.data.node_groups.get(workspace_name)
         
         if not node_tree or node_tree.bl_idname != 'SSMTBlueprintTreeType':

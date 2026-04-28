@@ -1,4 +1,5 @@
 import bpy
+import os
 
 
 _blueprint_enum_items_cache = []
@@ -16,6 +17,26 @@ def _get_blueprint_enum_items(self, context):
         ]
 
     return _blueprint_enum_items_cache
+
+
+def _get_workspace_enum_items(self, context):
+    try:
+        from .global_config import GlobalConfig
+
+        GlobalConfig.read_from_main_json_ssmt4()
+        workspace_root = GlobalConfig.path_current_game_total_workspace_folder()
+        if not workspace_root or not os.path.isdir(workspace_root):
+            return [("", "当前没有工作空间", "当前游戏配置下未找到可用工作空间")]
+
+        workspace_names = sorted(
+            [entry.name for entry in os.scandir(workspace_root) if entry.is_dir()]
+        )
+        if not workspace_names:
+            return [("", "当前没有工作空间", "当前游戏配置下未找到可用工作空间")]
+
+        return [(name, name, "") for name in workspace_names]
+    except Exception:
+        return [("", "当前没有工作空间", "当前游戏配置下未找到可用工作空间")]
 
 
 class GlobalProterties(bpy.types.PropertyGroup):
@@ -78,6 +99,18 @@ class GlobalProterties(bpy.types.PropertyGroup):
         description="选择的生成Mod的文件夹路径",
         default="",
         subtype='DIR_PATH',
+    ) # type: ignore
+
+    use_specific_workspace_name: bpy.props.BoolProperty(
+        name="使用指定工作空间",
+        description="勾选后使用下拉列表中选中的工作空间，而不是自动同步的工作空间",
+        default=False,
+    ) # type: ignore
+
+    specific_workspace_name: bpy.props.EnumProperty(
+        name="指定工作空间",
+        description="当前游戏配置下可选的工作空间列表",
+        items=_get_workspace_enum_items,
     ) # type: ignore
 
     use_mirror_workflow: bpy.props.BoolProperty(
@@ -177,6 +210,14 @@ class GlobalProterties(bpy.types.PropertyGroup):
     @classmethod
     def use_mirror_workflow(cls):
         return cls._instance().use_mirror_workflow
+
+    @classmethod
+    def use_specific_workspace_name(cls):
+        return cls._instance().use_specific_workspace_name
+
+    @classmethod
+    def specific_workspace_name(cls):
+        return cls._instance().specific_workspace_name
 
     @classmethod
     def use_normal_map(cls):

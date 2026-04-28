@@ -243,7 +243,7 @@ class ExportSRMI:
         )
 
         
-        ini_filepath = os.path.join(GlobalConfig.path_generate_mod_folder(), GlobalConfig.workspacename + ".ini")
+        ini_filepath = os.path.join(GlobalConfig.path_generate_mod_folder(), GlobalConfig.get_workspace_name() + ".ini")
         ini_builder.save_to_file(ini_filepath)
                 
 

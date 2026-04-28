@@ -185,12 +185,12 @@ class CollectionUtils:
         '''
         clean_workspace_collection_name = CollectionUtils.get_clean_collection_name(workspace_collection.name)
 
-        if clean_workspace_collection_name != GlobalConfig.workspacename:
+        if clean_workspace_collection_name != GlobalConfig.get_workspace_name():
 
             msg = (
                 "当前选中的集合名称不是工作空间集合名称，请检查您是否正确选中了工作空间集合.\n当前选中集合名称: " 
                 + clean_workspace_collection_name  + "\n"
-                + "正确的工作空间集合应该以当前工作空间名称 " + GlobalConfig.workspacename + " 作为名称前缀" + "\n"
+                + "正确的工作空间集合应该以当前工作空间名称 " + GlobalConfig.get_workspace_name() + " 作为名称前缀" + "\n"
                 + "1.工作空间集合指的是在SSMT工作台提取模型后，一键导入后的红色的以工作空间为名称的集合" + "\n"
                 + "2.工作空间集合的颜色固定是红色的，请检查是否选择错误" + "\n"
                 + "3.您必须手动选中工作空间集合，系统才能知道您要为哪个集合下的内容生成Mod"
