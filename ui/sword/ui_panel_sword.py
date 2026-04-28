@@ -1,7 +1,7 @@
 import bpy
 import os
 import shutil
-from bpy.props import StringProperty, CollectionProperty, IntProperty, BoolProperty
+from bpy.props import StringProperty, CollectionProperty, IntProperty, BoolProperty, EnumProperty
 from bpy.types import Operator, Panel, PropertyGroup, UIList
 from bpy_extras.io_utils import ImportHelper
 import bpy.utils.previews
@@ -17,6 +17,37 @@ from ...utils.collection_utils import CollectionUtils,CollectionColor
 
 # 存储预览图集合
 preview_collections = {}
+sword_reversed_workspace_items_cache = []
+
+
+def _get_sword_reversed_workspace_items(self, context):
+    global sword_reversed_workspace_items_cache
+
+    try:
+        GlobalConfig.read_from_main_json_ssmt4()
+        reversed_root = os.path.join(GlobalConfig.ssmtlocation, "Reversed")
+        if not reversed_root or not os.path.isdir(reversed_root):
+            sword_reversed_workspace_items_cache = [
+                ("", "当前没有可用逆向工作空间", "请确认 SSMT 缓存目录下存在 Reversed 文件夹")
+            ]
+            return sword_reversed_workspace_items_cache
+
+        folder_names = sorted(
+            [entry.name for entry in os.scandir(reversed_root) if entry.is_dir()]
+        )
+        if not folder_names:
+            sword_reversed_workspace_items_cache = [
+                ("", "当前没有可用逆向工作空间", "Reversed 文件夹下未找到子文件夹")
+            ]
+            return sword_reversed_workspace_items_cache
+
+        sword_reversed_workspace_items_cache = [(name, name, "") for name in folder_names]
+        return sword_reversed_workspace_items_cache
+    except Exception:
+        sword_reversed_workspace_items_cache = [
+            ("", "当前没有可用逆向工作空间", "读取 Reversed 文件夹失败")
+        ]
+        return sword_reversed_workspace_items_cache
 
 # 定义图片列表项
 class Sword_ImportTexture_ImageListItem(PropertyGroup):
@@ -268,9 +299,32 @@ class SwordImportAllReversed(bpy.types.Operator):
     bl_label = "一键导入逆向出来的全部模型"
     bl_description = "把上一次一键逆向出来的所有模型全部导入到Blender，然后你可以手动筛选并删除错误的数据类型，流程上更加方便。"
 
+    def _resolve_reverse_output_folder_path(self, context):
+        GlobalConfig.read_from_main_json_ssmt4()
+
+        source_mode = context.scene.sword_reverse_source_mode
+        if source_mode == "SPECIFIC":
+            selected_workspace_name = context.scene.sword_specific_reversed_workspace_name
+            if not selected_workspace_name:
+                self.report({"ERROR"}, "当前未选择指定工作空间，请先选择 Reversed 下的子文件夹")
+                return ""
+            return os.path.join(GlobalConfig.ssmtlocation, "Reversed", selected_workspace_name)
+
+        if source_mode == "CUSTOM":
+            custom_folder_path = str(context.scene.sword_custom_reverse_output_folder_path).strip()
+            if not custom_folder_path:
+                self.report({"ERROR"}, "自定义目录为空，请先选择目录")
+                return ""
+            return custom_folder_path
+
+        return GlobalConfig.path_reverse_output_folder()
+
     def execute(self, context):
-        reverse_output_folder_path = GlobalConfig.path_reverse_output_folder()
-        if not os.path.exists(reverse_output_folder_path):
+        reverse_output_folder_path = self._resolve_reverse_output_folder_path(context)
+        if not reverse_output_folder_path:
+            return {'FINISHED'}
+
+        if not os.path.exists(reverse_output_folder_path) or not os.path.isdir(reverse_output_folder_path):
             self.report({"ERROR"},"当前一键逆向结果中标注的文件夹位置不存在，请重新运行一键逆向")
             return {'FINISHED'}
         print("测试导入")
@@ -282,6 +336,9 @@ class SwordImportAllReversed(bpy.types.Operator):
 
         # 获取所有子文件夹
         subfolder_path_list = [f.path for f in os.scandir(reverse_output_folder_path) if f.is_dir()]
+        if not subfolder_path_list:
+            self.report({"ERROR"}, "目标目录下未找到可导入的子文件夹")
+            return {'FINISHED'}
 
         for subfolder_path in subfolder_path_list:
             
@@ -314,6 +371,22 @@ class SwordImportAllReversed(bpy.types.Operator):
         # 随后把图片路径指定为当前路径
         reload_textures_from_folder(reverse_output_folder_path)
 
+        return {'FINISHED'}
+
+
+class SWORD4RefreshReversedWorkspaceList(bpy.types.Operator):
+    bl_idname = "ssmt4.sword_refresh_reversed_workspace_list"
+    bl_label = "刷新逆向工作空间列表"
+    bl_description = "刷新当前 SSMT 缓存目录下 Reversed 文件夹的子文件夹列表"
+
+    def execute(self, context):
+        GlobalConfig.read_from_main_json_ssmt4()
+
+        for window in context.window_manager.windows:
+            for area in window.screen.areas:
+                area.tag_redraw()
+
+        self.report({'INFO'}, iface_("已刷新逆向工作空间列表"))
         return {'FINISHED'}
 
 
@@ -384,6 +457,14 @@ class Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
+
+        layout.prop(scene, "sword_reverse_source_mode")
+        if scene.sword_reverse_source_mode == "SPECIFIC":
+            reversed_workspace_row = layout.row(align=True)
+            reversed_workspace_row.prop(scene, "sword_specific_reversed_workspace_name", text=iface_("指定工作空间"))
+            reversed_workspace_row.operator(SWORD4RefreshReversedWorkspaceList.bl_idname, text="", icon='FILE_REFRESH')
+        elif scene.sword_reverse_source_mode == "CUSTOM":
+            layout.prop(scene, "sword_custom_reverse_output_folder_path", text=iface_("自定义目录"))
 
         # 一键导入逆向结果按钮
         layout.operator("ssmt.import_all_reverse",icon='IMPORT')
@@ -463,15 +544,40 @@ def register():
     bpy.utils.register_class(Sword_ImportTexture_WM_OT_ApplyImageToMaterial)
     bpy.utils.register_class(Sword_ImportTexture_WM_OT_SelectImageFolder)
     bpy.utils.register_class(SwordImportAllReversed)
+    bpy.utils.register_class(SWORD4RefreshReversedWorkspaceList)
     bpy.utils.register_class(Sword_SplitModel_By_DrawIndexed_Panel)
 
     bpy.types.Scene.sword_image_list = CollectionProperty(type=Sword_ImportTexture_ImageListItem)
     bpy.types.Scene.sword_image_list_index = IntProperty(default=0)
+    bpy.types.Scene.sword_reverse_source_mode = EnumProperty(
+        name="导入模式",
+        description="控制一键导入逆向结果时的目录来源",
+        items=[
+            ("LAST", "上次逆向结果", "使用全局配置中记录的上次逆向输出目录"),
+            ("SPECIFIC", "指定工作空间", "使用 SSMT 缓存目录下 Reversed 中指定的子文件夹"),
+            ("CUSTOM", "自定义目录", "使用你手动指定的目录"),
+        ],
+        default="LAST",
+    )
+    bpy.types.Scene.sword_specific_reversed_workspace_name = EnumProperty(
+        name="指定工作空间",
+        description="当前 SSMT 缓存目录下 Reversed 的子文件夹列表",
+        items=_get_sword_reversed_workspace_items,
+    )
+    bpy.types.Scene.sword_custom_reverse_output_folder_path = StringProperty(
+        name="自定义目录",
+        description="手动指定用于一键导入逆向结果的目录",
+        default="",
+        subtype='DIR_PATH',
+    )
 
 def unregister():
     try:
         del bpy.types.Scene.sword_image_list
         del bpy.types.Scene.sword_image_list_index
+        del bpy.types.Scene.sword_reverse_source_mode
+        del bpy.types.Scene.sword_specific_reversed_workspace_name
+        del bpy.types.Scene.sword_custom_reverse_output_folder_path
     except Exception:
         pass
 
@@ -488,6 +594,7 @@ def unregister():
     bpy.utils.unregister_class(Sword_ImportTexture_WM_OT_SelectImageFolder)
     bpy.utils.unregister_class(Sword_ImportTexture_WM_OT_ApplyImageToMaterial)
     bpy.utils.unregister_class(Sword_ImportTexture_VIEW3D_PT_ImageMaterialPanel)
+    bpy.utils.unregister_class(SWORD4RefreshReversedWorkspaceList)
     bpy.utils.unregister_class(SWORD_UL_FastImportTextureList)
     bpy.utils.unregister_class(Sword_ImportTexture_ImageListItem)
     bpy.utils.unregister_class(Import3DMigotoRaw)
