@@ -44,6 +44,7 @@ def ImprotFromWorkSpaceFull(self, context):
         
         # 获取导入的数据类型文件夹路径列表
         final_import_folder_path_list = WorkSpaceHelper.get_ordered_gpu_cpu_import_folderpath_list(submesh_folder_path)
+        print("Final Import Folder Path List: " + str(final_import_folder_path_list))
         
         # 接下来开始导入，尝试对当前DrawIB的每个数据类型都进行导入
         # 如果出错的话直接提示错误并continue

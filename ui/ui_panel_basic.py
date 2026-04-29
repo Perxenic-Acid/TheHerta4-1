@@ -120,6 +120,8 @@ class PanelBasicInformation(bpy.types.Panel):
 
         if GlobalConfig.logic_name == LogicName.WWMI:
             layout.prop(global_properties,"import_merged_vgmap")
+
+        if GlobalConfig.logic_name == LogicName.WWMI or GlobalConfig.logic_name == LogicName.NTEMI:
             layout.prop(global_properties,"import_skip_empty_vertex_groups")
 
         # 决定导入时是否调用法线贴图

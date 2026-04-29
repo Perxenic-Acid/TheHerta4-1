@@ -206,7 +206,7 @@ class MeshCreateHelper:
             logic_name=logic_name,
         )
 
-        if logic_name == LogicName.WWMI:
+        if logic_name == LogicName.WWMI or logic_name == LogicName.NTEMI:
             obj.rotation_euler[0] = 0
             obj.rotation_euler[1] = 0
             obj.rotation_euler[2] = math.radians(180)
@@ -223,7 +223,7 @@ class MeshCreateHelper:
             obj.rotation_euler[1] = 0
             obj.rotation_euler[2] = 0
 
-        if GlobalConfig.logic_name == LogicName.WWMI:
+        if GlobalConfig.logic_name == LogicName.WWMI or GlobalConfig.logic_name == LogicName.NTEMI:
             if GlobalProterties.import_skip_empty_vertex_groups():
                 VertexGroupUtils.remove_unused_vertex_groups(obj)
 
@@ -259,7 +259,7 @@ class MeshCreateHelper:
 
     @staticmethod
     def initialize_mesh(mesh, ib_data, ib_count:int, ib_polygon_count:int, logic_name:str, vb_vertex_count:int):
-        if logic_name == LogicName.WWMI or logic_name == LogicName.YYSLS:
+        if logic_name == LogicName.WWMI or logic_name == LogicName.NTEMI or logic_name == LogicName.YYSLS:
             flipped_indices = []
             for i in range(0, len(ib_data), 3):
                 triangle = ib_data[i:i + 3]
