@@ -104,7 +104,7 @@ class MeshCreateHelper:
 
                 if hasattr(mesh, 'color_attributes'):
                     # Blender 3.2+ 原生 API，Blender 5.1 也适用
-                    color_attr = mesh.color_attributes.new(name=element.ElementName, type='FLOAT_COLOR', domain='CORNER')
+                    color_attr = mesh.color_attributes.new(name=element.ElementName, type='BYTE_COLOR', domain='CORNER')
                     color_attr.data.foreach_set('color', colors_flat.ravel())
                 else:
                     # Blender 3.2 以下的旧式 API
