@@ -219,6 +219,11 @@ class ExportWWMI:
 
         if not draw_ib_model.blend_remap:
             commandlist_section.append("vb4 = ResourceBlendBuffer")
+        
+        # 注意，这里必须用ref 而不是直接 = 
+        # 在3Dmigoto中3Dmigoto 中 = ResourceMergedSkeleton 是一次性值拷贝，
+        # = ref ResourceMergedSkeleton 才是引用绑定。
+        # 缺少 ref 意味着后续 compute shader 更新骨架时，vs-cb 不会同步更新。
 
         if GlobalProterties.import_merged_vgmap():
             if draw_ib_model.blend_remap:
