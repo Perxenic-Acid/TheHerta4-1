@@ -185,18 +185,31 @@ class BlueprintExportHelper:
         if not BlueprintExportHelper._is_valid_blueprint_tree(current_tree):
             return []
 
-        drawib_aliasname_dict = WorkSpaceHelper.get_drawib_aliasname_dict()
-
-        return BlueprintExportHelper.set_tree_submesh_names(
-            [
+        all_display_names = []
+        lod_submesh_dict = WorkSpaceHelper.get_lod_submesh_folderpath_dict()
+        if lod_submesh_dict:
+            for lod_name, submesh_folder_paths in lod_submesh_dict.items():
+                lod_folder_path = os.path.join(GlobalConfig.path_workspace_folder(), lod_name)
+                drawib_aliasname_dict = WorkSpaceHelper.get_drawib_aliasname_dict_for_path(lod_folder_path)
+                for folder_path in submesh_folder_paths:
+                    bare_name = os.path.basename(folder_path)
+                    display_name = lod_name + "." + WorkSpaceHelper.get_display_submesh_name(
+                        bare_name,
+                        drawib_aliasname_dict=drawib_aliasname_dict,
+                    )
+                    all_display_names.append(display_name)
+        else:
+            # 兼容旧版无LOD结构
+            drawib_aliasname_dict = WorkSpaceHelper.get_drawib_aliasname_dict()
+            all_display_names = [
                 WorkSpaceHelper.get_display_submesh_name(
                     os.path.basename(folder_path),
                     drawib_aliasname_dict=drawib_aliasname_dict,
                 )
                 for folder_path in WorkSpaceHelper.get_submesh_folderpath_list()
-            ],
-            tree=current_tree,
-        )
+            ]
+
+        return BlueprintExportHelper.set_tree_submesh_names(all_display_names, tree=current_tree)
 
     @staticmethod
     def find_node_in_all_blueprints(node_name):

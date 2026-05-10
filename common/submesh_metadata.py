@@ -7,11 +7,18 @@ from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from .d3d11_gametype import D3D11GameType
 from .global_config import GlobalConfig
 from .submesh_json import SubmeshJson
+from .workspace_helper import WorkSpaceHelper
 
 
 def check_and_get_submesh_json_path(unique_str: str) -> tuple[bool, str, str]:
     workspace_folder = GlobalConfig.path_workspace_folder()
-    unique_str_folder = os.path.join(workspace_folder, unique_str)
+
+    # 解析 LOD 前缀（如 "LOD0.67f829fc-2653-0" → lod_name="LOD0", bare="67f829fc-2653-0"）
+    lod_name, bare_unique_str = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+
+    # 实际 submesh 文件夹路径（workspace/LOD0/67f829fc-2653-0 或 workspace/67f829fc-2653-0）
+    unique_str_folder = WorkSpaceHelper.get_submesh_folder_path(unique_str)
+
     if not os.path.exists(unique_str_folder):
         return False, (
             f"unique_str '{unique_str}' 没有找到对应的提取数据。\n"
@@ -23,7 +30,7 @@ def check_and_get_submesh_json_path(unique_str: str) -> tuple[bool, str, str]:
     gametype_name = workspace_import_json.get(unique_str, "")
 
     if gametype_name:
-        submesh_json_path = os.path.join(unique_str_folder, "TYPE_" + gametype_name, unique_str + ".json")
+        submesh_json_path = os.path.join(unique_str_folder, "TYPE_" + gametype_name, bare_unique_str + ".json")
         if os.path.exists(submesh_json_path):
             return True, "", submesh_json_path
 
@@ -33,7 +40,7 @@ def check_and_get_submesh_json_path(unique_str: str) -> tuple[bool, str, str]:
         if not dirname.startswith("TYPE_"):
             continue
 
-        submesh_json_path = os.path.join(unique_str_folder, dirname, unique_str + ".json")
+        submesh_json_path = os.path.join(unique_str_folder, dirname, bare_unique_str + ".json")
         if os.path.exists(submesh_json_path):
             found_type_paths.append(submesh_json_path)
             found_types.append(dirname.replace("TYPE_", ""))

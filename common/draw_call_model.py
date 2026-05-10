@@ -33,6 +33,13 @@ class DrawCallModel:
             self.match_draw_ib, self.match_index_count, self.match_first_index, self.match_unique_str, self.comment_alias_name = submesh_parse_result
             return
 
+        # submesh_name 解析失败，退而解析 obj_name
+        # 先尝试通过 _try_parse_name 解析 obj_name（支持 LOD 前缀）
+        obj_name_parse_result = self._try_parse_name(self.obj_name)
+        if obj_name_parse_result is not None:
+            self.match_draw_ib, self.match_index_count, self.match_first_index, self.match_unique_str, self.comment_alias_name = obj_name_parse_result
+            return
+
         obj_name_total_split = self.obj_name.split(".") if self.obj_name else []
         self.comment_alias_name = ".".join(obj_name_total_split[1:]) if len(obj_name_total_split) > 1 else ""
 
@@ -57,12 +64,24 @@ class DrawCallModel:
         if not normalized_name:
             return None
 
-        name_prefix, _, alias_suffix = normalized_name.partition(".")
+        # 检测并剥离 LOD 前缀（如 "LOD0."）
+        lod_prefix = ""
+        temp = normalized_name
+        if temp.upper().startswith("LOD") and "." in temp:
+            dot_idx = temp.index(".")
+            potential_lod = temp[:dot_idx]
+            if potential_lod[3:].isdigit():
+                lod_prefix = potential_lod + "."
+                temp = temp[dot_idx + 1:]  # 去掉 LOD0. 前缀后的部分
+
+        name_prefix, _, alias_suffix = temp.partition(".")
         name_split = name_prefix.split("-")
         if len(name_split) < 3:
             return None
 
-        return name_split[0], name_split[1], name_split[2], name_prefix, alias_suffix
+        # match_unique_str 保留 LOD 前缀，以便路径解析时能定位到正确目录
+        lod_unique_str = lod_prefix + name_prefix if lod_prefix else name_prefix
+        return name_split[0], name_split[1], name_split[2], lod_unique_str, alias_suffix
     
     def get_unique_str(self) -> str:
         # 这个唯一标识符是根据DrawIB、FirstIndex和IndexCount组成的字符串，作为一个整体来标识一个DrawCall

@@ -80,6 +80,34 @@ class WorkSpaceHelper:
         return final_import_folder_path_list
 
     @staticmethod
+    def parse_lod_unique_str(unique_str: str):
+        '''
+        解析 unique_str，返回 (lod_name, bare_unique_str)。
+        如果有 LOD 前缀（如 "LOD0.67f829fc-2653-0"），返回 ("LOD0", "67f829fc-2653-0")；
+        否则返回 ("", unique_str)。
+        '''
+        if unique_str and unique_str.upper().startswith("LOD") and "." in unique_str:
+            dot_idx = unique_str.index(".")
+            potential_lod = unique_str[:dot_idx]
+            lod_suffix = potential_lod[3:]
+            if lod_suffix.isdigit():
+                return potential_lod, unique_str[dot_idx + 1:]
+        return "", unique_str
+
+    @staticmethod
+    def get_submesh_folder_path(unique_str: str) -> str:
+        '''
+        根据 unique_str（可带 LOD 前缀）返回工作空间内实际的 submesh 文件夹路径。
+        LOD0.67f829fc-2653-0 → workspace/LOD0/67f829fc-2653-0/
+        67f829fc-2653-0      → workspace/67f829fc-2653-0/
+        '''
+        lod_name, bare_unique_str = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+        workspace_folder = GlobalConfig.path_workspace_folder()
+        if lod_name:
+            return os.path.join(workspace_folder, lod_name, bare_unique_str)
+        return os.path.join(workspace_folder, bare_unique_str)
+
+    @staticmethod
     def create_and_get_workspace_collection() -> bpy.types.Collection:
         # 这里先创建以当前工作空间为名称的集合，并且链接到scene，确保它存在
         workspace_collection = CollectionUtils.create_new_collection(collection_name=GlobalConfig.get_workspace_name(),color_tag=CollectionColor.Red)
@@ -87,10 +115,54 @@ class WorkSpaceHelper:
         return workspace_collection
 
     @staticmethod
+    def _get_submesh_folderpath_list_from(base_folder: str) -> List[str]:
+        '''
+        从指定目录中获取所有 SubMesh 文件夹（名字包含至少两个 '-' 的目录）。
+        '''
+        result = []
+        if not os.path.isdir(base_folder):
+            return result
+        for f in os.scandir(base_folder):
+            if not f.is_dir():
+                continue
+            if len(f.name.split('-')) >= 3:
+                result.append(f.path)
+        return result
+
+    @staticmethod
+    def get_lod_folderpath_list() -> List[str]:
+        '''
+        获取当前工作空间目录下所有以 "LOD" 开头（后接数字）的目录，按名称排序。
+        '''
+        lod_folders = []
+        workspace_folder = GlobalConfig.path_workspace_folder()
+        if not os.path.isdir(workspace_folder):
+            return lod_folders
+        for f in os.scandir(workspace_folder):
+            if not f.is_dir():
+                continue
+            name = f.name
+            if name.upper().startswith("LOD") and name[3:].isdigit():
+                lod_folders.append(f.path)
+        lod_folders.sort(key=lambda p: int(os.path.basename(p)[3:]))
+        return lod_folders
+
+    @staticmethod
+    def get_lod_submesh_folderpath_dict() -> Dict[str, List[str]]:
+        '''
+        返回 {lod_name: [submesh_folder_path, ...]} 字典，按 LOD 排序。
+        '''
+        result: Dict[str, List[str]] = {}
+        for lod_folder_path in WorkSpaceHelper.get_lod_folderpath_list():
+            lod_name = os.path.basename(lod_folder_path)
+            result[lod_name] = WorkSpaceHelper._get_submesh_folderpath_list_from(lod_folder_path)
+        return result
+
+    @staticmethod
     def get_submesh_folderpath_list() -> List[str]:
         '''
-        获取当前工作空间文件夹下面的所有SubMesh文件夹（仅保留名字包含至少两个 '-' 的文件夹）
-        导入时就已经确保它至少包含两个'-'，即符合命名规则
+        获取当前工作空间文件夹下面的所有SubMesh文件夹（兼容旧版无LOD结构）。
+        新版工作空间请使用 get_lod_submesh_folderpath_dict()。
         '''
         submesh_folderpath_list = []
         for f in os.scandir(GlobalConfig.path_workspace_folder()):
@@ -101,6 +173,25 @@ class WorkSpaceHelper:
                 submesh_folderpath_list.append(f.path)
             
         return submesh_folderpath_list
+
+    @staticmethod
+    def get_drawib_aliasname_dict_for_path(folder_path: str) -> Dict[str, str]:
+        '''
+        从指定目录下的 Config.json 里读取 DrawIB 和别名的对应关系。
+        '''
+        drawib_aliasname_dict = {}
+        config_json_path = os.path.join(folder_path, "Config.json")
+        if os.path.exists(config_json_path):
+            config_json = JsonUtils.LoadFromFile(config_json_path)
+            if isinstance(config_json, list):
+                for item in config_json:
+                    if not isinstance(item, dict):
+                        continue
+                    draw_ib = str(item.get("DrawIB", "")).strip()
+                    alias_name = str(item.get("Alias", "")).strip()
+                    if draw_ib:
+                        drawib_aliasname_dict[draw_ib] = alias_name
+        return drawib_aliasname_dict
 
     @staticmethod
     def get_drawib_aliasname_dict() -> Dict[str,str]:
@@ -128,7 +219,7 @@ class WorkSpaceHelper:
     @staticmethod
     def get_hash_deduped_texture_info_dict(submesh_folder_name:str) -> Dict[str,DedupedTextureInfo]:
 
-        draw_ib_folder_path = GlobalConfig.path_workspace_folder() + submesh_folder_name + "\\"
+        draw_ib_folder_path = WorkSpaceHelper.get_submesh_folder_path(submesh_folder_name) + "\\"
         # 接下来计算ComponentList，也就是当前DrawIB使用到这个贴图的所有Component的Count，从1开始
         component_name__drawcall_indexlist_json_path = os.path.join(draw_ib_folder_path,"ComponentName_DrawCallIndexList.json")
         trianglelist_deduped_filename_json_path = os.path.join(draw_ib_folder_path,"TrianglelistDedupedFileName.json")
