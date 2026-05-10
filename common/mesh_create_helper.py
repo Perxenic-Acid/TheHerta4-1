@@ -17,7 +17,6 @@ from .global_config import GlobalConfig
 from .global_properties import GlobalProterties
 from .logic_name import LogicName
 from .d3d11_element import D3D11Element
-from ..ui.wwmi.extracted_object import ExtractedObjectHelper
 
 
 class MeshCreateHelper:
@@ -38,6 +37,10 @@ class MeshCreateHelper:
         local_bounding_box_max:list | None = None,
         vertex_compression_params:list | None = None,
         import_collection:bpy.types.Collection | None = None,
+        wwmi_shapekey_buffers:dict | None = None,
+        wwmi_vertex_offset:int = 0,
+        wwmi_vertex_count:int = -1,
+        wwmi_vg_map:dict | None = None,
     ):
         TimerUtils.Start("Import 3Dmigoto Raw")
         print("导入模型: " + mesh_name)
@@ -176,23 +179,20 @@ class MeshCreateHelper:
 
         MeshCreateHelper.import_uv_layers(mesh, obj, texcoords)
 
-        component = None
-        if GlobalProterties.import_merged_vgmap() and (GlobalConfig.logic_name == LogicName.WWMI):
-            print("尝试读取Metadata.json")
-            metadatajsonpath = os.path.join(os.path.dirname(source_path), 'Metadata.json')
-            if os.path.exists(metadatajsonpath):
-                print("鸣潮读取Metadata.json")
-                extracted_object = ExtractedObjectHelper.read_metadata(metadatajsonpath)
-                if "-" in mesh_name:
-                    partname_count = int(mesh_name.split("-")[1]) - 1
-                    print("import partname count: " + str(partname_count))
-                    component = extracted_object.components[partname_count]
-
         print("导入顶点组")
-        MeshCreateHelper.import_vertex_groups(mesh, obj, blend_indices, blend_weights, component)
+        # Merged模式：用VGMap将local blend index重映射为global bone ID
+        if wwmi_vg_map:
+            import types as _types
+            _vg_component = _types.SimpleNamespace(vg_map={str(k): int(v) for k, v in wwmi_vg_map.items()})
+        else:
+            _vg_component = None
+        MeshCreateHelper.import_vertex_groups(mesh, obj, blend_indices, blend_weights, _vg_component)
         print("导入顶点组完毕")
 
         MeshCreateHelper.import_shapekeys(mesh, obj, shapekeys)
+
+        if wwmi_shapekey_buffers is not None:
+            MeshCreateHelper.import_shapekeys_wwmi(mesh, obj, wwmi_shapekey_buffers, wwmi_vertex_offset, wwmi_vertex_count)
 
         mesh.validate(verbose=False, clean_customdata=False)
         mesh.update()
@@ -417,6 +417,91 @@ class MeshCreateHelper:
             del new_sk
 
         del basis_co, offset_arr, new_co
+
+    @staticmethod
+    def import_shapekeys_wwmi(mesh, obj, shapekey_buffers: dict, vertex_offset: int, vertex_count: int):
+        sk_offset_raw = shapekey_buffers.get("ShapeKeyOffset")
+        sk_vertex_id_raw = shapekey_buffers.get("ShapeKeyVertexId")
+        sk_vertex_offset_raw = shapekey_buffers.get("ShapeKeyVertexOffset")
+
+        if sk_offset_raw is None or sk_vertex_id_raw is None or sk_vertex_offset_raw is None:
+            return
+
+        offsets = sk_offset_raw.view(numpy.uint32)
+        if len(offsets) < 128:
+            return
+        offsets = offsets[:128]
+
+        vertex_id_buffer = sk_vertex_id_raw.view(numpy.uint32)
+        vertex_offset_buffer = sk_vertex_offset_raw.view(numpy.float16)
+
+        total_entries = int(offsets[127])
+        if total_entries == 0:
+            return
+
+        if obj.data.shape_keys is None:
+            basis = obj.shape_key_add(name='Basis')
+            basis.interpolation = 'KEY_LINEAR'
+            obj.data.shape_keys.use_relative = True
+            try:
+                basis.value = 0.0
+            except Exception:
+                pass
+        else:
+            basis = obj.data.shape_keys.key_blocks.get('Basis') or obj.data.shape_keys.key_blocks[0]
+
+        vert_count = len(obj.data.vertices)
+        basis_co = numpy.empty(vert_count * 3, dtype=numpy.float32)
+        basis.data.foreach_get('co', basis_co)
+        basis_co = basis_co.reshape(-1, 3)
+
+        print(f"WWMI ShapeKey 导入：{total_entries} 个受影响顶点条目，vertex_offset={vertex_offset}")
+
+        for sk_id in range(127):
+            first_entry = int(offsets[sk_id])
+            last_entry = int(offsets[sk_id + 1])
+            if first_entry >= last_entry:
+                break
+
+            entries = numpy.arange(first_entry, last_entry, dtype=numpy.int64)
+            valid_mask = entries < len(vertex_id_buffer)
+            entries = entries[valid_mask]
+            if len(entries) == 0:
+                continue
+
+            global_vids = vertex_id_buffer[entries].astype(numpy.int64)
+            local_vids = global_vids - vertex_offset
+            local_mask = (local_vids >= 0) & (local_vids < vertex_count)
+            entries = entries[local_mask]
+            local_vids = local_vids[local_mask]
+            if len(entries) == 0:
+                continue
+
+            dx_idx = entries * 3
+            dy_idx = dx_idx + 1
+            dz_idx = dx_idx + 2
+
+            valid_idx_mask = dz_idx < len(vertex_offset_buffer)
+            entries = entries[valid_idx_mask]
+            local_vids = local_vids[valid_idx_mask]
+            dx_idx = entries * 3
+            dy_idx = dx_idx + 1
+            dz_idx = dx_idx + 2
+
+            new_co = basis_co.copy()
+            numpy.add.at(new_co[:, 0], local_vids, vertex_offset_buffer[dx_idx].astype(numpy.float32))
+            numpy.add.at(new_co[:, 1], local_vids, vertex_offset_buffer[dy_idx].astype(numpy.float32))
+            numpy.add.at(new_co[:, 2], local_vids, vertex_offset_buffer[dz_idx].astype(numpy.float32))
+
+            sk = obj.shape_key_add(name=f'Deform {sk_id}')
+            sk.interpolation = 'KEY_LINEAR'
+            sk.data.foreach_set('co', new_co.ravel())
+            try:
+                sk.value = 0.0
+            except Exception:
+                pass
+
+        print(f"WWMI ShapeKey 导入完成")
 
     @staticmethod
     def get_import_texture_paths(mesh_name:str, directory:str):

@@ -88,8 +88,6 @@ class DrawIBModelWWMI:
         primary_unique_str = self.ordered_drawcall_model_list[0].get_unique_str()
         self.primary_submesh_metadata = SubmeshMetadataResolver.resolve(primary_unique_str)
         self.d3d11GameType = self.primary_submesh_metadata.d3d11_game_type
-        metadata_path: str = os.path.join(self.primary_submesh_metadata.extract_gametype_folder_path, "Metadata.json")
-        self.extracted_object = ExtractedObjectHelper.read_metadata(metadata_path)
 
         self.component_model_list = []
         self.component_name_component_model_dict = {}
@@ -119,6 +117,9 @@ class DrawIBModelWWMI:
             )
             self.component_model_list.append(component_model)
             self.component_name_component_model_dict[component_model.component_name] = component_model
+
+        ordered_metadata = [unique_str_metadata_dict[unique_str] for unique_str in component_index_by_unique_str.keys()]
+        self.extracted_object = ExtractedObjectHelper.build_from_submesh_metadata_list(ordered_metadata)
 
         LOG.newline()
 
@@ -273,7 +274,7 @@ class DrawIBModelWWMI:
 
                 vertex_groups = ObjUtils.get_vertex_groups(temp_obj)
                 if GlobalProterties.import_merged_vgmap():
-                    total_vg_count = sum(extracted_component.vg_count for extracted_component in extracted_object.components)
+                    total_vg_count = max((extracted_component.vg_count for extracted_component in extracted_object.components), default=0)
                     ignore_list = [
                         vertex_group
                         for vertex_group in vertex_groups
