@@ -477,14 +477,14 @@ class MeshCreateHelper:
             if len(entries) == 0:
                 continue
 
-            dx_idx = entries * 3
+            dx_idx = entries * 6
             dy_idx = dx_idx + 1
             dz_idx = dx_idx + 2
 
             valid_idx_mask = dz_idx < len(vertex_offset_buffer)
             entries = entries[valid_idx_mask]
             local_vids = local_vids[valid_idx_mask]
-            dx_idx = entries * 3
+            dx_idx = entries * 6
             dy_idx = dx_idx + 1
             dz_idx = dx_idx + 2
 
