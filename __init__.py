@@ -17,6 +17,7 @@ from .blueprint import blueprint_node_base
 from .blueprint import blueprint_node_menu
 from .blueprint import blueprint_node_shapekey
 from .blueprint import blueprint_node_panel
+from .blueprint import blueprint_node_submesh_alias
 
 from .ui import ui_func_export
 
@@ -134,11 +135,13 @@ def register():
     blueprint_node_menu.register()
     blueprint_node_shapekey.register()
     blueprint_node_panel.register()
+    blueprint_node_submesh_alias.register()
 
 
 
 def unregister():
     # 蓝图系统
+    blueprint_node_submesh_alias.unregister()
     blueprint_node_obj.unregister()
     ui_func_export.unregister()
     blueprint_node_menu.unregister()

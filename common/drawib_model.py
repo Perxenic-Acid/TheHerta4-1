@@ -8,6 +8,7 @@ from .global_config import GlobalConfig
 from ..utils.json_utils import JsonUtils
 from .texture_metadata_helper import TextureMetadataResolver
 from .submesh_metadata import SubmeshMetadataResolver
+from .workspace_helper import WorkSpaceHelper
 
 import numpy
 
@@ -285,8 +286,26 @@ class DrawIBModel:
 
         return self.match_first_index_partname_dict.get(normalized_match_first_index)
 
+    def apply_alias_dict(self, alias_dict: dict):
+        '''
+        将别名字典应用到所有 submesh_model.display_str。
+        alias_dict: {unique_str: alias_name}，例如 {"LOD0.5a4c1ef3-318-46683": "身体"}
+        alias_name 为空字符串时，display_str 保持等于 unique_str。
+        '''
+        for submesh_model in self.submesh_model_list:
+            unique_str = submesh_model.unique_str
+            alias = str(alias_dict.get(unique_str, "") or "").strip()
+            if alias:
+                lod_name, _ = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+                if lod_name:
+                    submesh_model.display_str = lod_name + "." + alias
+                else:
+                    submesh_model.display_str = alias
+            else:
+                submesh_model.display_str = unique_str
+
     def get_submesh_unique_key(self, submesh_model: SubMeshModel) -> str:
-        return submesh_model.unique_str.replace("-", "_")
+        return submesh_model.display_str.replace("-", "_")
 
     def get_submesh_ib_resource_name(self, submesh_model: SubMeshModel) -> str:
         unique_key = self.get_submesh_unique_key(submesh_model)
@@ -367,7 +386,7 @@ class DrawIBModel:
     def PartName_IBBufferFileName_Dict(self) -> dict:
         result = {}
         for part_name, submesh_model in self.part_name_submesh_dict.items():
-            result[part_name] = submesh_model.unique_str + "-Index.buf"
+            result[part_name] = submesh_model.display_str + "-Index.buf"
         return result
 
     @property

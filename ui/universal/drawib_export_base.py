@@ -1,4 +1,5 @@
 from ...blueprint.blueprint_model import BluePrintModel
+from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 from ...common.drawib_model import DrawIBModel
 from ...common.buffer_export_helper import BufferExportHelper
 from .export_helper import ExportHelper
@@ -13,6 +14,11 @@ class DrawIBExportBase:
             blueprint_model=blueprint_model,
             combine_ib=combine_ib,
         )
+        # 从蓝图树中读取别名字典，并应用到每个 DrawIBModel 的 submesh_model.display_str
+        alias_dict = BlueprintExportHelper.get_alias_dict()
+        if alias_dict:
+            for drawib_model in self.drawib_model_list:
+                drawib_model.apply_alias_dict(alias_dict)
 
     def generate_buffer_files(self, output_folder: str):
         for drawib_model in self.drawib_model_list:
@@ -25,7 +31,7 @@ class DrawIBExportBase:
             else:
                 for submesh_model in drawib_model.submesh_model_list:
                     ib = drawib_model.submesh_ib_dict.get(submesh_model.unique_str, [])
-                    ib_filename = submesh_model.unique_str + "-Index.buf"
+                    ib_filename = submesh_model.display_str + "-Index.buf"
                     ib_filepath = os.path.join(output_folder, ib_filename)
                     BufferExportHelper.write_buf_ib_r32_uint(ib, ib_filepath)
 

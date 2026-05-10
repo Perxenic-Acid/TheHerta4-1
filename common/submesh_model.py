@@ -35,6 +35,11 @@ class SubMeshModel:
     # 读取工作空间中的 Import.json 选择数据类型目录，再从对应的 SubmeshJson 获取 d3d11GameType
     d3d11_game_type:D3D11GameType = field(init=False,repr=False,default=None)
 
+    # 用于文件名生成（别名应用后）。
+    # 默认等于 unique_str；如果用户在「自定义Submesh名称」节点中设置了别名，
+    # 由 DrawIBModel.apply_alias_dict() 在导出前更新为 "{lod_prefix}.{alias}"。
+    display_str:str = field(init=False, default="")
+
     ib:list = field(init=False,repr=False,default_factory=list)
     category_buffer_dict:dict = field(init=False,repr=False,default_factory=dict)
     index_vertex_id_dict:dict = field(init=False,repr=False,default_factory=dict) 
@@ -48,6 +53,9 @@ class SubMeshModel:
             self.match_first_index = self.drawcall_model_list[0].match_first_index
             self.match_index_count = self.drawcall_model_list[0].match_index_count
             self.unique_str = self.drawcall_model_list[0].get_unique_str()
+        
+        # display_str 默认等于 unique_str，导出前可被 apply_alias_dict 覆盖
+        self.display_str = self.unique_str
         
         self.calc_buffer()
     

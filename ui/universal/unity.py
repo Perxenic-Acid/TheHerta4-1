@@ -114,7 +114,7 @@ class ExportUnity(DrawIBExportBase):
             resource_vb_section.append("[" + ib_resource_name + "]")
             resource_vb_section.append("type = Buffer")
             resource_vb_section.append("format = DXGI_FORMAT_R32_UINT")
-            resource_vb_section.append("filename = " + buffer_folder_name + "/" + submesh_model.unique_str + "-Index.buf")
+            resource_vb_section.append("filename = " + buffer_folder_name + "/" + submesh_model.display_str + "-Index.buf")
             resource_vb_section.new_line()
 
         ini_builder.append_section(resource_vb_section)
@@ -132,8 +132,11 @@ class ExportUnity(DrawIBExportBase):
                     if resource_name in appended_resource_names:
                         continue
                     appended_resource_names.add(resource_name)
+                    aliased_filename = M_IniHelper._get_aliased_texture_output_filename(
+                        texture_markup_info.mark_filename, submesh_model
+                    )
                     resource_texture_section.append("[" + texture_markup_info.get_resource_name() + "]")
-                    resource_texture_section.append("filename = Textures/" + texture_markup_info.mark_filename)
+                    resource_texture_section.append("filename = Textures/" + aliased_filename)
                     resource_texture_section.new_line()
 
         ini_builder.append_section(resource_texture_section)
@@ -245,7 +248,7 @@ class ExportUnity(DrawIBExportBase):
             resource_vb_section.append("[" + ib_resource_name + "]")
             resource_vb_section.append("type = Buffer")
             resource_vb_section.append("format = DXGI_FORMAT_R32_UINT")
-            resource_vb_section.append("filename = " + buffer_folder_name + "/" + submesh_model.unique_str + "-Index.buf")
+            resource_vb_section.append("filename = " + buffer_folder_name + "/" + submesh_model.display_str + "-Index.buf")
             resource_vb_section.new_line()
 
         ini_builder.append_section(resource_vb_section)

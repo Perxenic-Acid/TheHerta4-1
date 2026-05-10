@@ -18,6 +18,25 @@ from .texture_metadata_helper import TextureMetadataResolver, TextureMarkUpInfo
 
 class M_IniHelper:
     @classmethod
+    def _get_aliased_texture_output_filename(cls, mark_filename: str, submesh_model) -> str:
+        '''
+        若 submesh_model 已应用别名（display_str != unique_str），则将 mark_filename 的
+        bare_unique_str 前缀替换为 display_str，以便输出文件名使用别名。
+        例：mark_filename="5a4c1ef3-318-46683-DiffuseMap.dds", display_str="LOD0.身体"
+        → 返回 "LOD0.身体-DiffuseMap.dds"
+        若无别名（display_str == unique_str），原样返回。
+        '''
+        display_str = getattr(submesh_model, "display_str", "")
+        unique_str = getattr(submesh_model, "unique_str", "")
+        if not display_str or not unique_str or display_str == unique_str:
+            return mark_filename
+        _, bare_unique_str = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+        old_prefix = bare_unique_str + "-"
+        if mark_filename.startswith(old_prefix):
+            return display_str + "-" + mark_filename[len(old_prefix):]
+        return mark_filename
+
+    @classmethod
     def _count_marked_textures(cls, draw_ib_model: DrawIBModel, mark_type: str | None = None) -> int:
         count = 0
         for submesh_model in getattr(draw_ib_model, "submesh_model_list", []):
@@ -320,6 +339,7 @@ class M_IniHelper:
                             + texture_markup_info.mark_hash
                         )
                         hash_style_texture_filename = texture_markup_info.mark_filename
+                        hash_style_texture_filename = cls._get_aliased_texture_output_filename(hash_style_texture_filename, submesh_model)
                     else:
                         component_count_list_str = deduped_texture_info.componet_count_list_str
                         hash_style_texture_filename = hash_style_texture_filename + "_" + component_count_list_str + "_"
@@ -392,7 +412,8 @@ class M_IniHelper:
                 texture_output_folder = GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib_model.draw_ib)
                 print("M_IniHelper: Slot 贴图输出目录: " + texture_output_folder)
 
-                target_path = GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib_model.draw_ib) + texture_markup_info.mark_filename
+                aliased_texture_filename = cls._get_aliased_texture_output_filename(texture_markup_info.mark_filename, submesh_model)
+                target_path = GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib_model.draw_ib) + aliased_texture_filename
                 source_path = cls._get_slot_texture_source_path(draw_ib_model, part_name, texture_markup_info)
                 print(
                     "M_IniHelper: Slot 贴图复制计划，Part: "
