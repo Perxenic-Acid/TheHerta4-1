@@ -5,6 +5,7 @@ from ...common.global_config import GlobalConfig
 from ...common.logic_name import LogicName
 from .drawib_model_wwmi import DrawIBModelWWMI
 from ...blueprint.blueprint_model import BluePrintModel
+from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
 from ...common.global_key_count_helper import GlobalKeyCountHelper
 from ...common.m_ini_helper import M_IniHelper
@@ -28,6 +29,11 @@ class ExportWWMI:
         for draw_ib in ordered_draw_ib_list:
             draw_ib_model = DrawIBModelWWMI(draw_ib=draw_ib, blueprint_model=self.blueprint_model)
             self.drawib_drawibmodel_dict[draw_ib] = draw_ib_model
+
+        alias_dict = BlueprintExportHelper.get_alias_dict()
+        if alias_dict:
+            for draw_ib_model in self.drawib_drawibmodel_dict.values():
+                draw_ib_model.apply_alias_dict(alias_dict)
 
     def add_constants_section(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
         constants_section = M_IniSection(M_SectionType.Constants)

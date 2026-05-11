@@ -12,6 +12,8 @@ from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
 from .export_helper import ExportHelper
+from ...blueprint.blueprint_export_helper import BlueprintExportHelper
+from ...common.workspace_helper import WorkSpaceHelper
 
 import os
 
@@ -28,6 +30,18 @@ class ExportEFMI:
         self.drawib_model_list = ExportHelper.parse_drawib_model_list_from_blueprint_model(self.blueprint_model, combine_ib=False)
         print("SubMeshModel列表初始化完成，共有 " + str(len(self.submesh_model_list)) + " 个SubMeshModel")
 
+        alias_dict = BlueprintExportHelper.get_alias_dict()
+        if alias_dict:
+            for drawib_model in self.drawib_model_list:
+                drawib_model.apply_alias_dict(alias_dict)
+            # self.submesh_model_list 是独立创建的 SubMeshModel 副本，需同步应用别名
+            for submesh_model in self.submesh_model_list:
+                unique_str = submesh_model.unique_str
+                alias = str(alias_dict.get(unique_str, "") or "").strip()
+                if alias:
+                    lod_name, _ = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+                    submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias
+
     def generate_buffer_files(self):
         buf_output_folder = GlobalConfig.path_generatemod_buffer_folder()
 
@@ -36,13 +50,13 @@ class ExportEFMI:
             print("ExportEFMI: 导出SubMeshModel，Unique标识: " + submesh_model.unique_str)
 
             # 生成IndexBuffer
-            ib_filename = submesh_model.unique_str + "-Index.buf"
+            ib_filename = submesh_model.display_str + "-Index.buf"
             ib_filepath = os.path.join(buf_output_folder, ib_filename)
             BufferExportHelper.write_buf_ib_r32_uint(submesh_model.ib, ib_filepath)
 
             # 生成CategoryBuffer
             for category, category_buf in submesh_model.category_buffer_dict.items():
-                category_buf_filename = submesh_model.unique_str + "-" + category + ".buf"
+                category_buf_filename = submesh_model.display_str + "-" + category + ".buf"
                 category_buf_filepath = os.path.join(buf_output_folder, category_buf_filename)
                 with open(category_buf_filepath, 'wb') as f:
                     category_buf.tofile(f)
@@ -70,7 +84,7 @@ class ExportEFMI:
             active_index = draw_ib_active_index_dict.get(submesh_model.match_draw_ib, 0)
             part_name = drawib_model.get_submesh_part_name(submesh_model) if drawib_model is not None else None
             
-            texture_override_ib_section.append("[TextureOverride_" + submesh_model.unique_str.replace("-","_") + "]")
+            texture_override_ib_section.append("[TextureOverride_" + drawib_model.get_submesh_texture_override_suffix(submesh_model) + "]")
             texture_override_ib_section.append("hash = " + submesh_model.match_draw_ib)
             texture_override_ib_section.append("match_first_index = " + submesh_model.match_first_index)
             texture_override_ib_section.append("match_index_count = " + submesh_model.match_index_count)
@@ -78,12 +92,12 @@ class ExportEFMI:
 
             texture_override_ib_section.append("run = CommandList\\EFMIv1\\OverrideTextures")
 
-            ib_resource_name = "Resource_" + submesh_model.unique_str.replace("-","_") + "_Index"
+            ib_resource_name = drawib_model.get_submesh_ib_resource_name(submesh_model)
             texture_override_ib_section.append("ib = " + ib_resource_name)
 
             for category in submesh_model.category_buffer_dict.keys():
                 category_slot = submesh_model.d3d11_game_type.CategoryExtractSlotDict.get(category,"unknown_slot")
-                category_resource_name = "Resource_" + submesh_model.unique_str.replace("-","_")  + "_" + category
+                category_resource_name = "Resource_" + drawib_model.get_submesh_unique_key(submesh_model) + "_" + category
                 texture_override_ib_section.append(category_slot + " = " + category_resource_name)
 
             if not GlobalProterties.forbid_auto_texture_ini() and drawib_model is not None:
@@ -108,20 +122,23 @@ class ExportEFMI:
         # ResourceBuffer部分
         resource_buffer_section = M_IniSection(M_SectionType.ResourceBuffer)
         for submesh_model in self.submesh_model_list:
-            ib_resource_name = "Resource_" + submesh_model.unique_str.replace("-","_") + "_Index"
+            drawib_model = drawib_drawibmodel_dict.get(submesh_model.match_draw_ib)
+            submesh_unique_key = drawib_model.get_submesh_unique_key(submesh_model) if drawib_model else submesh_model.display_str.replace("-", "_")
+
+            ib_resource_name = "Resource_" + submesh_unique_key + "_Index"
             resource_buffer_section.append("[" + ib_resource_name + "]")
             resource_buffer_section.append("type = Buffer")
             resource_buffer_section.append("format = DXGI_FORMAT_R32_UINT")
-            resource_buffer_section.append("filename = Meshes\\" + submesh_model.unique_str + "-Index.buf")
+            resource_buffer_section.append("filename = Meshes\\" + submesh_model.display_str + "-Index.buf")
             resource_buffer_section.new_line()
-            
+
             for category in submesh_model.category_buffer_dict.keys():
-                category_resource_name = "Resource_" + submesh_model.unique_str.replace("-","_")  + "_" + category
+                category_resource_name = "Resource_" + submesh_unique_key + "_" + category
                 stride = submesh_model.d3d11_game_type.CategoryStrideDict.get(category,0)
                 resource_buffer_section.append("[" + category_resource_name + "]")
                 resource_buffer_section.append("type = Buffer")
                 resource_buffer_section.append("stride = " + str(stride))
-                resource_buffer_section.append("filename = Meshes\\" + submesh_model.unique_str + "-" + category + ".buf")
+                resource_buffer_section.append("filename = Meshes\\" + submesh_model.display_str + "-" + category + ".buf")
                 resource_buffer_section.new_line()
 
         if not GlobalProterties.forbid_auto_texture_ini():

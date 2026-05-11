@@ -161,6 +161,7 @@ class DrawIBModelWWMI:
                 mfi_int = 0
             self.submesh_model_list.append(SimpleNamespace(
                 unique_str=unique_str,
+                display_str=unique_str,  # 初始等于 unique_str，后续由 apply_alias_dict 覆盖
                 match_first_index=mfi_int,
                 d3d11_game_type=self.d3d11GameType,
             ))
@@ -544,3 +545,16 @@ class DrawIBModelWWMI:
         if part_name is None:
             return []
         return self.partname_texturemarkinfolist_dict.get(part_name, [])
+
+    def apply_alias_dict(self, alias_dict: dict):
+        """
+        将别名字典应用到所有 submesh_model.display_str。
+        alias_dict: {unique_str: alias_name}
+        alias_name 为空字符串时，display_str 保持等于 unique_str。
+        """
+        for submesh_model in self.submesh_model_list:
+            unique_str = submesh_model.unique_str
+            alias = str(alias_dict.get(unique_str, "") or "").strip()
+            if alias:
+                lod_name, _ = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+                submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias

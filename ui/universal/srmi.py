@@ -10,6 +10,7 @@ from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
 from .export_helper import ExportHelper
 from ...common.drawib_model import DrawIBModel
+from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 
 import os
 
@@ -22,6 +23,10 @@ class ExportSRMI:
 
     def __post_init__(self):
         self.drawib_model_list = ExportHelper.parse_drawib_model_list_from_blueprint_model(blueprint_model=self.blueprint_model,combine_ib=False)
+        alias_dict = BlueprintExportHelper.get_alias_dict()
+        if alias_dict:
+            for drawib_model in self.drawib_model_list:
+                drawib_model.apply_alias_dict(alias_dict)
 
     def generate_buffer_files(self):
         buf_output_folder = GlobalConfig.path_generatemod_buffer_folder()
@@ -37,7 +42,7 @@ class ExportSRMI:
             else:
                 for submesh_model in drawib_model.submesh_model_list:
                     ib = drawib_model.submesh_ib_dict.get(submesh_model.unique_str, [])
-                    ib_filename = submesh_model.unique_str + "-Index.buf"
+                    ib_filename = submesh_model.display_str + "-Index.buf"
                     ib_filepath = os.path.join(buf_output_folder, ib_filename)
                     BufferExportHelper.write_buf_ib_r32_uint(ib, ib_filepath)
             
@@ -223,7 +228,7 @@ class ExportSRMI:
                 resource_buffer_section.append("[" + ib_resource_name + "]")
                 resource_buffer_section.append("type = Buffer")
                 resource_buffer_section.append("format = DXGI_FORMAT_R32_UINT")
-                resource_buffer_section.append("filename = Meshes\\" + submesh_model.unique_str + "-Index.buf")
+                resource_buffer_section.append("filename = Meshes\\" + submesh_model.display_str + "-Index.buf")
                 resource_buffer_section.new_line()
 
             ini_builder.append_section(resource_buffer_section)
