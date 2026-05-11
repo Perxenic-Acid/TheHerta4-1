@@ -8,6 +8,8 @@
 
 注意尽量古法编程，AI只能作为辅助。
 
+以及执行消耗token的任务时使用：/karpathy-guidelines
+
 
 # Blender下载地址
 - https://download.blender.org/release/
