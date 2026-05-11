@@ -68,7 +68,7 @@ class SubMeshModel:
 
         submesh_metadata = SubmeshMetadataResolver.resolve(folder_name)
         self.d3d11_game_type = submesh_metadata.d3d11_game_type
-
+        
         index_offset = 0
         submesh_temp_obj_list = []
         temp_collection_list = []
