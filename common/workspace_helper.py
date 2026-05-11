@@ -250,8 +250,9 @@ class WorkSpaceHelper:
         for deduped_filename, drawcall_index_list in deduped_filename_drawcall_index_list_dict.items():
             used_component_count_list = []
 
-            original_hash = deduped_filename.split("_")[0]
-            render_hash = deduped_filename.split("_")[1].split("-")[0]
+            filename_parts = deduped_filename.split("_")
+            original_hash = filename_parts[0] if len(filename_parts) > 0 else ""
+            render_hash = filename_parts[1].split("-")[0] if len(filename_parts) > 1 else ""
 
             # 从类似于 "b7ff7a6e_03d46264-R8G8B8A8_UNORM_SRGB.dds" 的文件名中
             # 提取出 "R8G8B8A8_UNORM_SRGB" 部分：
