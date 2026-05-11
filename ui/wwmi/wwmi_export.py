@@ -119,14 +119,16 @@ class ExportWWMI:
             blend_remap_section.append("[ResourceExtraRemappedSkeletonRW]")
             blend_remap_section.new_line()
 
+            component_count = 0
             for component_tmp_obj_name, use_remap in draw_ib_model.blend_remap_used.items():
                 if not use_remap:
+                    component_count += 1
                     continue
-                component_count = int(component_tmp_obj_name.split("-")[1]) - 1
                 blend_remap_section.append("[ResourceRemappedBlendBufferComponent" + str(component_count) + "]")
                 blend_remap_section.append("[ResourceRemappedSkeletonComponent" + str(component_count) + "]")
                 blend_remap_section.append("[ResourceExtraRemappedSkeletonComponent" + str(component_count) + "]")
                 blend_remap_section.new_line()
+                component_count += 1
 
             if draw_ib_model.blend_remap:
                 blend_remap_section.append("[CommandListInitializeBlendRemaps]")
@@ -142,10 +144,11 @@ class ExportWWMI:
                 blend_remap_section.append("  cs-t35 = ref ResourceBlendRemapVertexVGBuffer")
 
                 blend_remap_id = 0
+                component_count = 0
                 for component_tmp_obj_name, use_remap in draw_ib_model.blend_remap_used.items():
                     if not use_remap:
+                        component_count += 1
                         continue
-                    component_count = int(component_tmp_obj_name.split("-")[1]) - 1
                     component_count_str = str(component_count)
                     blend_remap_section.append("    $\\WWMIv1\\blend_remap_id = " + str(blend_remap_id))
                     blend_remap_section.append("    ResourceRemappedBlendBufferRW = copy ResourceBlendBufferNoStride")
@@ -155,6 +158,7 @@ class ExportWWMI:
                     blend_remap_section.append("    ResourceRemappedBlendBufferComponent" + component_count_str + " = copy_desc ResourceBlendBuffer")
                     blend_remap_section.new_line()
                     blend_remap_id = blend_remap_id + 1
+                    component_count += 1
 
                 blend_remap_section.append("    $blend_remaps_initialized = 1")
                 blend_remap_section.append("endif")
@@ -169,12 +173,13 @@ class ExportWWMI:
                 blend_remap_section.new_line()
 
                 blend_remap_id = 0
+                component_count = 0
                 for component_tmp_obj_name, use_remap in draw_ib_model.blend_remap_used.items():
                     if not use_remap:
+                        component_count += 1
                         continue
 
                     blend_remap_section.append("$\\WWMIv1\\blend_remap_id = " + str(blend_remap_id))
-                    component_count = int(component_tmp_obj_name.split("-")[1]) - 1
                     vg_count = draw_ib_model.component_real_vg_count_dict[component_count]
                     blend_remap_section.append("$\\WWMIv1\\vg_count = " + str(vg_count))
                     blend_remap_section.append("cs-t38 = ResourceMergedSkeletonRemap")
@@ -187,6 +192,7 @@ class ExportWWMI:
                     blend_remap_section.append("ResourceExtraRemappedSkeletonComponent" + str(component_count) + " = copy ResourceExtraRemappedSkeletonRW")
                     blend_remap_section.new_line()
                     blend_remap_id = blend_remap_id + 1
+                    component_count += 1
 
         ini_builder.append_section(blend_remap_section)
 
