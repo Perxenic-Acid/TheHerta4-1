@@ -136,8 +136,8 @@ _TRANSLATIONS_ZH_TO_EN_BASE = {
     "默认为False, 启用后导入和导出模型将不再是镜像的，目前3Dmigoto的模型导入后是镜像存粹是由于历史遗留问题是错误的，但是当错误积累成粑粑山，人的习惯和旧的工程很难被改变，所以只有勾选后才能使用非镜像工作流": "Default is False. When enabled, imported and exported models will no longer be mirrored. The current mirrored behavior in 3Dmigoto imports is a legacy mistake, but old habits and existing projects make it hard to change by default, so non-mirrored workflow is only used when this option is enabled.",
     "自动上贴图时使用法线贴图": "Use Normal Maps During Auto Texture Assignment",
     "启用后在导入模型时自动附加法线贴图节点, 在材质预览模式下得到略微更好的视觉效果": "When enabled, automatically attach a normal map node when importing models to get slightly better visual results in material preview mode.",
-    "使用融合统一顶点组": "Use Merged Unified Vertex Groups",
-    "导入时是否导入融合后的顶点组 (Unreal的合并顶点组技术会用到)，一般鸣潮Mod需要勾选来降低制作Mod的复杂度": "Whether to import merged vertex groups during import. This is used by Unreal's merged vertex group workflow and is usually recommended for Wuthering Waves Mods to reduce production complexity.",
+    "顶点组模式": "Vertex Group Mode",
+
     "忽略未启用的形态键": "Ignore Disabled Shape Keys",
     "勾选此项后，未勾选启用的形态键在生成Mod时会被忽略，勾选的形态键会参与生成Mod": "When enabled, shape keys that are not checked will be ignored during Mod generation, and only checked shape keys will be included.",
     "应用所有修改器": "Apply All Modifiers",

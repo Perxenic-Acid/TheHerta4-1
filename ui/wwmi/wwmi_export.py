@@ -253,6 +253,7 @@ class ExportWWMI:
                 commandlist_section.append("elif vs-cb3 == 3381.7777")
                 commandlist_section.append("  vs-cb3 = ref ResourceMergedSkeletonOverride")
                 commandlist_section.append("endif")
+                commandlist_section.append("endif")
             else:
                 commandlist_section.append("if vs-cb4 == 3381.7777")
                 commandlist_section.append("  vs-cb4 = ref ResourceMergedSkeleton")

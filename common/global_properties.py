@@ -137,10 +137,14 @@ class GlobalProterties(bpy.types.PropertyGroup):
         default=False,
     ) # type: ignore
 
-    import_merged_vgmap: bpy.props.BoolProperty(
-        name="使用融合统一顶点组",
-        description="导入时是否导入融合后的顶点组 (Unreal的合并顶点组技术会用到)，一般鸣潮Mod需要勾选来降低制作Mod的复杂度",
-        default=True,
+    import_merged_vgmap: bpy.props.EnumProperty(
+        name="顶点组模式",
+        description="Merged: 导入融合后的统一顶点组 (Unreal的合并顶点组技术会用到)，一般鸣潮Mod选这个来降低制作Mod的复杂度\nPerComponent: 按每个组件独立的顶点组导入",
+        items=[
+            ('MERGED', 'Merged', '导入融合后的统一顶点组'),
+            ('PER_COMPONENT', 'PerComponent', '按每个组件独立的顶点组导入'),
+        ],
+        default='MERGED',
     ) # type: ignore
 
     ignore_muted_shape_keys: bpy.props.BoolProperty(
@@ -241,7 +245,7 @@ class GlobalProterties(bpy.types.PropertyGroup):
 
     @classmethod
     def import_merged_vgmap(cls):
-        return cls._instance().import_merged_vgmap
+        return cls._instance().import_merged_vgmap == 'MERGED'
 
     @classmethod
     def ignore_muted_shape_keys(cls):
