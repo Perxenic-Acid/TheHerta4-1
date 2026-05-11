@@ -89,8 +89,14 @@ class SSMTImportHelper:
 		vertex_slice_offset = submesh_json.VertexOffset
 		vertex_slice_count = submesh_json.VertexCount
 
+		# Buffer types that use standard D3D11ElementList structured layout.
+		# - Normal: standard vertex buffer (Position, Texcoord, Color, etc.)
+		# - BlendWeight: NTEMI packed BLENDINDICES + BLENDWEIGHTS buffer
+		# - TangentFrame: NTEMI packed TANGENT + NORMAL buffer
+		STRUCTURED_BUFFER_TYPES = {"Normal", "BlendWeight", "TangentFrame"}
+
 		for category_buffer in submesh_json.CategoryBufferList:
-			if category_buffer.Type != "Normal":
+			if category_buffer.Type not in STRUCTURED_BUFFER_TYPES:
 				continue
 
 			category_elements, category_vb_data, category_vertex_count = SSMTImportHelper.parse_normal_category_buffer(
@@ -114,7 +120,7 @@ class SSMTImportHelper:
 		SHAPEKEY_TYPES = ("ShapeKeyOffset", "ShapeKeyVertexId", "ShapeKeyVertexOffset", "ShapeKeyScale")
 
 		for category_buffer in submesh_json.CategoryBufferList:
-			if category_buffer.Type == "Normal":
+			if category_buffer.Type in STRUCTURED_BUFFER_TYPES:
 				continue
 
 			if category_buffer.Type in SHAPEKEY_TYPES:
