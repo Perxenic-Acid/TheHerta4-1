@@ -43,6 +43,7 @@ class SSMTImportHelper:
 			wwmi_vertex_offset=submesh_json.VertexOffset,
 			wwmi_vertex_count=submesh_json.VertexCount,
 			wwmi_vg_map=wwmi_vg_map,
+			wwmi_vg_offset=submesh_json.VGOffset,
 		)
 
 	@staticmethod

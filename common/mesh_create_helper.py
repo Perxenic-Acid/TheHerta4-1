@@ -41,6 +41,7 @@ class MeshCreateHelper:
         wwmi_vertex_offset:int = 0,
         wwmi_vertex_count:int = -1,
         wwmi_vg_map:dict | None = None,
+        wwmi_vg_offset:int = 0,
     ):
         TimerUtils.Start("Import 3Dmigoto Raw")
         print("导入模型: " + mesh_name)
@@ -183,7 +184,10 @@ class MeshCreateHelper:
         # Merged模式：用VGMap将local blend index重映射为global bone ID
         if wwmi_vg_map:
             import types as _types
-            _vg_component = _types.SimpleNamespace(vg_map={str(k): int(v) for k, v in wwmi_vg_map.items()})
+            _vg_component = _types.SimpleNamespace(
+                vg_map={str(k): int(v) for k, v in wwmi_vg_map.items()},
+                vg_offset=wwmi_vg_offset,
+            )
         else:
             _vg_component = None
         MeshCreateHelper.import_vertex_groups(mesh, obj, blend_indices, blend_weights, _vg_component)
@@ -342,9 +346,12 @@ class MeshCreateHelper:
                 num_vertex_groups = max_valid_group_id + 1
             else:
                 mapped_group_ids = {int(group_id) for group_id in component.vg_map.values()}
-                if not mapped_group_ids:
+                vg_offset = getattr(component, 'vg_offset', 0)
+                max_global = max(mapped_group_ids) if mapped_group_ids else -1
+                max_global = max(max_global, vg_offset + max_valid_group_id)
+                if max_global < 0:
                     return
-                num_vertex_groups = max(mapped_group_ids) + 1
+                num_vertex_groups = max_global + 1
 
             print("num_vertex_groups: " + str(num_vertex_groups))
 
@@ -366,8 +373,9 @@ class MeshCreateHelper:
                         else:
                             mapped_group_id = component.vg_map.get(str(int(i)))
                             if mapped_group_id is None:
-                                continue
-                            target_group_id = int(mapped_group_id)
+                                target_group_id = component.vg_offset + int(i)
+                            else:
+                                target_group_id = int(mapped_group_id)
 
                         if target_group_id < 0:
                             continue
