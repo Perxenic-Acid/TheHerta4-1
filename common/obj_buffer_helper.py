@@ -58,7 +58,7 @@ class ObjBufferHelper:
             # Check if BLENDINDICES exists
             if d3d11_element_name.startswith("BLENDINDICES"):
                 if not obj.vertex_groups:
-                    raise SSMTErrorUtils.Fatal("your object [" +obj.name + "] need at leat one valid Vertex Group, Please check if your model's Vertex Group is correct.")
+                    SSMTErrorUtils.raise_fatal("your object [" +obj.name + "] need at leat one valid Vertex Group, Please check if your model's Vertex Group is correct.")
 
     @staticmethod
     def get_obj_data_model_list_by_draw_ib(ordered_draw_obj_data_model_list:list[DrawCallModel], draw_ib:str):

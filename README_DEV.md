@@ -10,6 +10,9 @@
 
 以及执行消耗token的任务时使用：/karpathy-guidelines
 
+绝对不要让愚蠢的DeepSeek V4 Pro排查问题，它只能修复你已经知道错在哪里的问题，
+并且需要严格的指示和提示，它只会干脏活，目前不能像人一样思考，
+希望未来的V5 Pro能好一点
 
 # Blender下载地址
 - https://download.blender.org/release/
