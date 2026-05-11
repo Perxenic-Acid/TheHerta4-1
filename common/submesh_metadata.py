@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 
 from ..utils.format_utils import Fatal
 from ..utils.json_utils import JsonUtils
-from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from .d3d11_gametype import D3D11GameType
 from .global_config import GlobalConfig
 from .submesh_json import SubmeshJson
@@ -96,30 +95,9 @@ class SubmeshMetadata:
         self.d3d11_game_type = self._build_d3d11_game_type()
 
     def _build_d3d11_game_type(self) -> D3D11GameType:
-        draw_ib = self.unique_str.split("-")[0] if "-" in self.unique_str else self.unique_str
-        datatype_node_info_list = BlueprintExportHelper.get_datatype_node_info()
-        override_d3d11_element_list = None
-
-        if datatype_node_info_list:
-            for node_info in datatype_node_info_list:
-                node = node_info["node"]
-                if not node.is_draw_ib_matched(draw_ib):
-                    continue
-
-                tmp_json_path = node_info.get("tmp_json_path")
-                if not tmp_json_path or not os.path.exists(tmp_json_path):
-                    break
-
-                datatype_tmp_json_dict = JsonUtils.LoadFromFile(tmp_json_path)
-                override_d3d11_element_list = datatype_tmp_json_dict.get("D3D11ElementList")
-                if override_d3d11_element_list:
-                    print("使用数据类型节点的 D3D11ElementList 覆盖 SubmeshJson 配置")
-                break
-
         return D3D11GameType.from_submesh_json_dict(
             submesh_json_dict=self.submesh_json_dict,
             file_path=self.submesh_json_path,
-            override_d3d11_element_list=override_d3d11_element_list,
         )
 
 

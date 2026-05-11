@@ -96,13 +96,12 @@ class D3D11GameType:
         cls,
         submesh_json_dict: dict,
         file_path: str = "",
-        override_d3d11_element_list: list[dict] | None = None,
     ):
         game_type_json = {
             "GPU-PreSkinning": submesh_json_dict.get("GPU-PreSkinning", False),
             "WorkGameType": submesh_json_dict.get("WorkGameType", ""),
             "CategoryDrawCategoryMap": submesh_json_dict.get("CategoryDrawCategoryMap", {}),
-            "D3D11ElementList": override_d3d11_element_list or cls._collect_element_list_from_submesh_json(submesh_json_dict),
+            "D3D11ElementList": cls._collect_element_list_from_submesh_json(submesh_json_dict),
         }
 
         instance = cls.__new__(cls)

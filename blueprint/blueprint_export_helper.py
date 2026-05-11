@@ -406,75 +406,7 @@ class BlueprintExportHelper:
         collect_shapekey_nodes(tree)
         return shapekey_name_mkey_dict
 
-    @staticmethod
-    def get_datatype_node_info(context=None):
-        """获取当前蓝图及所有嵌套蓝图中连接到输出节点的数据类型节点信息"""
-        tree = BlueprintExportHelper.get_current_blueprint_tree(context=context)
-        if not tree:
-            return None
-        
-        visited_blueprints = set()
-        datatype_nodes = []
-        
-        def collect_datatype_nodes(current_tree):
-            """递归收集数据类型节点"""
-            if current_tree.name in visited_blueprints:
-                return
-            visited_blueprints.add(current_tree.name)
-            
-            output_node = None
-            for node in current_tree.nodes:
-                if node.bl_idname == 'SSMTNode_Result_Output':
-                    output_node = node
-                    break
-            
-            if output_node:
-                nodes = BlueprintExportHelper._find_datatype_nodes_connected_to_output(output_node)
-                datatype_nodes.extend(nodes)
 
-        
-        collect_datatype_nodes(tree)
-        
-        if not datatype_nodes:
-            return None
-        
-        node_info_list = []
-        for node in datatype_nodes:
-            node_info_list.append({
-                "draw_ib_match": node.draw_ib_match,
-                "tmp_json_path": node.tmp_json_path,
-                "loaded_data": node.loaded_data,
-                "node": node
-            })
-        
-        return node_info_list
-    
-    @staticmethod
-    def _find_datatype_nodes_connected_to_output(node, visited=None):
-        """递归查找连接到输出节点的所有数据类型节点"""
-        if visited is None:
-            visited = set()
-        
-        if node.name in visited:
-            return []
-        
-        if node.mute:
-            return []
-        
-        visited.add(node.name)
-        datatype_nodes = []
-        
-        # 如果当前节点是数据类型节点，添加到列表
-        if node.bl_idname == 'SSMTNode_DataType':
-            datatype_nodes.append(node)
-        
-        # 递归查找连接的节点
-        connected_nodes = BlueprintExportHelper.get_connected_nodes(node)
-        for connected_node in connected_nodes:
-            datatype_nodes.extend(BlueprintExportHelper._find_datatype_nodes_connected_to_output(connected_node, visited))
-        
-        return datatype_nodes
-    
 
 
 
