@@ -1,3 +1,12 @@
+# AI协作
+
+这个时代没有AI的话效率会慢很多倍
+
+本项目使用Claude Code + DeepSeek V4 Pro + /caveman skill辅助开发
+
+千万别忘了用/caveman，不然这模型嘟嘟嘟嘟废话一大堆。
+
+
 # Blender下载地址
 - https://download.blender.org/release/
 
