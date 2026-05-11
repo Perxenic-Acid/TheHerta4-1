@@ -68,10 +68,13 @@ class SSMTImportHelper:
 		ib_data = numpy.fromfile(index_buffer.FilePath, dtype=index_np_type, count=ib_count)
 
 		# IB indices are global (relative to full shared VB).
-		# Since VB is sliced to [VertexOffset : VertexOffset+VertexCount],
-		# subtract VertexOffset to make indices local to the sliced VB.
+		# When VertexCount > 0, VB is sliced to [VertexOffset : VertexOffset+VertexCount],
+		# so we subtract VertexOffset to make indices local to the sliced VB.
+		# When VertexCount == 0, the full VB is loaded without slicing,
+		# and the global IB indices are already valid for the full VB.
 		vertex_offset = submesh_json.VertexOffset
-		if vertex_offset > 0:
+		vertex_count = submesh_json.VertexCount
+		if vertex_offset > 0 and vertex_count > 0:
 			ib_data = ib_data.astype(numpy.int64) - vertex_offset
 
 		return ib_data, ib_count, ib_polygon_count

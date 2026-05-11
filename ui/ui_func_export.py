@@ -16,6 +16,7 @@ from .universal.snowbreak import ExportSnowBreak
 from .universal.srmi import ExportSRMI
 from .universal.unity import ExportUnity
 from .wwmi.wwmi_export import ExportWWMI
+from .universal.ntemi import ExportNTEMI
 from .universal.yysls import ExportYYSLS
 from .universal.zzmi import ExportZZMI
 
@@ -75,9 +76,12 @@ def generate_mod_from_tree(tree, context, report_callback):
     elif GlobalConfig.logic_name == LogicName.ZZMI:
         export_zzmi = ExportZZMI(blueprint_model=blueprint_model)
         export_zzmi.export()
-    elif GlobalConfig.logic_name == LogicName.WWMI or GlobalConfig.logic_name == LogicName.NTEMI:
+    elif GlobalConfig.logic_name == LogicName.WWMI:
         export_wwmi = ExportWWMI(blueprint_model=blueprint_model)
         export_wwmi.export()
+    elif GlobalConfig.logic_name == LogicName.NTEMI:
+        export_ntemi = ExportNTEMI(blueprint_model=blueprint_model)
+        export_ntemi.export()
     elif GlobalConfig.logic_name == LogicName.SnowBreak:
         export_snowbreak = ExportSnowBreak(blueprint_model=blueprint_model)
         export_snowbreak.export()
