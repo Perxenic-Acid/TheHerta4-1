@@ -51,8 +51,8 @@ class SubMeshModel:
         # 因为列表里的每个DrawCallModel的draw_ib,first_index,index_count都是一样的，所以直接取第一个就行了
         if len(self.drawcall_model_list) > 0:
             self.match_draw_ib = self.drawcall_model_list[0].match_draw_ib
-            self.match_first_index = self.drawcall_model_list[0].match_first_index
-            self.match_index_count = self.drawcall_model_list[0].match_index_count
+            self.match_first_index = int(self.drawcall_model_list[0].match_first_index)
+            self.match_index_count = int(self.drawcall_model_list[0].match_index_count)
             self.unique_str = self.drawcall_model_list[0].get_unique_str()
         
         # display_str 默认等于 unique_str，导出前可被 apply_alias_dict 覆盖

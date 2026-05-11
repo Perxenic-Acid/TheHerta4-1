@@ -13,6 +13,7 @@ from ...common.m_ini_helper_gui import M_IniHelperGUI
 from .export_helper import ExportHelper
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 from ...common.workspace_helper import WorkSpaceHelper
+from ...utils.format_utils import FormatUtils
 
 from dataclasses import dataclass, field
 
@@ -146,14 +147,23 @@ class ExportNTEMI:
     def _build_category_layouts(game_type) -> dict:
         """Build per-category element layouts from D3D11GameType.
 
-        Returns: {category_name: [(element_name, byte_offset, byte_width, format), ...]}
+        AlignedByteOffset is global across all elements. Category buffers only
+        contain the bytes for their own elements, so we subtract the first
+        element's offset to make them category-local.
+
+        Returns: {category_name: [(element_name, local_byte_offset, byte_width, format), ...]}
         """
         layouts: dict[str, list] = {}
         for elem in game_type.D3D11ElementList:
             cat = elem.Category
             if cat not in layouts:
                 layouts[cat] = []
-            layouts[cat].append((elem.ElementName, elem.AlignedByteOffset, elem.ByteWidth, elem.Format))
+            byte_width = elem.ByteWidth if elem.ByteWidth > 0 else FormatUtils.format_size(elem.Format)
+            layouts[cat].append((elem.ElementName, elem.AlignedByteOffset, byte_width, elem.Format))
+        # Make offsets category-local
+        for cat, elems in layouts.items():
+            base = elems[0][1]  # first element's global offset
+            layouts[cat] = [(name, off - base, width, fmt) for name, off, width, fmt in elems]
         return layouts
 
     def _write_position_buffer(self, data: numpy.ndarray, stride: int, filepath: str):
@@ -233,6 +243,10 @@ class ExportNTEMI:
 
         tg_offset, tg_width, _ = tg_elem
         nm_offset, nm_width, _ = nm_elem
+
+        if tg_width == 0 or nm_width == 0:
+            print(f"WARNING: Normal element width is 0 (TANGENT={tg_width}, NORMAL={nm_width}), skipping normal buffer")
+            return
 
         tangents = chunk[:, tg_offset:tg_offset + tg_width].astype(numpy.int8)
         normals = chunk[:, nm_offset:nm_offset + nm_width].astype(numpy.int8)
