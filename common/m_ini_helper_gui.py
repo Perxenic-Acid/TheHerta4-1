@@ -16,20 +16,40 @@ class M_IniHelperGUI:
         :param src_dir: 源目录路径
         :param dst_dir: 目标目录路径
         """
+        print("[TRACE] M_IniHelperGUI.copy_files() 入口")
+        print("[TRACE]   src_dir: " + src_dir)
+        print("[TRACE]   dst_dir: " + dst_dir)
+        print("[TRACE]   src_dir 存在: " + str(os.path.exists(src_dir)))
+
         # 确保目标目录存在
         os.makedirs(dst_dir, exist_ok=True)
+        print("[TRACE]   dst_dir 已确保存在")
+
+        copied_count = 0
+        skipped_not_file = 0
 
         # 遍历源目录下的所有文件
-        for filename in os.listdir(src_dir):
+        files_in_src = os.listdir(src_dir) if os.path.exists(src_dir) else []
+        print("[TRACE]   src_dir 内文件/目录列表(" + str(len(files_in_src)) + "个): " + str(files_in_src))
+
+        for filename in files_in_src:
             src_file = os.path.join(src_dir, filename)
             dst_file = os.path.join(dst_dir, filename)
 
             # 只复制文件，忽略子目录
             if os.path.isfile(src_file):
-                # 面板 shader 和贴图会持续迭代，生成 Mod 时必须覆盖旧资源，
-                # 否则生成目录里会残留旧版 res 文件，导致 ini 与 shader 行为不一致。
-                shutil.copy2(src_file, dst_file)  # 使用 copy2 保留元数据
-                print(f"复制文件: {src_file} -> {dst_file}")
+                print("[TRACE] >>> 复制资源文件: " + src_file + " -> " + dst_file)
+                try:
+                    shutil.copy2(src_file, dst_file)  # 使用 copy2 保留元数据
+                    print("[TRACE] <<< 复制成功: " + dst_file)
+                    copied_count += 1
+                except Exception as e:
+                    print("[TRACE] <<< 复制失败! 异常: " + str(e))
+            else:
+                print("[TRACE]   跳过非文件: " + src_file)
+                skipped_not_file += 1
+
+        print("[TRACE] M_IniHelperGUI.copy_files() 汇总: 复制=" + str(copied_count) + ", 跳过非文件=" + str(skipped_not_file))
                 
     @classmethod
     def add_branch_mod_gui_section(cls,ini_builder:M_IniBuilder,key_name_mkey_dict:dict[str,M_Key]):

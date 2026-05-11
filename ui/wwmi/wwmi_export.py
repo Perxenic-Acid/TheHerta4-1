@@ -595,11 +595,21 @@ class ExportWWMI:
                 self.add_resource_merged_skeleton(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
 
             self.add_resource_buffer(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
+
+            print("=" * 60)
+            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - 开始复制 Slot 贴图...")
             M_IniHelper.move_slot_style_textures(draw_ib_model=draw_ib_model)
+            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - Slot 贴图复制完成")
+
             GlobalKeyCountHelper.generated_mod_number = GlobalKeyCountHelper.generated_mod_number + 1
             M_IniHelper.add_branch_key_sections(ini_builder=config_ini_builder, key_name_mkey_dict=self.blueprint_model.keyname_mkey_dict)
             M_IniHelperGUI.add_branch_mod_gui_section(ini_builder=config_ini_builder, key_name_mkey_dict=self.blueprint_model.keyname_mkey_dict)
+
+            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - 开始生成 Hash 贴图 INI...")
             M_IniHelper.generate_hash_style_texture_ini(ini_builder=config_ini_builder, drawib_drawibmodel_dict=self.drawib_drawibmodel_dict)
+            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - Hash 贴图 INI 生成完成")
+            print("=" * 60)
+
             config_ini_builder.save_to_file_not_reorder(os.path.join(GlobalConfig.path_generate_mod_folder(), GlobalConfig.get_workspace_name() + "_" + draw_ib + ".ini"))
             config_ini_builder.clear()
 
