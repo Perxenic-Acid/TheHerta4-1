@@ -3,7 +3,6 @@ import time
 import uuid
 
 import bpy
-from bpy.types import NodeTree, Node, NodeSocket
 from bpy_extras.io_utils import ImportHelper
 
 from ..common.logic_name import LogicName
@@ -11,14 +10,12 @@ from ..common.global_config import GlobalConfig
 from ..common.global_properties import GlobalProterties
 from ..utils.translate_utils import iface_, rpt_
 from .blueprint_export_helper import BlueprintExportHelper
-from .blueprint_node_base import SSMTBlueprintTree, SSMTNodeBase
+from .blueprint_node_base import SSMTNodeBase
 
-BLENDER_VERSION = bpy.app.version[:2]
 OBJECT_PERSISTENT_ID_KEY = "_ssmt_object_uuid"
 
 _picking_node_name = None
 _picking_tree_name = None
-_is_viewing_group_objects = False
 
 
 def _is_duplicate_object_persistent_id(target_obj, object_id):

@@ -8,7 +8,6 @@ import bpy
 from bpy.types import PropertyGroup
 
 from ..utils.translate_utils import iface_, rpt_
-from ..common.global_config import GlobalConfig
 from ..common.workspace_helper import WorkSpaceHelper
 from .blueprint_node_base import SSMTNodeBase
 

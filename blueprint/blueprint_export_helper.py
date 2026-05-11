@@ -3,17 +3,9 @@ import os
 import bpy
 from ..common.global_config import GlobalConfig
 from ..common.m_key import M_Key
-from ..common.draw_call_model import DrawCallModel
 from ..common.workspace_helper import WorkSpaceHelper
 
 class BlueprintExportHelper:
-
-    # 静态变量，用于多文件导出功能
-    # 存储当前导出次数（从1开始）
-    current_export_index = 1
-    
-    # 静态变量，存储最大导出次数
-    max_export_count = 1
 
     # 运行时记录当前操作对应的蓝图树，避免按钮触发后丢失上下文
     runtime_blueprint_tree_name = ""
@@ -282,28 +274,6 @@ class BlueprintExportHelper:
         return any(getattr(node, "enable_flow_effect", True) for node in panel_nodes)
     
     @staticmethod
-    def get_connected_groups(output_node):
-        """
-        获取连接到输出节点的所有 Group 节点。
-        按照 Input 插槽的顺序返回列表。
-        """
-        connected_groups = []
-        if not output_node:
-            return connected_groups
-            
-        # 遍历 Output 节点的所有输入插槽
-        for socket in output_node.inputs:
-            if socket.is_linked:
-                # 遍历连线 (通常一个插槽只有一个连线，但数据结构是列表)
-                for link in socket.links:
-                    source_node = link.from_node
-                    # 确保来源是 Group 节点
-                    if source_node.bl_idname == 'SSMTNode_Object_Group':
-                         connected_groups.append(source_node)
-        
-        return connected_groups
-    
-    @staticmethod
     def get_connected_nodes(current_node):
         """
         按照插槽顺序返回所有连接的节点
@@ -321,36 +291,7 @@ class BlueprintExportHelper:
                     connected_groups.append(source_node)
         
         return connected_groups
-    
-    @staticmethod
-    def get_objects_from_group(group_node):
-        """
-        获取连接到某个 Group 节点的所有 Object Info 节点中的物体名称信息。
-        """
-        objects_info = []
-        if not group_node:
-            return objects_info
 
-        for socket in group_node.inputs:
-            if socket.is_linked:
-                for link in socket.links:
-                    source_node = link.from_node
-                    # 确保来源是 Object Info 节点
-                    if source_node.bl_idname == 'SSMTNode_Object_Info':
-                        draw_ib = ""
-                        submesh_name = str(getattr(source_node, "submesh_name", "") or "")
-                        if submesh_name:
-                            draw_ib = DrawCallModel(obj_name=str(getattr(source_node, "object_name", "") or ""), submesh_name=submesh_name).match_draw_ib
-
-                        info = {
-                            "object_name": source_node.object_name,
-                            "draw_ib": draw_ib,
-                            "component": source_node.component,
-                            "node": source_node
-                        }
-                        objects_info.append(info)
-        return objects_info
-    
 
     @staticmethod
     def get_current_shapekeyname_mkey_dict(context=None):

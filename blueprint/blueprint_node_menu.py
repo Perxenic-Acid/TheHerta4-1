@@ -1,12 +1,10 @@
 
 import bpy
-from bpy.types import NodeTree, Node, NodeSocket
 
 from ..common.global_config import GlobalConfig
 from ..utils.translate_utils import iface_, rpt_
 
 from .blueprint_export_helper import BlueprintExportHelper
-from .blueprint_node_base import SSMTBlueprintTree, SSMTNodeBase
 
 
 class SSMT_OT_CreateGroupFromSelection(bpy.types.Operator):
