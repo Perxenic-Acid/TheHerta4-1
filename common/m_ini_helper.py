@@ -84,6 +84,8 @@ class M_IniHelper:
             return ""
 
         d3d11_game_type = getattr(submesh_model, "d3d11_game_type", None)
+        if d3d11_game_type is None:
+            d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
         unique_str = getattr(submesh_model, "unique_str", "")
         if d3d11_game_type is None or unique_str == "":
             return ""
@@ -106,6 +108,8 @@ class M_IniHelper:
 
         for submesh_model in getattr(draw_ib_model, "submesh_model_list", []):
             d3d11_game_type = getattr(submesh_model, "d3d11_game_type", None)
+            if d3d11_game_type is None:
+                d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
             unique_str = getattr(submesh_model, "unique_str", "")
             if d3d11_game_type is None or unique_str == "":
                 continue

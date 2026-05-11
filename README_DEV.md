@@ -6,6 +6,8 @@
 
 千万别忘了用/caveman，不然这模型嘟嘟嘟嘟废话一大堆。
 
+注意尽量古法编程，AI只能作为辅助。
+
 
 # Blender下载地址
 - https://download.blender.org/release/

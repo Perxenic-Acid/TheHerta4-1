@@ -162,6 +162,7 @@ class DrawIBModelWWMI:
             self.submesh_model_list.append(SimpleNamespace(
                 unique_str=unique_str,
                 match_first_index=mfi_int,
+                d3d11_game_type=self.d3d11GameType,
             ))
             submesh_metadata = SubmeshMetadataResolver.resolve(unique_str)
             part_name = submesh_metadata.part_name or unique_str
@@ -520,6 +521,16 @@ class DrawIBModelWWMI:
             return self.match_first_index_partname_dict.get(int(match_first_index))
         except (TypeError, ValueError):
             return None
+
+    @property
+    def part_name_submesh_dict(self) -> dict:
+        mapping = {}
+        for submesh_model in self.submesh_model_list:
+            part_name = self.get_submesh_part_name(submesh_model)
+            if part_name is None:
+                continue
+            mapping[part_name] = submesh_model
+        return mapping
 
     def get_submesh_part_name(self, submesh_model):
         return self.get_part_name_by_match_first_index(submesh_model.match_first_index)
