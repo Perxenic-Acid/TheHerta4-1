@@ -42,8 +42,9 @@ class SubMeshModel:
 
     ib:list = field(init=False,repr=False,default_factory=list)
     category_buffer_dict:dict = field(init=False,repr=False,default_factory=dict)
-    index_vertex_id_dict:dict = field(init=False,repr=False,default_factory=dict) 
+    index_vertex_id_dict:dict = field(init=False,repr=False,default_factory=dict)
     shape_key_buffer_dict:dict = field(init=False,repr=False,default_factory=dict)
+    ntemi_bone_palette:list = field(init=False,repr=False,default_factory=list)
 
     def __post_init__(self):
 
@@ -146,6 +147,9 @@ class SubMeshModel:
         self.index_vertex_id_dict = obj_buffer_result.index_loop_id_dict
         self.shape_key_buffer_dict = obj_buffer_result.shape_key_buffer_dict
 
+        if GlobalConfig.logic_name == LogicName.NTEMI:
+            self.ntemi_bone_palette = [int(vg.name) for vg in submesh_merged_obj.vertex_groups]
+
         # 4.计算完成后，删除临时obj
         bpy.data.objects.remove(submesh_merged_obj, do_unlink=True)
 
@@ -182,7 +186,16 @@ class SubMeshModel:
             temp_obj.rotation_euler[2] = 0
             bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
         
-        # 这里真的需要设置一下吗？暂且留着反正不影响
+        elif GlobalConfig.logic_name == LogicName.NTEMI:
+            # NTEMI import: Z rotate 180°, scale 0.01 → reverse: scale 100, Z rotate ±180°
+            ObjUtils.select_obj(temp_obj)
+            temp_obj.scale = (100.0, 100.0, 100.0)
+            bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+            temp_obj.rotation_euler[0] = 0
+            temp_obj.rotation_euler[1] = 0
+            temp_obj.rotation_euler[2] = math.radians(180)
+            bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+
         elif GlobalConfig.logic_name == LogicName.EFMI or GlobalConfig.logic_name == LogicName.Naraka:
             ObjUtils.select_obj(temp_obj)
             temp_obj.rotation_euler[0] = 0
