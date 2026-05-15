@@ -2,17 +2,12 @@
 
 这个时代没有AI的话效率会慢很多倍
 
-本项目使用Claude Code + DeepSeek V4 Pro + /caveman skill辅助开发
+本项目使用Copilot + DeepSeek V4-flash 辅助开发
 
-千万别忘了用/caveman，不然这模型嘟嘟嘟嘟废话一大堆。
-
-注意尽量古法编程，AI只能作为辅助。
-
-以及执行消耗token的任务时使用：/karpathy-guidelines
-
-绝对不要让愚蠢的DeepSeek V4 Pro排查问题，它只能修复你已经知道错在哪里的问题，
-并且需要严格的指示和提示，它只会干脏活，目前不能像人一样思考，
-希望未来的V5 Pro能好一点
+注意:
+- 尽量古法编程，AI只能作为辅助。
+- 尽量不要让愚蠢的DeepSeek排查问题，否则可能大量浪费时间和token且无法得到满意结果
+- 写完代码必须人工审核，否则屎山难以维护
 
 # Blender下载地址
 - https://download.blender.org/release/
@@ -76,44 +71,6 @@ FileExistsError: [WinError 183] 当文件已存在时，无法创建该文件。
 所有的文件夹都必须小写，因为git无法追踪文件夹名称大小写改变的记录,至少VSCode集成的git做不到，也可能是VSCode的问题。
 
 文件名也必须小写，因为Github也无法追踪文件名的大小写变化。
-
-# 插件架构设计
-架构由底层到上层如下依次排列，但需求是从用户层ui触发然后设计到具体每一个小utils的。
-
-基础层级:  
-- base 基础抽象数据类型  
- - config:所有与配置相关的内容
- - resources: hlsl与图片资源
- - utils 所有基础功能最小的单元拆分为工具类
- - wwmi_config WWMI用到的配置类
-- common 高级抽象数据类型
- - blueprint_node 蓝图节点
- - d3d11 基础d3d11数据类型抽象
- - export 生成Mod逻辑
- - migoto 3Dmigoto数据结构
- - read_in 模型导入逻辑
-
-
-帮助类层级: 
-- helper 相当于建立在基础抽象数据类型上的工具类
-
-逻辑处理层级:
-- common:高级一点的拆分为功能类。功能类的功能是比较复杂的实现一个功能，工具类则只负责特定小功能实现，比如字符串分割是一个工具类功能，导入顶点组权重到mesh是一个功能类功能。
-- games:各个游戏的导入流程和Mod生成流程必须拆分开来
-
-用户交互层级:
-- ui:用户交互部分
-
-
-# Properties的设计和使用问题
-
-我们不得不给把Properties分开放到不同类中，并提供classmethod来直接进行调用。
-
-如果不这样设计的话，在其中一个Property遭到废弃或者发生大幅度变更时，
-
-如果修改代码的时候不注意，就会导致部分地方没有完全修改，
-
-设计成现在这样就能避免这些问题，用法和声明上都有了统一的规范。
 
 # Jinja2的ini模板问题
 
