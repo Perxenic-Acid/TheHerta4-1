@@ -1215,8 +1215,8 @@ class ObjBufferHelper:
 
         # 设置ib，准备返回
         ib = flattened_ib
-        # YYSLS是目前除了鸣潮外，唯一需要翻转面朝向的游戏
-        if GlobalConfig.logic_name == LogicName.YYSLS:
+        # YYSLS/SnowBreak 需要在导出时翻转面朝向
+        if GlobalConfig.logic_name == LogicName.YYSLS or GlobalConfig.logic_name == LogicName.SnowBreak:
             flipped_indices = []
             # print(flattened_ib[0],flattened_ib[1],flattened_ib[2])
             for i in range(0, len(flattened_ib), 3):

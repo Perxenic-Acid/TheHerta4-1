@@ -186,8 +186,8 @@ class SubMeshModel:
             temp_obj.rotation_euler[2] = 0
             bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
         
-        elif GlobalConfig.logic_name == LogicName.NTEMI:
-            # NTEMI import: Z rotate 180°, scale 0.01 → reverse: scale 100, Z rotate ±180°
+        elif GlobalConfig.logic_name == LogicName.NTEMI or GlobalConfig.logic_name == LogicName.SnowBreak:
+            # NTEMI/SnowBreak import: Z rotate 180°, scale 0.01 → reverse: scale 100, Z rotate ±180°
             ObjUtils.select_obj(temp_obj)
             temp_obj.scale = (100.0, 100.0, 100.0)
             bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
