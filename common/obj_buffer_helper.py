@@ -394,14 +394,15 @@ class ObjBufferHelper:
             max_index = numpy.max(blendindices)
             if max_index > 255:
                 print("BLENDINDICES大于255了,最大值是：" + str(max_index))
-            else:
-                blendindices.astype(numpy.uint8)
 
+            if blendindices.dtype != numpy.uint8:
+                blendindices = blendindices.astype(numpy.uint8)
             return blendindices
             # print(original_elementname_data_dict[d3d11_element_name].dtype)
             # print("WWMI R8_UINT特殊处理")
         elif d3d11_element.Format == "R16_UINT" and d3d11_element.ByteWidth == 16:
-            blendindices.astype(numpy.uint16)
+            if blendindices.dtype != numpy.uint16:
+                blendindices = blendindices.astype(numpy.uint16)
             return blendindices
             # print("WWMI R16_UINT特殊处理")
         else:

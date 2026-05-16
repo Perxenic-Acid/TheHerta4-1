@@ -612,9 +612,7 @@ class VertexGroupUtils:
         counts = np.bincount(v_idx_arr, minlength=n_verts)
         real_max_groups = int(counts.max()) if counts.size > 0 else 0
         aligned_max_groups = 4 * math.ceil(real_max_groups / 4) if real_max_groups else 4
-        if aligned_max_groups < blend_size:
-            aligned_max_groups = blend_size
-        M = aligned_max_groups
+        M = min(aligned_max_groups, blend_size)
 
         # 3) we want for each vertex the top-M groups sorted by weight
         # Strategy:
