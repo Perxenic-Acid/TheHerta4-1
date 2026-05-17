@@ -2,7 +2,7 @@ import bpy
 import numpy
 
 from ..common.global_config import GlobalConfig
-from ..common.logic_name import LogicName
+from ..common.global_config import LogicName
 
 class MeshUtils:
 

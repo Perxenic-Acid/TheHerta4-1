@@ -2,7 +2,7 @@ import os
 
 from ...common.global_properties import GlobalProterties
 from ...common.global_config import GlobalConfig
-from ...common.logic_name import LogicName
+from ...common.global_config import LogicName
 from .drawib_model_wwmi import DrawIBModelWWMI
 from ...blueprint.blueprint_model import BluePrintModel
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper

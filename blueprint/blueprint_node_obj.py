@@ -5,7 +5,7 @@ import uuid
 import bpy
 from bpy_extras.io_utils import ImportHelper
 
-from ..common.logic_name import LogicName
+from ..common.global_config import LogicName
 from ..common.global_config import GlobalConfig
 from ..common.global_properties import GlobalProterties
 from ..utils.translate_utils import iface_, rpt_

@@ -4,7 +4,7 @@
 import bpy
 
 from ..common.global_config import GlobalConfig
-from ..common.logic_name import LogicName
+from ..common.global_config import LogicName
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
 from ..utils.translate_utils import iface_

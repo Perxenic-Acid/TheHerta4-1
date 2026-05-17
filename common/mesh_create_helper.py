@@ -15,7 +15,7 @@ from ..utils.vertexgroup_utils import VertexGroupUtils
 
 from .global_config import GlobalConfig
 from .global_properties import GlobalProterties
-from .logic_name import LogicName
+from .global_config import LogicName
 from .d3d11_element import D3D11Element
 
 

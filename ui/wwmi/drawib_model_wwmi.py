@@ -9,7 +9,7 @@ import numpy
 
 from ...common.global_properties import GlobalProterties
 from ...common.global_config import GlobalConfig
-from ...common.logic_name import LogicName
+from ...common.global_config import LogicName
 from ...utils.export_utils import ExportUtils, ObjElementContext, WWMIBufferBuildResult
 from ...utils.log_utils import LOG
 from ...utils.obj_utils import (

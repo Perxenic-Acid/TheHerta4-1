@@ -6,7 +6,7 @@ from ..utils.translate_utils import rpt_
 
 from ..common.global_config import GlobalConfig
 from ..common.global_key_count_helper import GlobalKeyCountHelper
-from ..common.logic_name import LogicName
+from ..common.global_config import LogicName
 
 from .universal.efmi import ExportEFMI
 from .universal.gimi import ExportGIMI

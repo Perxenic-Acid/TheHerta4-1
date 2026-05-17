@@ -9,7 +9,7 @@ from ..utils.json_utils import JsonUtils
 from ..utils.format_utils import Fatal
 from .global_config import GlobalConfig
 from .global_properties import GlobalProterties
-from .logic_name import LogicName
+from .global_config import LogicName
 
 from .global_key_count_helper import GlobalKeyCountHelper
 from .workspace_helper import WorkSpaceHelper

@@ -5,7 +5,7 @@ from ..utils.export_utils import ExportUtils
 from ..utils.obj_utils import ObjUtils
 from ..utils.collection_utils import CollectionUtils
 from ..utils.json_utils import JsonUtils
-from .logic_name import LogicName
+from .global_config import LogicName
 from .global_config import GlobalConfig
 from .d3d11_gametype import D3D11GameType
 from .obj_buffer_helper import ObjBufferHelper

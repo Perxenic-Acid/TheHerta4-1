@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from ..common.global_config import GlobalConfig
-from ..common.logic_name import LogicName
+from ..common.global_config import LogicName
 from .obj_utils import ObjUtils
 from .shapekey_utils import ShapeKeyUtils
 from .timer_utils import TimerUtils
