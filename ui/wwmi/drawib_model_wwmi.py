@@ -305,7 +305,9 @@ class DrawIBModelWWMI:
 
                 vertex_groups = ObjUtils.get_vertex_groups(temp_obj)
                 if GlobalProterties.import_merged_vgmap():
-                    total_vg_count = max((extracted_component.vg_count for extracted_component in extracted_object.components), default=0)
+                    # 使用 SUM 而非 MAX：累加所有组件的原生 VG 数量作为阈值
+                    # 确保高位顶点组（来自不同组件）不会被错误删除
+                    total_vg_count = sum(extracted_component.vg_count for extracted_component in extracted_object.components)
                     ignore_list = [
                         vertex_group
                         for vertex_group in vertex_groups
@@ -320,6 +322,11 @@ class DrawIBModelWWMI:
                         if "ignore" in vertex_group.name.lower() or vertex_group.index >= total_vg_count
                     ]
                 remove_vertex_groups(temp_obj, ignore_list)
+
+                # 将所有剩余顶点组重命名为索引号
+                # 确保后续 Blender join 时，不同组件中同编号的顶点组自动合并
+                for vg in ObjUtils.get_vertex_groups(temp_obj):
+                    vg.name = str(vg.index)
 
                 temp_object.vertex_count = len(temp_obj.data.vertices)
                 temp_object.index_count = len(temp_obj.data.polygons) * 3
