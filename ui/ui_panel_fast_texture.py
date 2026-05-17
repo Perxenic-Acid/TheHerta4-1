@@ -9,7 +9,7 @@
 import bpy
 import os
 import shutil
-from bpy.props import StringProperty, CollectionProperty, IntProperty, BoolProperty
+from bpy.props import StringProperty, CollectionProperty, IntProperty, BoolProperty, EnumProperty
 from bpy.types import Operator, Panel, PropertyGroup, UIList
 from bpy_extras.io_utils import ImportHelper
 import bpy.utils.previews
@@ -23,15 +23,48 @@ from ..utils.collection_utils import CollectionUtils,CollectionColor
 # 存储预览图集合
 fast_preview_collections = {}
 
+# LOD 枚举缓存
+_lod_enum_cache: list[tuple[str, str, str]] = []
 
-def get_workspace_preview_texture_folder():
+
+def _get_lod_enum_items(self, context):
+    global _lod_enum_cache
+    return _lod_enum_cache
+
+
+def _refresh_lod_enum_cache():
+    global _lod_enum_cache
+    _lod_enum_cache.clear()
+    try:
+        from ..common.workspace_helper import WorkSpaceHelper
+        lod_folder_paths = WorkSpaceHelper.get_lod_folderpath_list()
+        if lod_folder_paths:
+            _lod_enum_cache = [
+                (os.path.basename(p), os.path.basename(p), "")
+                for p in lod_folder_paths
+            ]
+        else:
+            _lod_enum_cache = [("", "无LOD目录", "当前工作空间下未找到 LOD 目录")]
+    except Exception as e:
+        print(f"刷新LOD列表失败: {e}")
+        _lod_enum_cache = [("", "无LOD目录", "刷新失败")]
+
+
+def get_workspace_preview_texture_folder(lod_name: str = ""):
     GlobalConfig.read_from_main_json_ssmt4()
 
     workspace_folder_path = GlobalConfig.path_workspace_folder()
     use_jpg_folder = bpy.app.version <= (4, 2, 0)
     folder_name = "DedupedTextures_jpg" if use_jpg_folder else "DedupedTextures"
-    preview_folder_path = os.path.join(workspace_folder_path, folder_name + "\\")
 
+    # 如果指定了 LOD，在 LOD 目录下查找
+    if lod_name:
+        preview_folder_path = os.path.join(workspace_folder_path, lod_name, folder_name + "\\")
+        if os.path.exists(preview_folder_path):
+            return preview_folder_path, folder_name
+
+    # 回退：直接在工作空间根目录查找
+    preview_folder_path = os.path.join(workspace_folder_path, folder_name + "\\")
     if os.path.exists(preview_folder_path):
         return preview_folder_path, folder_name
 
@@ -64,16 +97,36 @@ class SSMT_UL_FastImportTextureList(UIList):
                 layout.label(text="", icon='IMAGE_DATA')
 
 
+# 刷新LOD列表
+class SSMT_ImportTexture_WM_OT_RefreshLODList(Operator):
+    bl_idname = "ssmt.refresh_lod_list"
+    bl_label = "刷新LOD列表"
+    bl_description = "重新扫描当前工作空间下的 LOD 目录"
+
+    def execute(self, context):
+        _refresh_lod_enum_cache()
+        # 如果存在 LOD 且当前没有选中项，默认选第一个
+        if _lod_enum_cache and _lod_enum_cache[0][0]:
+            if not context.scene.fast_texture_lod or context.scene.fast_texture_lod not in [e[0] for e in _lod_enum_cache]:
+                context.scene.fast_texture_lod = _lod_enum_cache[0][0]
+        self.report({'INFO'}, f"已刷新LOD列表，找到 {len([e for e in _lod_enum_cache if e[0]])} 个LOD目录。")
+        return {'FINISHED'}
+
+
 # 自动检测并设置DedupedTextures文件夹
 class SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
     bl_idname = "ssmt.auto_detect_texture_folder"
     bl_label = "读取DedupedTextures"
     
     def execute(self, context):
-        deduped_textures_folder_path, folder_name = get_workspace_preview_texture_folder()
+        lod_name = context.scene.fast_texture_lod
+        deduped_textures_folder_path, folder_name = get_workspace_preview_texture_folder(lod_name=lod_name)
 
         if not deduped_textures_folder_path:
-            self.report({'ERROR'}, f"未找到当前工作空间下的 {folder_name} 文件夹")
+            msg = f"未找到当前工作空间下的 {folder_name} 文件夹"
+            if lod_name:
+                msg += f"（LOD: {lod_name}）"
+            self.report({'ERROR'}, msg)
             return {'CANCELLED'}
         
         # 清空之前的列表和预览
@@ -101,7 +154,8 @@ class SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder(Operator):
                     except Exception as e:
                         print(f"Could not load preview for {filename}: {e}")
 
-        self.report({'INFO'}, f"已从当前工作空间的 {folder_name} 文件夹加载 {image_count} 张图片。")
+        lod_info = f"（LOD: {lod_name}）" if lod_name else ""
+        self.report({'INFO'}, f"已从当前工作空间的 {folder_name} 文件夹加载 {image_count} 张图片。{lod_info}")
 
         return {'FINISHED'}
     
@@ -207,9 +261,15 @@ class SSMT_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
         layout = self.layout
         scene = context.scene
 
+        # LOD 选择行
+        box = layout.box()
+        row = box.row(align=True)
+        row.label(text=iface_("LOD:"))
+        row.prop(scene, "fast_texture_lod", text="")
+        row.operator("ssmt.refresh_lod_list", text="", icon='FILE_REFRESH')
+
         # 自动检测按钮
         row = layout.row()
-
         row.operator("ssmt.auto_detect_texture_folder")
         
         # 显示图片数量信息
@@ -220,7 +280,7 @@ class SSMT_ImportTexture_VIEW3D_PT_ImageMaterialPanel(Panel):
         if scene.image_list:
             row = layout.row()
             row.template_list(
-                "SSMT_UL_FastImportTextureList",  # 修正为正确的类名
+                "SSMT_UL_FastImportTextureList",
                 iface_("图片列表"), 
                 scene, 
                 "image_list", 
@@ -256,16 +316,26 @@ def register():
     bpy.utils.register_class(SSMT_ImportTexture_ImageListItem)
     bpy.utils.register_class(SSMT_UL_FastImportTextureList)
     bpy.utils.register_class(SSMT_ImportTexture_WM_OT_ApplyImageToMaterial)
+    bpy.utils.register_class(SSMT_ImportTexture_WM_OT_RefreshLODList)
     bpy.utils.register_class(SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder)
     bpy.utils.register_class(SSMT_ImportTexture_VIEW3D_PT_ImageMaterialPanel)
 
     bpy.types.Scene.image_list = CollectionProperty(type=SSMT_ImportTexture_ImageListItem)
     bpy.types.Scene.image_list_index = IntProperty(default=0)
+    bpy.types.Scene.fast_texture_lod = EnumProperty(
+        name="LOD",
+        description="选择 LOD 目录来读取对应的 DedupedTextures",
+        items=_get_lod_enum_items,
+    )
+
+    # 启动时自动刷新 LOD 列表
+    _refresh_lod_enum_cache()
 
 def unregister():
     try:
         del bpy.types.Scene.image_list
         del bpy.types.Scene.image_list_index
+        del bpy.types.Scene.fast_texture_lod
     except Exception:
         pass
 
@@ -279,6 +349,7 @@ def unregister():
 
     bpy.utils.unregister_class(SSMT_ImportTexture_VIEW3D_PT_ImageMaterialPanel)
     bpy.utils.unregister_class(SSMT_ImportTexture_WM_OT_AutoDetectTextureFolder)
+    bpy.utils.unregister_class(SSMT_ImportTexture_WM_OT_RefreshLODList)
     bpy.utils.unregister_class(SSMT_ImportTexture_WM_OT_ApplyImageToMaterial)
     bpy.utils.unregister_class(SSMT_UL_FastImportTextureList)
     bpy.utils.unregister_class(SSMT_ImportTexture_ImageListItem)
