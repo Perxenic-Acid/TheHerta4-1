@@ -7,7 +7,7 @@ from ...common.global_config import GlobalConfig
 from ...common.global_properties import GlobalProterties
 
 from ...common.buffer_export_helper import BufferExportHelper
-from ...common.global_key_count_helper import GlobalKeyCountHelper
+from ...common.global_config import GlobalConfig
 from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
@@ -163,7 +163,7 @@ class ExportEFMI:
         for drawib_model in self.drawib_model_list:
             M_IniHelper.move_slot_style_textures(draw_ib_model=drawib_model)
 
-        GlobalKeyCountHelper.generated_mod_number = len(self.drawib_model_list)
+        GlobalConfig.generated_mod_number = len(self.drawib_model_list)
         M_IniHelper.add_branch_key_sections(
             ini_builder=ini_builder,
             key_name_mkey_dict=self.blueprint_model.keyname_mkey_dict,

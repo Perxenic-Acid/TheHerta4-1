@@ -6,7 +6,7 @@ from ..utils.log_utils import LOG
 
 from ..common.m_key import M_Key
 from ..common.draw_call_model import DrawCallModel
-from ..common.global_key_count_helper import GlobalKeyCountHelper
+from ..common.global_config import GlobalConfig
 from .blueprint_export_helper import BlueprintExportHelper
 
 from .blueprint_node_obj import SSMTNode_Object_Group, SSMTNode_SwitchKey, SSMTNode_Object_Info, SSMTNode_Result_Output
@@ -86,7 +86,7 @@ class BluePrintModel:
                 # 如果有 > 1 个有效分支端口，则必须创建 Key，哪怕某些端口是空的（代表空分支）
                 m_key = M_Key()
                 current_add_key_index = len(self.keyname_mkey_dict.keys())
-                m_key.key_name = "$swapkey" + str(GlobalKeyCountHelper.global_key_index)
+                m_key.key_name = "$swapkey" + str(GlobalConfig.global_key_index)
 
                 # 值列表就是分支索引的列表 [0, 1, 2, ...]
                 m_key.value_list = list(range(len(valid_input_sockets)))
@@ -102,7 +102,7 @@ class BluePrintModel:
 
                 # 更新全局key索引
                 if len(self.keyname_mkey_dict.keys()) > current_add_key_index:
-                    GlobalKeyCountHelper.global_key_index = GlobalKeyCountHelper.global_key_index + 1
+                    GlobalConfig.global_key_index = GlobalConfig.global_key_index + 1
 
                 # 逐个处理每个分支节点（包括空分支）
                 key_tmp_value = 0

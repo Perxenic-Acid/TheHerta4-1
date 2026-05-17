@@ -7,7 +7,7 @@ from .drawib_model_wwmi import DrawIBModelWWMI
 from ...blueprint.blueprint_model import BluePrintModel
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
-from ...common.global_key_count_helper import GlobalKeyCountHelper
+from ...common.global_config import GlobalConfig
 from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 
@@ -346,7 +346,7 @@ class ExportWWMI:
             texture_override_component.append("$object_detected = 1")
 
             if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
-                texture_override_component.append("$active" + str(GlobalKeyCountHelper.generated_mod_number) + " = 1")
+                texture_override_component.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
                 if GlobalProterties.generate_branch_mod_gui():
                     texture_override_component.append("$ActiveCharacter = 1")
 
@@ -607,7 +607,7 @@ class ExportWWMI:
             M_IniHelper.move_slot_style_textures(draw_ib_model=draw_ib_model)
             print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - Slot 贴图复制完成")
 
-            GlobalKeyCountHelper.generated_mod_number = GlobalKeyCountHelper.generated_mod_number + 1
+            GlobalConfig.generated_mod_number = GlobalConfig.generated_mod_number + 1
             M_IniHelper.add_branch_key_sections(ini_builder=config_ini_builder, key_name_mkey_dict=self.blueprint_model.keyname_mkey_dict)
             M_IniHelperGUI.add_branch_mod_gui_section(ini_builder=config_ini_builder, key_name_mkey_dict=self.blueprint_model.keyname_mkey_dict)
 

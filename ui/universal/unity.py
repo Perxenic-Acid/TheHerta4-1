@@ -4,7 +4,7 @@ import os
 from ...common.global_config import GlobalConfig
 from ...common.global_config import LogicName
 from ...common.global_properties import GlobalProterties
-from ...common.global_key_count_helper import GlobalKeyCountHelper
+from ...common.global_config import GlobalConfig
 from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
@@ -40,7 +40,7 @@ class ExportUnity(DrawIBExportBase):
 
             if category_name == d3d11_game_type.CategoryDrawCategoryDict["Position"]:
                 if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
-                    texture_override_vb_section.append("$active" + str(GlobalKeyCountHelper.generated_mod_number) + " = 1")
+                    texture_override_vb_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
                     if GlobalProterties.generate_branch_mod_gui():
                         texture_override_vb_section.append("$ActiveCharacter = 1")
 
@@ -173,7 +173,7 @@ class ExportUnity(DrawIBExportBase):
 
             if category_name == d3d11_game_type.CategoryDrawCategoryDict["Position"]:
                 if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
-                    texture_override_vb_section.append("$active" + str(GlobalKeyCountHelper.generated_mod_number) + " = 1")
+                    texture_override_vb_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
                     if GlobalProterties.generate_branch_mod_gui():
                         texture_override_vb_section.append("$ActiveCharacter = 1")
 
@@ -295,7 +295,7 @@ class ExportUnity(DrawIBExportBase):
             self.add_unity_cs_resource_vb_sections(ini_builder=ini_builder, drawib_model=drawib_model)
             self.add_resource_texture_sections(ini_builder=ini_builder, drawib_model=drawib_model)
             M_IniHelper.move_slot_style_textures(draw_ib_model=drawib_model)
-            GlobalKeyCountHelper.generated_mod_number = GlobalKeyCountHelper.generated_mod_number + 1
+            GlobalConfig.generated_mod_number = GlobalConfig.generated_mod_number + 1
 
         M_IniHelper.add_branch_key_sections(ini_builder=ini_builder, key_name_mkey_dict=self.blueprint_model.keyname_mkey_dict)
         M_IniHelper.add_shapekey_ini_sections(ini_builder=ini_builder, drawib_drawibmodel_dict=drawib_drawibmodel_dict)
@@ -316,7 +316,7 @@ class ExportUnity(DrawIBExportBase):
             self.add_unity_vs_resource_vb_sections(ini_builder=ini_builder, drawib_model=drawib_model)
             self.add_resource_texture_sections(ini_builder=ini_builder, drawib_model=drawib_model)
             M_IniHelper.move_slot_style_textures(draw_ib_model=drawib_model)
-            GlobalKeyCountHelper.generated_mod_number = GlobalKeyCountHelper.generated_mod_number + 1
+            GlobalConfig.generated_mod_number = GlobalConfig.generated_mod_number + 1
 
         M_IniHelper.add_branch_key_sections(ini_builder=ini_builder, key_name_mkey_dict=self.blueprint_model.keyname_mkey_dict)
         M_IniHelper.add_shapekey_ini_sections(ini_builder=ini_builder, drawib_drawibmodel_dict=drawib_drawibmodel_dict)

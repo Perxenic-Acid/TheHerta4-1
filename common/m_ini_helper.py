@@ -11,7 +11,7 @@ from .global_config import GlobalConfig
 from .global_properties import GlobalProterties
 from .global_config import LogicName
 
-from .global_key_count_helper import GlobalKeyCountHelper
+from .global_config import GlobalConfig
 from .workspace_helper import WorkSpaceHelper
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from .texture_metadata_helper import TextureMetadataResolver, TextureMarkUpInfo
@@ -707,7 +707,7 @@ class M_IniHelper:
             constants_section = M_IniSection(M_SectionType.Constants)
             constants_section.SectionName = "Constants"
 
-            for i in range(GlobalKeyCountHelper.generated_mod_number):
+            for i in range(GlobalConfig.generated_mod_number):
                 constants_section.append("global $active" + str(i))
 
             for mkey in key_name_mkey_dict.values():
@@ -721,7 +721,7 @@ class M_IniHelper:
             present_section = M_IniSection(M_SectionType.Present)
             present_section.SectionName = "Present"
 
-            for i in range(GlobalKeyCountHelper.generated_mod_number):
+            for i in range(GlobalConfig.generated_mod_number):
                 present_section.append("post $active" + str(i) + " = 0")
             ini_builder.append_section(present_section)
         

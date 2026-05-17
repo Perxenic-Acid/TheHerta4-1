@@ -1,14 +1,3 @@
-# AI协作
-
-这个时代没有AI的话效率会慢很多倍
-
-本项目使用Copilot + DeepSeek V4-flash 辅助开发
-
-注意:
-- 尽量古法编程，AI只能作为辅助。
-- 尽量不要让愚蠢的DeepSeek排查问题，否则可能大量浪费时间和token且无法得到满意结果
-- 写完代码必须人工审核，否则屎山难以维护
-
 # Blender下载地址
 - https://download.blender.org/release/
 

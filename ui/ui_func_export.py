@@ -5,7 +5,7 @@ from ..utils.command_utils import CommandUtils
 from ..utils.translate_utils import rpt_
 
 from ..common.global_config import GlobalConfig
-from ..common.global_key_count_helper import GlobalKeyCountHelper
+from ..common.global_config import GlobalConfig
 from ..common.global_config import LogicName
 
 from .universal.efmi import ExportEFMI
@@ -34,7 +34,7 @@ def generate_mod_from_tree(tree, context, report_callback):
 
     # 每次生成 Mod 都必须重置全局按键计数，
     # 否则会沿用上一次导出的 $swapkey / $active 索引，导致本次 ini 变量编号错乱。
-    GlobalKeyCountHelper.initialize()
+    GlobalConfig.initialize_key_count()
     BlueprintExportHelper.set_runtime_blueprint_tree(tree)
 
     # 导出前强制同步一次 Object Info 节点。

@@ -6,7 +6,7 @@ from ...blueprint.blueprint_model import BluePrintModel
 from ...common.drawib_model import DrawIBModel
 from ...common.global_config import GlobalConfig
 from ...common.global_properties import GlobalProterties
-from ...common.global_key_count_helper import GlobalKeyCountHelper
+from ...common.global_config import GlobalConfig
 from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
 from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
@@ -327,7 +327,7 @@ class ExportNTEMI:
             for drawib_model in self.drawib_model_list:
                 M_IniHelper.move_slot_style_textures(draw_ib_model=drawib_model)
 
-        GlobalKeyCountHelper.generated_mod_number = len(self.drawib_model_list)
+        GlobalConfig.generated_mod_number = len(self.drawib_model_list)
 
         # Branch key / GUI sections
         key_lines = self._build_branch_key_lines()
