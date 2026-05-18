@@ -523,8 +523,13 @@ class MeshCreateHelper:
 
         texture_prefix = mesh_name_split[0] + "-" + mesh_name_split[1] + "-"
 
-        texture_path = TextureUtils.find_texture(texture_prefix, "-DiffuseMap.dds", directory)
-        normal_path = TextureUtils.find_texture(texture_prefix, "-NormalMap.dds", directory)
+        texture_path = TextureUtils.find_texture(texture_prefix, "-DiffuseMap.jpg", directory)
+        if texture_path is None:
+            texture_path = TextureUtils.find_texture(texture_prefix, "-DiffuseMap.dds", directory)
+
+        normal_path = TextureUtils.find_texture(texture_prefix, "-NormalMap.jpg", directory)
+        if normal_path is None:
+            normal_path = TextureUtils.find_texture(texture_prefix, "-NormalMap.dds", directory)
 
         return texture_path, normal_path
 
