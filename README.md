@@ -4,7 +4,7 @@
 <div align="center">
 
 [![Vibe Coding](https://img.shields.io/badge/Vibe_Coding-💫-ff69b4?style=for-the-badge)](https://github.com/StarBobis/TheHerta4)
-[![Powered by DeepSeek](https://img.shields.io/badge/Powered_by-DeepSeek-4D6BFE?style=for-the-badge&logo=deepseek&logoColor=white)](https://deepseek.com/)
+[![VibeCoding With DeepSeek V4 Pro](https://img.shields.io/badge/VibeCoding_With-DeepSeek_V4_Pro-4D6BFE?style=for-the-badge&logo=deepseek&logoColor=white)](https://deepseek.com/)
 
 [![GitHub stars](https://img.shields.io/github/stars/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=gold)](https://github.com/StarBobis/TheHerta4/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=blue)](https://github.com/StarBobis/TheHerta4/forks)
