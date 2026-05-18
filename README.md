@@ -1,28 +1,66 @@
 
-# TheHerta4 ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?color=blue&label=最新版本下载量)
+# TheHerta4
 
-SSMT4的Blender插件
+<div align="center">
 
-- SSMT4和TheHerta4的版本几乎是同步更新，尽量全部使用最新版防止功能无法一一对应。
-- Blender推荐最低使用4.5LTS版本，如遇到BUG请提交issue。
+[![GitHub stars](https://img.shields.io/github/stars/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=gold)](https://github.com/StarBobis/TheHerta4/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=blue)](https://github.com/StarBobis/TheHerta4/forks)
+[![GitHub issues](https://img.shields.io/github/issues/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=red)](https://github.com/StarBobis/TheHerta4/issues)
+[![GitHub license](https://img.shields.io/github/license/StarBobis/TheHerta4?style=for-the-badge&color=brightgreen)](https://github.com/StarBobis/TheHerta4/blob/main/LICENSE.txt)
+[![GitHub last commit](https://img.shields.io/github/last-commit/StarBobis/TheHerta4?style=for-the-badge&logo=git&color=orange)](https://github.com/StarBobis/TheHerta4/commits/main)
+[![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?style=for-the-badge&logo=github&color=blue&label=最新版下载量)](https://github.com/StarBobis/TheHerta4/releases/latest)
+[![Blender](https://img.shields.io/badge/Blender-4.5+-e67e22?style=for-the-badge&logo=blender&logoColor=white)](https://www.blender.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 
-# Support Development:
+</div>
+
+📦 A Blender addon for SSMT4
+
+- 🔄 SSMT4 and TheHerta4 versions are almost always updated together. Please use the latest versions of both to avoid feature mismatches.
+- 🐞 Blender 4.5 LTS or newer is recommended. If you encounter any bugs, please submit an Issue.
+
+# 💖 Support Development
 
 <a href="https://afdian.com/a/NicoMico666"><img width="200" src="https://pic1.afdiancdn.com/static/img/welcome/button-sponsorme.png" alt=""></a>
 
-# 更多蓝图的版本在哪？
+# 🔧 Where to find more blueprint nodes?
 
-此TheHerta4本体仓库仅负责实现基础的导入导出功能，复杂的蓝图节点在fork版本中进行开发
-你可以使用希尔维护的TheHerta版本以体验完整特性：
+This repository (TheHerta4) only implements basic import/export functionality. Complex blueprint nodes are developed in fork versions.
 
-- https://github.com/xuhuan9102/TheHerta3 
-- https://github.com/xuhuan9102/TheHerta4 
+You can use the versions maintained by XiEr for the full feature set:
 
-如果需要在此仓库内容基础上进行大规模功能扩展，请Fork一份在自己的仓库中开发和发布，不要提交回此主仓库
+- https://github.com/xuhuan9102/TheHerta3
+- https://github.com/xuhuan9102/TheHerta4
 
-严格来说，TheHerta4主仓库仅负责核心架构的搭建，附加扩展功能(例如各种蓝图节点)都将由各位Fork版作者进行维护
+If you need to do large-scale feature extensions based on this repository, please fork it and develop in your own repository — do not push back to this main repo.
 
-如果你有自己维护的分支，可以提交PR修改README在此处添加你维护的分支版。
+Strictly speaking, the main TheHerta4 repo is only responsible for building the core architecture. Additional extensions (e.g. various blueprint nodes) will be maintained by the authors of each fork.
 
-参与开发插件请使用VSCode和VSCode插件:
-- Blender Development (作者是 Jacques Lucke)
+If you have your own maintained branch, feel free to submit a PR to add your branch info here.
+
+For plugin development, please use VSCode with the Blender Development extension (by Jacques Lucke).
+
+# ⭐ Star History
+
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/svg?repos=StarBobis/TheHerta4&type=Date)](https://star-history.com/#StarBobis/TheHerta4&Date)
+
+</div>
+
+# 🙏 Special Thanks
+
+TheHerta4 learns from several different projects. Without their wonderful code, TheHerta4 wouldn't be this amazing.
+
+Great thanks to:
+
+- https://github.com/DarkStarSword/3d-fixes
+- https://github.com/SilentNightSound/GI-Model-Importer
+- https://github.com/leotorrez/XXMITools
+- https://github.com/leotorrez/LeoTools
+- https://github.com/leotorrez/ZZ-Model-Importer
+- https://github.com/SpectrumQT/WWMI-Tools
+- https://github.com/SpectrumQT/EFMI-Tools
+- https://github.com/ssice-a/mod_importer
+
+
