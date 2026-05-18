@@ -9,9 +9,6 @@ from ..utils.json_utils import JsonUtils
 from ..utils.format_utils import Fatal
 from .global_config import GlobalConfig
 from .global_properties import GlobalProterties
-from .global_config import LogicName
-
-from .global_config import GlobalConfig
 from ..workspace.workspace_helper import WorkSpaceHelper
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from .texture_metadata_helper import TextureMetadataResolver, TextureMarkUpInfo
@@ -330,7 +327,7 @@ class M_IniHelper:
 
                 if not texture_markup_info_list:
                     continue
-
+                    
                 part_name = draw_ib_model.get_submesh_part_name(submesh_model)
                 submesh_folder_name = getattr(submesh_model, "unique_str", "")
                 if not submesh_folder_name:
@@ -442,10 +439,6 @@ class M_IniHelper:
                     else:
                         print("[TRACE]     跳过复制: 目标已存在")
                         hash_skipped_exists += 1
-
-            # 现在除了WWMI外都不使用全局Hash贴图风格，而是上面的标记的Hash风格贴图
-            if GlobalConfig.logic_name != LogicName.WWMI:
-                continue
 
         print("[TRACE] generate_hash_style_texture_ini() 汇总:")
         print("[TRACE]   Hash 复制成功: " + str(hash_copied))
