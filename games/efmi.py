@@ -1,18 +1,18 @@
-from ...model.blueprint_model import BluePrintModel
-from ...model.draw_call_model import DrawCallModel
-from ...model.submesh_model import SubMeshModel
-from ...model.drawib_model import DrawIBModel
+﻿from ..model.blueprint_model import BluePrintModel
+from ..model.draw_call_model import DrawCallModel
+from ..model.submesh_model import SubMeshModel
+from ..model.drawib_model import DrawIBModel
 from dataclasses import dataclass,field
-from ...common.global_config import GlobalConfig
-from ...common.global_properties import GlobalProterties
+from ..common.global_config import GlobalConfig
+from ..common.global_properties import GlobalProterties
 
-from ...common.buffer_export_helper import BufferExportHelper
-from ...common.global_config import GlobalConfig
-from ...common.m_ini_helper import M_IniHelper
-from ...common.m_ini_helper_gui import M_IniHelperGUI
-from ...common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
-from ...blueprint.blueprint_export_helper import BlueprintExportHelper
-from ...workspace.ssmt_workspace import SSMTWorkSpace
+from ..common.buffer_export_helper import BufferExportHelper
+from ..common.global_config import GlobalConfig
+from ..common.m_ini_helper import M_IniHelper
+from ..common.m_ini_helper_gui import M_IniHelperGUI
+from ..common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
+from ..blueprint.blueprint_export_helper import BlueprintExportHelper
+from ..workspace.ssmt_workspace import SSMTWorkSpace
 
 import os
 
@@ -27,13 +27,13 @@ class ExportEFMI:
     def __post_init__(self):
         self.submesh_model_list = self.blueprint_model.parse_submesh_model_list()
         self.drawib_model_list = self.blueprint_model.parse_drawib_model_list(combine_ib=False)
-        print("SubMeshModel列表初始化完成，共有 " + str(len(self.submesh_model_list)) + " 个SubMeshModel")
+        print("SubMeshModel鍒楄〃鍒濆鍖栧畬鎴愶紝鍏辨湁 " + str(len(self.submesh_model_list)) + " 涓猄ubMeshModel")
 
         alias_dict = BlueprintExportHelper.get_alias_dict()
         if alias_dict:
             for drawib_model in self.drawib_model_list:
                 drawib_model.apply_alias_dict(alias_dict)
-            # self.submesh_model_list 是独立创建的 SubMeshModel 副本，需同步应用别名
+            # self.submesh_model_list 鏄嫭绔嬪垱寤虹殑 SubMeshModel 鍓湰锛岄渶鍚屾搴旂敤鍒悕
             for submesh_model in self.submesh_model_list:
                 unique_str = submesh_model.unique_str
                 alias = str(alias_dict.get(unique_str, "") or "").strip()
@@ -44,16 +44,16 @@ class ExportEFMI:
     def generate_buffer_files(self):
         buf_output_folder = GlobalConfig.path_generatemod_buffer_folder()
 
-        # 新版EFMI只需要依次导出每个SubMeshModel的内容，甚至无需合并，非常简单
+        # 鏂扮増EFMI鍙渶瑕佷緷娆″鍑烘瘡涓猄ubMeshModel鐨勫唴瀹癸紝鐢氳嚦鏃犻渶鍚堝苟锛岄潪甯哥畝鍗?
         for submesh_model in self.submesh_model_list:
-            print("ExportEFMI: 导出SubMeshModel，Unique标识: " + submesh_model.unique_str)
+            print("ExportEFMI: 瀵煎嚭SubMeshModel锛孶nique鏍囪瘑: " + submesh_model.unique_str)
 
-            # 生成IndexBuffer
+            # 鐢熸垚IndexBuffer
             ib_filename = submesh_model.display_str + "-Index.buf"
             ib_filepath = os.path.join(buf_output_folder, ib_filename)
             BufferExportHelper.write_buf_ib_r32_uint(submesh_model.ib, ib_filepath)
 
-            # 生成CategoryBuffer
+            # 鐢熸垚CategoryBuffer
             for category, category_buf in submesh_model.category_buffer_dict.items():
                 category_buf_filename = submesh_model.display_str + "-" + category + ".buf"
                 category_buf_filepath = os.path.join(buf_output_folder, category_buf_filename)
@@ -118,7 +118,7 @@ class ExportEFMI:
 
         ini_builder.append_section(texture_override_ib_section)
 
-        # ResourceBuffer部分
+        # ResourceBuffer閮ㄥ垎
         resource_buffer_section = M_IniSection(M_SectionType.ResourceBuffer)
         for submesh_model in self.submesh_model_list:
             drawib_model = drawib_drawibmodel_dict.get(submesh_model.match_draw_ib)

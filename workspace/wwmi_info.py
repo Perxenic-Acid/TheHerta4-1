@@ -1,30 +1,7 @@
-import os 
-import json
-
-from typing import List, Dict, Union
-from dataclasses import dataclass, field, asdict
-
-from ...utils.format_utils import Fatal
-from enum import Enum
-
-    
-@dataclass
-class ExtractedObjectBufferSemantic:
-    name: str
-    index: int
-    format: str
-    stride: int = 0
-
-    def __post_init__(self):
-        if self.stride == 0:
-            self.stride = self.format.byte_width
-
-@dataclass
-class ExtractedObjectBuffer:
-    semantics: List[ExtractedObjectBufferSemantic]
+from dataclasses import dataclass, field
+from typing import Dict, List
 
 
-    
 @dataclass
 class ExtractedObjectComponent:
     vertex_offset: int
@@ -53,33 +30,13 @@ class ExtractedObject:
     index_count: int
     components: List[ExtractedObjectComponent]
     shapekeys: ExtractedObjectShapeKeys
-    export_format: Dict[str, ExtractedObjectBuffer]
-
-    def __post_init__(self):
-        if isinstance(self.shapekeys, dict):
-            self.components = [ExtractedObjectComponent(**component) for component in self.components]
-            self.shapekeys = ExtractedObjectShapeKeys(**self.shapekeys)
-
-    def as_json(self):
-        return json.dumps(asdict(self), indent=4)
 
 
 class ExtractedObjectHelper:
-    '''
-    不用类包起来难受，还是做成工具类好一点。。
-    '''
-    @classmethod
-    def read_metadata(cls,metadata_path: str) -> ExtractedObject:
-        if not os.path.exists(metadata_path):
-            raise Fatal("无法找到Metadata.json文件，请确认是否存在该文件。")
-        
-        with open(metadata_path) as f:
-            return ExtractedObject(**json.load(f))
-
     @classmethod
     def build_from_submesh_metadata_list(cls, submesh_json_list: list) -> ExtractedObject:
         if not submesh_json_list:
-            raise Fatal("No SubmeshJson provided to build ExtractedObject.")
+            raise ValueError("No SubmeshJson provided to build ExtractedObject.")
 
         first_json = submesh_json_list[0]
         vb0_hash = first_json.VertexLimitVB
@@ -127,6 +84,4 @@ class ExtractedObjectHelper:
             index_count=total_index_count,
             components=components,
             shapekeys=shapekeys,
-            export_format={},
         )
-        

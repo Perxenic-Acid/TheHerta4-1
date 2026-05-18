@@ -1,15 +1,15 @@
-import os
+﻿import os
 
-from ...common.global_properties import GlobalProterties
-from ...common.global_config import GlobalConfig
-from ...common.global_config import LogicName
-from ...model.drawib_model_wwmi import DrawIBModelWWMI
-from ...model.blueprint_model import BluePrintModel
-from ...blueprint.blueprint_export_helper import BlueprintExportHelper
-from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
-from ...common.global_config import GlobalConfig
-from ...common.m_ini_helper import M_IniHelper
-from ...common.m_ini_helper_gui import M_IniHelperGUI
+from ..common.global_properties import GlobalProterties
+from ..common.global_config import GlobalConfig
+from ..common.global_config import LogicName
+from ..model.drawib_model_wwmi import DrawIBModelWWMI
+from ..model.blueprint_model import BluePrintModel
+from ..blueprint.blueprint_export_helper import BlueprintExportHelper
+from ..common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
+from ..common.global_config import GlobalConfig
+from ..common.m_ini_helper import M_IniHelper
+from ..common.m_ini_helper_gui import M_IniHelperGUI
 
 
 class ExportWWMI:
@@ -232,10 +232,10 @@ class ExportWWMI:
         if not draw_ib_model.blend_remap:
             commandlist_section.append("vb4 = ResourceBlendBuffer")
         
-        # 注意，这里必须用ref 而不是直接 = 
-        # 在3Dmigoto中3Dmigoto 中 = ResourceMergedSkeleton 是一次性值拷贝，
-        # = ref ResourceMergedSkeleton 才是引用绑定。
-        # 缺少 ref 意味着后续 compute shader 更新骨架时，vs-cb 不会同步更新。
+        # 娉ㄦ剰锛岃繖閲屽繀椤荤敤ref 鑰屼笉鏄洿鎺?= 
+        # 鍦?Dmigoto涓?Dmigoto 涓?= ResourceMergedSkeleton 鏄竴娆℃€у€兼嫹璐濓紝
+        # = ref ResourceMergedSkeleton 鎵嶆槸寮曠敤缁戝畾銆?
+        # 缂哄皯 ref 鎰忓懗鐫€鍚庣画 compute shader 鏇存柊楠ㄦ灦鏃讹紝vs-cb 涓嶄細鍚屾鏇存柊銆?
 
         if GlobalProterties.import_merged_vgmap():
             if draw_ib_model.blend_remap:
@@ -603,17 +603,17 @@ class ExportWWMI:
             self.add_resource_buffer(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
 
             print("=" * 60)
-            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - 开始复制 Slot 贴图...")
+            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - 寮€濮嬪鍒?Slot 璐村浘...")
             M_IniHelper.move_slot_style_textures(draw_ib_model=draw_ib_model)
-            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - Slot 贴图复制完成")
+            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - Slot 璐村浘澶嶅埗瀹屾垚")
 
             GlobalConfig.generated_mod_number = GlobalConfig.generated_mod_number + 1
             M_IniHelper.add_branch_key_sections(ini_builder=config_ini_builder, key_name_mkey_dict=self.blueprint_model.keyname_mkey_dict)
             M_IniHelperGUI.add_branch_mod_gui_section(ini_builder=config_ini_builder, key_name_mkey_dict=self.blueprint_model.keyname_mkey_dict)
 
-            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - 开始生成 Hash 贴图 INI...")
+            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - 寮€濮嬬敓鎴?Hash 璐村浘 INI...")
             M_IniHelper.generate_hash_style_texture_ini(ini_builder=config_ini_builder, drawib_drawibmodel_dict=self.drawib_drawibmodel_dict)
-            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - Hash 贴图 INI 生成完成")
+            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - Hash 璐村浘 INI 鐢熸垚瀹屾垚")
             print("=" * 60)
 
             config_ini_builder.save_to_file_not_reorder(os.path.join(GlobalConfig.path_generate_mod_folder(), GlobalConfig.get_workspace_name() + "_" + draw_ib + ".ini"))

@@ -1,18 +1,18 @@
-import os
+﻿import os
 import numpy
 import hashlib
 
-from ...model.blueprint_model import BluePrintModel
-from ...model.drawib_model import DrawIBModel
-from ...common.global_config import GlobalConfig
-from ...common.global_properties import GlobalProterties
-from ...common.global_config import GlobalConfig
-from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
-from ...common.m_ini_helper import M_IniHelper
-from ...common.m_ini_helper_gui import M_IniHelperGUI
-from ...blueprint.blueprint_export_helper import BlueprintExportHelper
-from ...workspace.ssmt_workspace import SSMTWorkSpace
-from ...utils.format_utils import FormatUtils
+from ..model.blueprint_model import BluePrintModel
+from ..model.drawib_model import DrawIBModel
+from ..common.global_config import GlobalConfig
+from ..common.global_properties import GlobalProterties
+from ..common.global_config import GlobalConfig
+from ..common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
+from ..common.m_ini_helper import M_IniHelper
+from ..common.m_ini_helper_gui import M_IniHelperGUI
+from ..blueprint.blueprint_export_helper import BlueprintExportHelper
+from ..workspace.ssmt_workspace import SSMTWorkSpace
+from ..utils.format_utils import FormatUtils
 
 from dataclasses import dataclass, field
 
@@ -48,7 +48,7 @@ class ExportNTEMI:
 
     def __post_init__(self):
         self.drawib_model_list = self.blueprint_model.parse_drawib_model_list(combine_ib=False)
-        print(f"ExportNTEMI: 解析完成，共 {len(self.drawib_model_list)} 个 DrawIBModel")
+        print(f"ExportNTEMI: 瑙ｆ瀽瀹屾垚锛屽叡 {len(self.drawib_model_list)} 涓?DrawIBModel")
 
         alias_dict = BlueprintExportHelper.get_alias_dict()
         if alias_dict:
@@ -61,7 +61,7 @@ class ExportNTEMI:
                         lod_name, _ = SSMTWorkSpace.parse_lod_unique_str(unique_str)
                         submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias
 
-    # ── buffer file generation ────────────────────────────────────────────
+    # 鈹€鈹€ buffer file generation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     def generate_buffer_files(self):
         buf_output_folder = GlobalConfig.path_generatemod_buffer_folder()
@@ -209,7 +209,7 @@ class ExportNTEMI:
 
         idx_u32 = numpy.asarray(raw_indices, dtype=numpy.uint32)
         wt_u8 = numpy.asarray(raw_weights, dtype=numpy.uint32)
-        wt_fixed = wt_u8 * 257  # [0,255] → [0,65535]
+        wt_fixed = wt_u8 * 257  # [0,255] 鈫?[0,65535]
 
         # Interleave: idx_0, wt_0, idx_1, wt_1, ...
         interleaved = numpy.empty((n_verts, n_influences * 2), dtype=numpy.uint32)
@@ -286,7 +286,7 @@ class ExportNTEMI:
         with open(filepath, 'wb') as f:
             arr.tofile(f)
 
-    # ── INI generation ────────────────────────────────────────────────────
+    # 鈹€鈹€ INI generation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     def generate_ini_file(self):
         lines: list[str] = []
@@ -343,7 +343,7 @@ class ExportNTEMI:
             return self.drawib_model_list[0].draw_ib
         return "shared"
 
-    # ── section builders ──────────────────────────────────────────────────
+    # 鈹€鈹€ section builders 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     def _append_constants(self, lines: list[str]):
         lines.extend([
@@ -717,7 +717,7 @@ class ExportNTEMI:
         lines.append("")
         return lines
 
-    # ── helpers ───────────────────────────────────────────────────────────
+    # 鈹€鈹€ helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     def _get_vertex_count(self, submesh_model) -> int:
         """Get the number of vertex rows in the pre-CS buffers from the Position category stride."""
@@ -759,7 +759,7 @@ class ExportNTEMI:
         else:
             print("Skip write mod ini because sha256 is same.")
 
-    # ── iter helpers ──────────────────────────────────────────────────────
+    # 鈹€鈹€ iter helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
     def _iter_all_submesh_models(self):
         for drawib_model in self.drawib_model_list:

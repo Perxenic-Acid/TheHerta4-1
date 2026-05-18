@@ -1,15 +1,15 @@
-from ...model.blueprint_model import BluePrintModel
+﻿from ..model.blueprint_model import BluePrintModel
 from dataclasses import dataclass,field
-from ...common.global_config import GlobalConfig
-from ...common.global_properties import GlobalProterties
+from ..common.global_config import GlobalConfig
+from ..common.global_properties import GlobalProterties
 
-from ...common.buffer_export_helper import BufferExportHelper
-from ...common.global_config import GlobalConfig
-from ...common.m_ini_helper import M_IniHelper
-from ...common.m_ini_helper_gui import M_IniHelperGUI
-from ...common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
-from ...model.drawib_model import DrawIBModel
-from ...blueprint.blueprint_export_helper import BlueprintExportHelper
+from ..common.buffer_export_helper import BufferExportHelper
+from ..common.global_config import GlobalConfig
+from ..common.m_ini_helper import M_IniHelper
+from ..common.m_ini_helper_gui import M_IniHelperGUI
+from ..common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
+from ..model.drawib_model import DrawIBModel
+from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
 import os
 
@@ -29,11 +29,11 @@ class ExportSRMI:
 
     def generate_buffer_files(self):
         buf_output_folder = GlobalConfig.path_generatemod_buffer_folder()
-        print("ExportSRMI: 开始生成缓冲区文件，输出路径: " + buf_output_folder)
+        print("ExportSRMI: 寮€濮嬬敓鎴愮紦鍐插尯鏂囦欢锛岃緭鍑鸿矾寰? " + buf_output_folder)
 
         for drawib_model in self.drawib_model_list:
             draw_ib = drawib_model.draw_ib
-            print("ExportSRMI: 正在生成DrawIB " + draw_ib + " 的缓冲区文件...")
+            print("ExportSRMI: 姝ｅ湪鐢熸垚DrawIB " + draw_ib + " 鐨勭紦鍐插尯鏂囦欢...")
             if drawib_model.combine_ib:
                 ib_filename = draw_ib + "-Index.buf"
                 ib_filepath = os.path.join(buf_output_folder, ib_filename)
@@ -45,7 +45,7 @@ class ExportSRMI:
                     ib_filepath = os.path.join(buf_output_folder, ib_filename)
                     BufferExportHelper.write_buf_ib_r32_uint(ib, ib_filepath)
             
-            # 生成VB文件
+            # 鐢熸垚VB鏂囦欢
             for category, category_buf in drawib_model.category_buffer_dict.items():
                 category_buf_filename = draw_ib + "-" + category + ".buf"
                 category_buf_filepath = os.path.join(buf_output_folder, category_buf_filename)
@@ -60,12 +60,12 @@ class ExportSRMI:
 
     def copy_texture_files(self):
         if GlobalProterties.forbid_auto_texture_ini():
-            print("ExportSRMI: 已禁用自动贴图流程，跳过贴图复制")
+            print("ExportSRMI: 宸茬鐢ㄨ嚜鍔ㄨ创鍥炬祦绋嬶紝璺宠繃璐村浘澶嶅埗")
             return
 
-        print("ExportSRMI: 开始执行贴图复制流程，DrawIB 数量: " + str(len(self.drawib_model_list)))
+        print("ExportSRMI: 寮€濮嬫墽琛岃创鍥惧鍒舵祦绋嬶紝DrawIB 鏁伴噺: " + str(len(self.drawib_model_list)))
         for drawib_model in self.drawib_model_list:
-            print("ExportSRMI: 正在复制DrawIB " + drawib_model.draw_ib + " 的贴图文件...")
+            print("ExportSRMI: 姝ｅ湪澶嶅埗DrawIB " + drawib_model.draw_ib + " 鐨勮创鍥炬枃浠?..")
             M_IniHelper.move_slot_style_textures(draw_ib_model=drawib_model)
             
     def generate_ini_file(self):
@@ -83,7 +83,7 @@ class ExportSRMI:
             ini_builder=ini_builder,
             drawib_drawibmodel_dict=drawib_drawibmodel_dict,
         )
-        print("ExportSRMI: 已完成 Hash 风格贴图配置生成")
+        print("ExportSRMI: 宸插畬鎴?Hash 椋庢牸璐村浘閰嶇疆鐢熸垚")
 
         for drawib_model in self.drawib_model_list:
             draw_ib = drawib_model.draw_ib

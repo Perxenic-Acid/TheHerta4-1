@@ -8,17 +8,17 @@ from ..common.global_config import GlobalConfig
 from ..common.global_config import GlobalConfig
 from ..common.global_config import LogicName
 
-from ..games.universal.efmi import ExportEFMI
-from ..games.universal.gimi import ExportGIMI
-from ..games.universal.himi import ExportHIMI
-from ..games.universal.identityv import ExportIdentityV
-from ..games.universal.snowbreak import ExportSnowBreak
-from ..games.universal.srmi import ExportSRMI
-from ..games.universal.unity import ExportUnity
-from ..games.wwmi.wwmi_export import ExportWWMI
-from ..games.universal.ntemi import ExportNTEMI
-from ..games.universal.yysls import ExportYYSLS
-from ..games.universal.zzmi import ExportZZMI
+from ..games.efmi import ExportEFMI
+from ..games.gimi import ExportGIMI
+from ..games.himi import ExportHIMI
+from ..games.identityv import ExportIdentityV
+from ..games.snowbreak import ExportSnowBreak
+from ..games.srmi import ExportSRMI
+from ..games.unity import ExportUnity
+from ..games.wwmi import ExportWWMI
+from ..games.ntemi import ExportNTEMI
+from ..games.yysls import ExportYYSLS
+from ..games.zzmi import ExportZZMI
 
 from ..model.blueprint_model import BluePrintModel
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper

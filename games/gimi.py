@@ -1,11 +1,11 @@
 import os
 
-from ...common.global_config import GlobalConfig
-from ...common.global_properties import GlobalProterties
-from ...common.global_config import GlobalConfig
-from ...common.m_ini_helper import M_IniHelper
-from ...common.m_ini_helper_gui import M_IniHelperGUI
-from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
+from ..common.global_config import GlobalConfig
+from ..common.global_properties import GlobalProterties
+from ..common.global_config import GlobalConfig
+from ..common.m_ini_helper import M_IniHelper
+from ..common.m_ini_helper_gui import M_IniHelperGUI
+from ..common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
 from .unity import ExportUnity
 
 

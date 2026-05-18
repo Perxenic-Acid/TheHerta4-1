@@ -28,7 +28,7 @@ from ..utils.obj_utils import (
 )
 from ..utils.shapekey_utils import ShapeKeyUtils
 from ..utils.vertexgroup_utils import VertexGroupUtils
-from ..games.wwmi.extracted_object import ExtractedObject, ExtractedObjectHelper
+from ..workspace.wwmi_info import ExtractedObject, ExtractedObjectHelper
 from ..common.buffer_export_helper import BufferExportHelper
 from ..common.obj_buffer_helper import ObjBufferHelper
 from ..workspace.ssmt_workspace import SSMTWorkSpace
@@ -135,7 +135,7 @@ class DrawIBModelWWMI:
 
         LOG.newline()
 
-        self.merged_object = self.build_merged_object(extracted_object=self.extracted_object)
+        self.merged_object = self.build_merged_object()
 
         obj_name_temp_object_dict: dict[str, TempObject] = {}
         for component in self.merged_object.components:
@@ -247,9 +247,9 @@ class DrawIBModelWWMI:
         if self.blend_remap_vertex_vg_buffer is not None and self.blend_remap_vertex_vg_buffer.size != 0:
             BufferExportHelper.write_buf_blendindices_uint16(self.blend_remap_vertex_vg_buffer, self.draw_ib + "-BlendRemapVertexVG.buf")
 
-    def build_merged_object(self, extracted_object: ExtractedObject) -> MergedObject:
+    def build_merged_object(self) -> MergedObject:
         components: list[MergedObjectComponent] = []
-        for _component in extracted_object.components:
+        for _component in self.extracted_object.components:
             components.append(MergedObjectComponent(objects=[], index_count=0))
 
         workspace_collection = bpy.context.collection
@@ -308,16 +308,14 @@ class DrawIBModelWWMI:
 
                 vertex_groups = ObjUtils.get_vertex_groups(temp_obj)
                 if GlobalProterties.import_merged_vgmap():
-                    # 使用 SUM 而非 MAX：累加所有组件的原生 VG 数量作为阈值
-                    # 确保高位顶点组（来自不同组件）不会被错误删除
-                    total_vg_count = sum(extracted_component.vg_count for extracted_component in extracted_object.components)
+                    total_vg_count = sum(ec.vg_count for ec in self.extracted_object.components)
                     ignore_list = [
                         vertex_group
                         for vertex_group in vertex_groups
                         if "ignore" in vertex_group.name.lower() or vertex_group.index >= total_vg_count
                     ]
                 else:
-                    extracted_component = extracted_object.components[component_id]
+                    extracted_component = self.extracted_object.components[component_id]
                     total_vg_count = len(extracted_component.vg_map)
                     ignore_list = [
                         vertex_group
