@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass, field
 
 from ..workspace.submesh_json import SubmeshJson
-from ..workspace.workspace_helper import WorkSpaceHelper
+from ..workspace.workspace_helper import SSMTWorkSpace
 
 
 @dataclass
@@ -104,7 +104,7 @@ class TextureMetadataResolver:
         unique_str = submesh_model.unique_str
 
         try:
-            exists, error_msg, submesh_json_path = WorkSpaceHelper.check_and_get_submesh_json_path(unique_str)
+            exists, error_msg, submesh_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(unique_str)
             if not exists:
                 raise Exception(error_msg)
             submesh_json = SubmeshJson(submesh_json_path)

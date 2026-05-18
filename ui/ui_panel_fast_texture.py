@@ -36,8 +36,8 @@ def _refresh_lod_enum_cache():
     global _lod_enum_cache
     _lod_enum_cache.clear()
     try:
-        from ..workspace.workspace_helper import WorkSpaceHelper
-        lod_folder_paths = WorkSpaceHelper.get_lod_folderpath_list()
+        from ..workspace.workspace_helper import SSMTWorkSpace
+        lod_folder_paths = SSMTWorkSpace.get_lod_folderpath_list()
         if lod_folder_paths:
             _lod_enum_cache = [
                 (os.path.basename(p), os.path.basename(p), "")

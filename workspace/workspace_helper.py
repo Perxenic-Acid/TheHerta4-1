@@ -16,7 +16,7 @@ class DedupedTextureInfo:
     componet_count_list_str:str = field(default="",init=False)
 
 
-class WorkSpaceHelper:
+class SSMTWorkSpace:
 
     @staticmethod
     def get_object_display_name(submesh_folder_name: str, drawib_aliasname_dict: Dict[str, str] | None = None) -> str:
@@ -24,7 +24,7 @@ class WorkSpaceHelper:
         if not normalized_folder_name:
             return ""
 
-        drawib_aliasname_dict = drawib_aliasname_dict or WorkSpaceHelper.get_drawib_aliasname_dict()
+        drawib_aliasname_dict = drawib_aliasname_dict or SSMTWorkSpace.get_drawib_aliasname_dict()
         folder_prefix, _, folder_alias = normalized_folder_name.partition(".")
         draw_ib = folder_prefix.split("-")[0]
 
@@ -46,7 +46,7 @@ class WorkSpaceHelper:
         if not normalized_folder_name:
             return ""
 
-        alias_name = WorkSpaceHelper.get_object_display_name(
+        alias_name = SSMTWorkSpace.get_object_display_name(
             normalized_folder_name,
             drawib_aliasname_dict=drawib_aliasname_dict,
         )
@@ -102,7 +102,7 @@ class WorkSpaceHelper:
         LOD0.67f829fc-2653-0 → workspace/LOD0/67f829fc-2653-0/
         67f829fc-2653-0      → workspace/67f829fc-2653-0/
         '''
-        lod_name, bare_unique_str = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+        lod_name, bare_unique_str = SSMTWorkSpace.parse_lod_unique_str(unique_str)
         workspace_folder = GlobalConfig.path_workspace_folder()
         if lod_name:
             return os.path.join(workspace_folder, lod_name, bare_unique_str)
@@ -154,9 +154,9 @@ class WorkSpaceHelper:
         返回 {lod_name: [submesh_folder_path, ...]} 字典，按 LOD 排序。
         '''
         result: Dict[str, List[str]] = {}
-        for lod_folder_path in WorkSpaceHelper.get_lod_folderpath_list():
+        for lod_folder_path in SSMTWorkSpace.get_lod_folderpath_list():
             lod_name = os.path.basename(lod_folder_path)
-            result[lod_name] = WorkSpaceHelper._get_submesh_folderpath_list_from(lod_folder_path)
+            result[lod_name] = SSMTWorkSpace._get_submesh_folderpath_list_from(lod_folder_path)
         return result
 
     @staticmethod
@@ -225,8 +225,8 @@ class WorkSpaceHelper:
         """
         workspace_folder = GlobalConfig.path_workspace_folder()
 
-        lod_name, bare_unique_str = WorkSpaceHelper.parse_lod_unique_str(unique_str)
-        unique_str_folder = WorkSpaceHelper.get_submesh_folder_path(unique_str)
+        lod_name, bare_unique_str = SSMTWorkSpace.parse_lod_unique_str(unique_str)
+        unique_str_folder = SSMTWorkSpace.get_submesh_folder_path(unique_str)
 
         if not os.path.exists(unique_str_folder):
             return False, (
@@ -271,7 +271,7 @@ class WorkSpaceHelper:
     @staticmethod
     def get_hash_deduped_texture_info_dict(submesh_folder_name:str) -> Dict[str,DedupedTextureInfo]:
 
-        draw_ib_folder_path = os.path.dirname(WorkSpaceHelper.get_submesh_folder_path(submesh_folder_name)) + "\\"
+        draw_ib_folder_path = os.path.dirname(SSMTWorkSpace.get_submesh_folder_path(submesh_folder_name)) + "\\"
         # 接下来计算ComponentList，也就是当前DrawIB使用到这个贴图的所有Component的Count，从1开始
         component_name__drawcall_indexlist_json_path = os.path.join(draw_ib_folder_path,"ComponentName_DrawCallIndexList.json")
         trianglelist_deduped_filename_json_path = os.path.join(draw_ib_folder_path,"TrianglelistDedupedFileName.json")

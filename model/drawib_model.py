@@ -9,7 +9,7 @@ from ..utils.json_utils import JsonUtils
 from ..utils.format_utils import Fatal
 from ..common.texture_metadata_helper import TextureMetadataResolver
 from ..workspace.submesh_json import SubmeshJson
-from ..workspace.workspace_helper import WorkSpaceHelper
+from ..workspace.workspace_helper import SSMTWorkSpace
 
 import numpy
 
@@ -92,7 +92,7 @@ class DrawIBModel:
         folder_name = first_submesh.unique_str
         print("DrawIBModel: 开始读取导出元数据，DrawIB: " + self.draw_ib + "，unique_str: " + folder_name)
 
-        exists, error_msg, submesh_json_path = WorkSpaceHelper.check_and_get_submesh_json_path(folder_name)
+        exists, error_msg, submesh_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(folder_name)
         if not exists:
             raise Fatal(error_msg)
         submesh_json = SubmeshJson(submesh_json_path)
@@ -291,7 +291,7 @@ class DrawIBModel:
             unique_str = submesh_model.unique_str
             alias = str(alias_dict.get(unique_str, "") or "").strip()
             if alias:
-                lod_name, _ = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+                lod_name, _ = SSMTWorkSpace.parse_lod_unique_str(unique_str)
                 if lod_name:
                     submesh_model.display_str = lod_name + "." + alias
                 else:

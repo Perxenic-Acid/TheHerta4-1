@@ -12,7 +12,7 @@ from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from .drawib_export_base import DrawIBExportBase
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
-from ...workspace.workspace_helper import WorkSpaceHelper
+from ...workspace.workspace_helper import SSMTWorkSpace
 from ...utils.format_utils import FormatUtils
 
 from dataclasses import dataclass, field
@@ -61,7 +61,7 @@ class ExportNTEMI:
                     unique_str = submesh_model.unique_str
                     alias = str(alias_dict.get(unique_str, "") or "").strip()
                     if alias:
-                        lod_name, _ = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+                        lod_name, _ = SSMTWorkSpace.parse_lod_unique_str(unique_str)
                         submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias
 
     # ── buffer file generation ────────────────────────────────────────────

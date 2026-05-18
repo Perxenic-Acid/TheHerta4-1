@@ -8,7 +8,7 @@ import bpy
 from bpy.types import PropertyGroup
 
 from ..utils.translate_utils import iface_, rpt_
-from ..workspace.workspace_helper import WorkSpaceHelper
+from ..workspace.workspace_helper import SSMTWorkSpace
 from .blueprint_node_base import SSMTNodeBase
 
 
@@ -49,7 +49,7 @@ class SSMT_OT_RefreshSubmeshAlias(bpy.types.Operator):
 
         # 从工作空间扫描所有 LOD 下的 submesh unique_str
         all_unique_strs = []
-        lod_submesh_dict = WorkSpaceHelper.get_lod_submesh_folderpath_dict()
+        lod_submesh_dict = SSMTWorkSpace.get_lod_submesh_folderpath_dict()
         if lod_submesh_dict:
             for lod_name, submesh_folder_paths in lod_submesh_dict.items():
                 for folder_path in submesh_folder_paths:
@@ -57,7 +57,7 @@ class SSMT_OT_RefreshSubmeshAlias(bpy.types.Operator):
                     all_unique_strs.append(lod_name + "." + bare_name)
         else:
             # 兼容旧版无 LOD 结构
-            for folder_path in WorkSpaceHelper.get_submesh_folderpath_list():
+            for folder_path in SSMTWorkSpace.get_submesh_folderpath_list():
                 all_unique_strs.append(os.path.basename(folder_path))
 
         # 保留已有别名，只增量合并新的 unique_str

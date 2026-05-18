@@ -13,7 +13,7 @@ from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
 from .drawib_export_base import DrawIBExportBase
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
-from ...workspace.workspace_helper import WorkSpaceHelper
+from ...workspace.workspace_helper import SSMTWorkSpace
 
 import os
 
@@ -39,7 +39,7 @@ class ExportEFMI:
                 unique_str = submesh_model.unique_str
                 alias = str(alias_dict.get(unique_str, "") or "").strip()
                 if alias:
-                    lod_name, _ = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+                    lod_name, _ = SSMTWorkSpace.parse_lod_unique_str(unique_str)
                     submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias
 
     def generate_buffer_files(self):

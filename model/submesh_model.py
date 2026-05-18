@@ -10,7 +10,7 @@ from ..common.global_config import LogicName
 from ..common.global_config import GlobalConfig
 from ..common.d3d11_gametype import D3D11GameType
 from ..common.obj_buffer_helper import ObjBufferHelper
-from ..workspace.workspace_helper import WorkSpaceHelper
+from ..workspace.workspace_helper import SSMTWorkSpace
 from ..workspace.submesh_json import SubmeshJson
 
 
@@ -68,7 +68,7 @@ class SubMeshModel:
 
         folder_name = self.unique_str
 
-        exists, error_msg, submesh_json_path = WorkSpaceHelper.check_and_get_submesh_json_path(folder_name)
+        exists, error_msg, submesh_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(folder_name)
         if not exists:
             raise Fatal(error_msg)
         submesh_json = SubmeshJson(submesh_json_path)

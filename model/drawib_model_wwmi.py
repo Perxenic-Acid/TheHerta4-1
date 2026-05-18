@@ -31,7 +31,7 @@ from ..utils.vertexgroup_utils import VertexGroupUtils
 from ..games.wwmi.extracted_object import ExtractedObject, ExtractedObjectHelper
 from ..common.buffer_export_helper import BufferExportHelper
 from ..common.obj_buffer_helper import ObjBufferHelper
-from ..workspace.workspace_helper import WorkSpaceHelper
+from ..workspace.workspace_helper import SSMTWorkSpace
 from ..common.d3d11_gametype import D3D11GameType
 from ..blueprint.blueprint_model import BluePrintModel
 from .draw_call_model import DrawCallModel
@@ -81,7 +81,7 @@ class DrawIBModelWWMI:
     blend_remap_vertex_vg_buffer: numpy.ndarray | None = field(init=False, default=None, repr=False)
 
     def __post_init__(self):
-        drawib_aliasname_dict: dict[str, str] = WorkSpaceHelper.get_drawib_aliasname_dict()
+        drawib_aliasname_dict: dict[str, str] = SSMTWorkSpace.get_drawib_aliasname_dict()
         self.draw_ib_alias = drawib_aliasname_dict.get(self.draw_ib, self.draw_ib)
 
         self.ordered_drawcall_model_list = ObjBufferHelper.get_obj_data_model_list_by_draw_ib(
@@ -93,7 +93,7 @@ class DrawIBModelWWMI:
             raise ValueError("当前 DrawIB 没有可导出的 DrawCallModel")
 
         primary_unique_str = self.ordered_drawcall_model_list[0].get_unique_str()
-        exists, error_msg, primary_json_path = WorkSpaceHelper.check_and_get_submesh_json_path(primary_unique_str)
+        exists, error_msg, primary_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(primary_unique_str)
         if not exists:
             raise Fatal(error_msg)
         primary_submesh_json = SubmeshJson(primary_json_path)
@@ -110,7 +110,7 @@ class DrawIBModelWWMI:
             unique_str = drawcall_model.get_unique_str()
             submesh_json = unique_str_submesh_json_dict.get(unique_str)
             if submesh_json is None:
-                sj_path = WorkSpaceHelper.check_and_get_submesh_json_path(unique_str)
+                sj_path = SSMTWorkSpace.check_and_get_submesh_json_path(unique_str)
                 if not sj_path[0]:
                     raise Fatal(sj_path[1])
                 submesh_json = SubmeshJson(sj_path[2])
@@ -549,5 +549,5 @@ class DrawIBModelWWMI:
             unique_str = submesh_model.unique_str
             alias = str(alias_dict.get(unique_str, "") or "").strip()
             if alias:
-                lod_name, _ = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+                lod_name, _ = SSMTWorkSpace.parse_lod_unique_str(unique_str)
                 submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias

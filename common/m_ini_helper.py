@@ -9,7 +9,7 @@ from ..utils.json_utils import JsonUtils
 from ..utils.format_utils import Fatal
 from .global_config import GlobalConfig
 from .global_properties import GlobalProterties
-from ..workspace.workspace_helper import WorkSpaceHelper
+from ..workspace.workspace_helper import SSMTWorkSpace
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from .texture_metadata_helper import TextureMetadataResolver, TextureMarkUpInfo
 
@@ -27,7 +27,7 @@ class M_IniHelper:
         unique_str = getattr(submesh_model, "unique_str", "")
         if not display_str or not unique_str or display_str == unique_str:
             return mark_filename
-        _, bare_unique_str = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+        _, bare_unique_str = SSMTWorkSpace.parse_lod_unique_str(unique_str)
         old_prefix = bare_unique_str + "-"
         if mark_filename.startswith(old_prefix):
             return display_str + "-" + mark_filename[len(old_prefix):]
@@ -59,7 +59,7 @@ class M_IniHelper:
             d3d11_game_type = getattr(first_submesh_model, "d3d11_game_type", None)
             if unique_str and d3d11_game_type is not None:
                 return os.path.join(
-                    WorkSpaceHelper.get_submesh_folder_path(unique_str),
+                    SSMTWorkSpace.get_submesh_folder_path(unique_str),
                     "TYPE_" + d3d11_game_type.GameTypeName,
                     "",
                 )
@@ -87,7 +87,7 @@ class M_IniHelper:
         if d3d11_game_type is None or unique_str == "":
             return ""
 
-        submesh_folder = WorkSpaceHelper.get_submesh_folder_path(unique_str)
+        submesh_folder = SSMTWorkSpace.get_submesh_folder_path(unique_str)
         return os.path.join(submesh_folder, "TYPE_" + d3d11_game_type.GameTypeName, "")
 
     @classmethod
@@ -110,7 +110,7 @@ class M_IniHelper:
                 continue
 
             candidate_source_path = os.path.join(
-                WorkSpaceHelper.get_submesh_folder_path(unique_str),
+                SSMTWorkSpace.get_submesh_folder_path(unique_str),
                 "TYPE_" + d3d11_game_type.GameTypeName,
                 texture_markup_info.mark_filename,
             )
@@ -138,7 +138,7 @@ class M_IniHelper:
             if not submesh_folder_name:
                 continue
 
-            hash_deduped_texture_info_dict = WorkSpaceHelper.get_hash_deduped_texture_info_dict(submesh_folder_name=submesh_folder_name)
+            hash_deduped_texture_info_dict = SSMTWorkSpace.get_hash_deduped_texture_info_dict(submesh_folder_name=submesh_folder_name)
             deduped_texture_info = hash_deduped_texture_info_dict.get(mark_hash, None)
             if deduped_texture_info is not None:
                 print(
@@ -259,7 +259,7 @@ class M_IniHelper:
                     continue
 
                 # 读取该 SubMesh 的 Hash 去重信息字典
-                hash_deduped_texture_info_dict = WorkSpaceHelper.get_hash_deduped_texture_info_dict(
+                hash_deduped_texture_info_dict = SSMTWorkSpace.get_hash_deduped_texture_info_dict(
                     submesh_folder_name=submesh_folder_name,
                 )
 
@@ -295,7 +295,7 @@ class M_IniHelper:
                             sm_folder = getattr(sm, "unique_str", "")
                             if not sm_folder:
                                 continue
-                            sm_deduped_dict = WorkSpaceHelper.get_hash_deduped_texture_info_dict(
+                            sm_deduped_dict = SSMTWorkSpace.get_hash_deduped_texture_info_dict(
                                 submesh_folder_name=sm_folder,
                             )
                             deduped_texture_info = sm_deduped_dict.get(

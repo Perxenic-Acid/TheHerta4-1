@@ -15,7 +15,7 @@ from ..utils.translate_utils import rpt_
 
 from ..common.global_config import GlobalConfig
 from ..common.ssmt_import_helper import SSMTImportHelper
-from ..workspace.workspace_helper import WorkSpaceHelper
+from ..workspace.workspace_helper import SSMTWorkSpace
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
 
@@ -23,10 +23,10 @@ from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 def ImprotFromWorkSpaceFull(self, context):
     
     # 这里先创建以当前工作空间为名称的集合，并且链接到scene，确保它存在
-    workspace_collection = WorkSpaceHelper.create_and_get_workspace_collection()
+    workspace_collection = SSMTWorkSpace.create_and_get_workspace_collection()
 
     # 获取当前工作空间下的所有 LOD 目录及其 submesh 子目录
-    lod_submesh_dict = WorkSpaceHelper.get_lod_submesh_folderpath_dict()
+    lod_submesh_dict = SSMTWorkSpace.get_lod_submesh_folderpath_dict()
 
     if not lod_submesh_dict:
         self.report({'ERROR'}, "当前工作空间未找到任何 LOD 目录（LOD0、LOD1…），请检查工作空间结构。")
@@ -50,7 +50,7 @@ def ImprotFromWorkSpaceFull(self, context):
 
         # 读取该 LOD 目录下的 Config.json 里的 DrawIB -> 别名映射
         lod_folder_path = os.path.join(GlobalConfig.path_workspace_folder(), lod_name)
-        drawib_aliasname_dict = WorkSpaceHelper.get_drawib_aliasname_dict_for_path(lod_folder_path)
+        drawib_aliasname_dict = SSMTWorkSpace.get_drawib_aliasname_dict_for_path(lod_folder_path)
 
         for submesh_folder_path in submesh_folder_paths:
             submesh_folder_name = os.path.basename(submesh_folder_path)
@@ -59,7 +59,7 @@ def ImprotFromWorkSpaceFull(self, context):
             print("Import FolderName: " + lod_prefixed_name)
 
             # 获取导入的数据类型文件夹路径列表
-            final_import_folder_path_list = WorkSpaceHelper.get_ordered_gpu_cpu_import_folderpath_list(submesh_folder_path)
+            final_import_folder_path_list = SSMTWorkSpace.get_ordered_gpu_cpu_import_folderpath_list(submesh_folder_path)
             print("Final Import Folder Path List: " + str(final_import_folder_path_list))
 
             # 接下来开始导入，尝试对当前DrawIB的每个数据类型都进行导入
@@ -69,7 +69,7 @@ def ImprotFromWorkSpaceFull(self, context):
                 try:
                     print("尝试导入路径: " + import_folder_path)
                     # 构造显示名称，带 LOD 前缀
-                    bare_display_name = WorkSpaceHelper.get_display_submesh_name(
+                    bare_display_name = SSMTWorkSpace.get_display_submesh_name(
                         submesh_folder_name,
                         drawib_aliasname_dict=drawib_aliasname_dict,
                     )
@@ -139,7 +139,7 @@ def ImprotFromWorkSpaceFull(self, context):
                 continue
 
             # 解析裸 unique_str 用于获取 component 编号
-            _, bare_unique_str = WorkSpaceHelper.parse_lod_unique_str(lod_prefixed_name)
+            _, bare_unique_str = SSMTWorkSpace.parse_lod_unique_str(lod_prefixed_name)
             namesplits = bare_unique_str.split('-')
 
             # 创建节点
