@@ -96,31 +96,24 @@ class DrawIBModelWWMI:
 
         self.submesh_drawcall_groups = []
 
-        submesh_json_dict: dict[str, SubmeshJson] = {first_submesh_name: first_submesh_json}
-        component_name_drawcall_model_dict: dict[str, list[DrawCallModel]] = {}
-        component_index_by_submesh_name: dict[str, int] = {}
+        # 从工作空间获取当前 DrawIB 所有 submesh 的排序列表
+        ordered_submesh_name_list = SSMTWorkSpace.get_ordered_submesh_name_list_by_drawib(self.draw_ib)
 
-        for drawcall_model in self.ordered_drawcall_model_list:
-            submesh_name = drawcall_model.get_submesh_name()
-            submesh_json = submesh_json_dict.get(submesh_name)
-            if submesh_json is None:
-                submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(submesh_name))
-                submesh_json_dict[submesh_name] = submesh_json
-
-            component_index = component_index_by_submesh_name.setdefault(submesh_name, len(component_index_by_submesh_name) + 1)
-            component_name = "Component " + str(component_index)
-            component_drawcall_model_list = component_name_drawcall_model_dict.get(component_name, [])
-            component_drawcall_model_list.append(drawcall_model)
-            component_name_drawcall_model_dict[component_name] = component_drawcall_model_list
-
-        for component_drawcall_model_list in component_name_drawcall_model_dict.values():
-            self.submesh_drawcall_groups.append(component_drawcall_model_list)
-
-        ordered_submesh_json_list = [submesh_json_dict[submesh_name] for submesh_name in component_index_by_submesh_name.keys()]
+        # 预加载 SubmeshJson 并按排序后的顺序构建分组 + wwmi_info
+        ordered_submesh_json_list: list[SubmeshJson] = []
+        for submesh_name in ordered_submesh_name_list:
+            ordered_submesh_json_list.append(SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(submesh_name)))
+            # 收集当前 submesh 对应的所有 DrawCall
+            drawcall_group = []
+            for drawcall_model in self.ordered_drawcall_model_list:
+                if drawcall_model.get_submesh_name() == submesh_name:
+                    drawcall_group.append(drawcall_model)
+            self.submesh_drawcall_groups.append(drawcall_group)
+        
+        # 根据有序的 SubmeshJson 列表构建 WWMIInfoObject，
+        # 这个对象包含了当前 DrawIB 的所有组件信息，后续构建 MergedObject 和导出时都会用到
         self.wwmi_info = WWMIInfoHelper.build_from_json_list(ordered_submesh_json_list)
-
-        LOG.newline()
-
+        
         self.merged_object = self.build_merged_object()
 
         obj_name_temp_object_dict: dict[str, TempObject] = {}

@@ -269,6 +269,62 @@ class SSMTWorkSpace:
         )
 
     @staticmethod
+    def get_ordered_submesh_name_list_by_drawib(draw_ib: str) -> list[str]:
+        """
+        根据 DrawIB 在工作空间中查找对应的 Submesh 文件夹，
+        按 FirstIndex 升序排序后返回 submesh_name 列表。
+        Submesh 文件夹命名规则: {draw_ib}-{index_count}-{first_index}
+        排序规则: 下一个 submesh 的 FirstIndex = 上一个的 IndexCount + FirstIndex
+        """
+        workspace_folder = GlobalConfig.path_workspace_folder()
+
+        # 收集所有 LOD 下的 submesh 文件夹路径
+        submesh_folder_paths: list[tuple[str, str, int]] = []  # (lod_name, bare_name, first_index)
+
+        # 检查 LOD 结构
+        lod_folders = SSMTWorkSpace.get_lod_folderpath_list()
+        if lod_folders:
+            for lod_path in lod_folders:
+                lod_name = os.path.basename(lod_path)
+                for entry in os.scandir(lod_path):
+                    if not entry.is_dir():
+                        continue
+                    name = entry.name
+                    if not name.startswith(draw_ib + "-"):
+                        continue
+                    parts = name.split("-")
+                    if len(parts) >= 3:
+                        try:
+                            first_index = int(parts[-1])
+                        except ValueError:
+                            continue
+                        submesh_folder_paths.append((lod_name, name, first_index))
+        else:
+            # 兼容旧版无 LOD 结构
+            for entry in os.scandir(workspace_folder):
+                if not entry.is_dir():
+                    continue
+                name = entry.name
+                if not name.startswith(draw_ib + "-"):
+                    continue
+                parts = name.split("-")
+                if len(parts) >= 3:
+                    try:
+                        first_index = int(parts[-1])
+                    except ValueError:
+                        continue
+                    submesh_folder_paths.append(("", name, first_index))
+
+        # 按 FirstIndex 升序排序
+        submesh_folder_paths.sort(key=lambda x: x[2])
+
+        # 组装完整的 submesh_name
+        return [
+            (lod_name + "." + bare_name) if lod_name else bare_name
+            for lod_name, bare_name, _ in submesh_folder_paths
+        ]
+
+    @staticmethod
     def get_hash_deduped_texture_info_dict(submesh_folder_name:str) -> Dict[str,DedupedTextureInfo]:
 
         draw_ib_folder_path = os.path.dirname(SSMTWorkSpace.get_submesh_folder_path(submesh_folder_name)) + "\\"

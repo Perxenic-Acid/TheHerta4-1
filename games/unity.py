@@ -269,20 +269,6 @@ class ExportUnity:
 
     def add_unity_cs_vertex_shader_check(self, ini_builder: M_IniBuilder):
         vscheck_section = M_IniSection(M_SectionType.VertexShaderCheck)
-        vs_hash_set = set()
-        for drawib_model in self.drawib_model_list:
-            for vs_hash in getattr(drawib_model, "vshash_list", []):
-                vs_hash_set.add(vs_hash)
-
-        for vs_hash in vs_hash_set:
-            vscheck_section.append("[ShaderOverride_" + vs_hash + "]")
-            vscheck_section.append("allow_duplicate_hash = overrule")
-            vscheck_section.append("hash = " + vs_hash)
-            vscheck_section.append("if $costume_mods")
-            vscheck_section.append("  checktextureoverride = ib")
-            vscheck_section.append("endif")
-            vscheck_section.new_line()
-
         ini_builder.append_section(vscheck_section)
 
     def generate_unity_cs_config_ini(self):

@@ -364,8 +364,7 @@ class ExportWWMI:
                 texture_override_component.append("  if ResourceMergedSkeleton !== null")
                 texture_override_component.append("    handling = skip")
 
-                component_model = draw_ib_model.component_name_component_model_dict[component_name]
-                drawindexed_str_list = M_IniHelper.get_drawindexed_str_list(component_model.final_ordered_draw_obj_model_list)
+                drawindexed_str_list = M_IniHelper.get_drawindexed_str_list(draw_ib_model.submesh_drawcall_groups[component_count])
 
                 if len(drawindexed_str_list) != 0:
                     if component_blend_remap_used:
@@ -381,8 +380,7 @@ class ExportWWMI:
                     texture_override_component.append("    run = CommandListCleanupSharedResources")
                 texture_override_component.append("  endif")
             else:
-                component_model = draw_ib_model.component_name_component_model_dict[component_name]
-                drawindexed_str_list = M_IniHelper.get_drawindexed_str_list(component_model.final_ordered_draw_obj_model_list)
+                drawindexed_str_list = M_IniHelper.get_drawindexed_str_list(draw_ib_model.submesh_drawcall_groups[component_count])
                 if len(drawindexed_str_list) != 0:
                     texture_override_component.append("  handling = skip")
                     texture_override_component.append("  run = CommandListTriggerResourceOverrides")

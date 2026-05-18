@@ -105,7 +105,7 @@ class TextureMetadataResolver:
             "TextureMetadataResolver: 读取贴图标记，submesh_name: "
             + submesh_name
             + "，submesh_json: "
-            + submesh_json_path
+            + submesh_json.JsonFilePath
         )
 
         texture_markup_info_list = TextureMetadataResolver.normalize_texture_markup_info_list(

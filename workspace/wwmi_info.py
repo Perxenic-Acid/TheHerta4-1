@@ -34,11 +34,11 @@ class WWMIInfoObject:
 
 class WWMIInfoHelper:
     @classmethod
-    def build_from_json_list(cls, submesh_json_list: list) -> WWMIInfoObject:
-        if not submesh_json_list:
+    def build_from_json_list(cls, ordered_submesh_json_list: list) -> WWMIInfoObject:
+        if not ordered_submesh_json_list:
             raise ValueError("No SubmeshJson provided to build WWMIInfoObject.")
 
-        first_json = submesh_json_list[0]
+        first_json = ordered_submesh_json_list[0]
         vb0_hash = first_json.VertexLimitVB
         cb4_hash = first_json.CB4Hash
 
@@ -46,7 +46,7 @@ class WWMIInfoHelper:
         total_index_count = 0
         max_vertex_end = 0
 
-        for j in submesh_json_list:
+        for j in ordered_submesh_json_list:
             vertex_offset = j.VertexOffset
             vertex_count = max(j.VertexCount, 0)
             index_offset = int(j.JsonDict.get("IndexOffset", 0))
