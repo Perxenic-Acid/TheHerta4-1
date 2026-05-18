@@ -58,7 +58,7 @@
 | 🌌 **Honkai: Star Rail** | `SRMI` | Unity |
 | 🌃 **Zenless Zone Zero** | `ZZMI` | Unity |
 | 🌊 **Wuthering Waves** | `WWMI` | Unreal |
-| 🌫️ **Eternal Force** | `EFMI` | Unity |
+| �️ **Arknights: Endfield** (明日方舟终末地) | `EFMI` | Unity |
 
 ### ⚠️ Community / Occasional Maintenance
 
@@ -69,7 +69,6 @@
 | 🏮 **Where Winds Meet** | `YYSLS` | Limited player base |
 | 🌐 **Neverness to Everness** | `NTEMI` | Beta testing phase |
 | 🔫 **Girls' Frontline 2** | `GF2` | CPU-PreSkinning approach |
-| 🌐 **Neverness to Everness** | `NEMI` |
 
 ### 🔮 Reserved (In Testing / Upcoming)
 
@@ -145,7 +144,7 @@ TheHerta4/
 │   ├── srmi.py                 # Honkai: Star Rail
 │   ├── zzmi.py                 # Zenless Zone Zero
 │   ├── wwmi.py                 # Wuthering Waves
-│   ├── efmi.py                 # Eternal Force
+│   ├── efmi.py                 # Arknights: Endfield
 │   ├── himi.py                 # Honkai Impact 3rd
 │   ├── identityv.py            # Identity V
 │   ├── snowbreak.py            # Snowbreak
