@@ -11,7 +11,6 @@ from ...common.global_config import GlobalConfig
 from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
-from .drawib_export_base import DrawIBExportBase
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 from ...workspace.ssmt_workspace import SSMTWorkSpace
 
@@ -26,8 +25,8 @@ class ExportEFMI:
     drawib_model_list:list[DrawIBModel] = field(default_factory=list,init=False)
 
     def __post_init__(self):
-        self.submesh_model_list = DrawIBExportBase.parse_submesh_model_list_from_blueprint_model(self.blueprint_model)
-        self.drawib_model_list = DrawIBExportBase.parse_drawib_model_list_from_blueprint_model(self.blueprint_model, combine_ib=False)
+        self.submesh_model_list = self.blueprint_model.parse_submesh_model_list()
+        self.drawib_model_list = self.blueprint_model.parse_drawib_model_list(combine_ib=False)
         print("SubMeshModel列表初始化完成，共有 " + str(len(self.submesh_model_list)) + " 个SubMeshModel")
 
         alias_dict = BlueprintExportHelper.get_alias_dict()

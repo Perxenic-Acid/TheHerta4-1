@@ -6,6 +6,8 @@ from ..utils.log_utils import LOG
 
 from ..common.m_key import M_Key
 from .draw_call_model import DrawCallModel
+from .submesh_model import SubMeshModel
+from .drawib_model import DrawIBModel
 from ..common.global_config import GlobalConfig
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
@@ -152,12 +154,42 @@ class BluePrintModel:
             
             self.ordered_draw_obj_data_model_list.append(obj_model)
 
+    def parse_submesh_model_list(self) -> list[SubMeshModel]:
+        """
+        从当前 BluePrintModel 解析出 SubMeshModel 列表。
+        将相同 unique_str 的 DrawCallModel 分在一起，每个组创建一个 SubMeshModel。
+        """
+        submesh_model_list: list[SubMeshModel] = []
+        draw_call_model_dict: dict[str, list[DrawCallModel]] = {}
 
+        for draw_call_model in self.ordered_draw_obj_data_model_list:
+            unique_str = draw_call_model.get_unique_str()
+            draw_call_model_list = draw_call_model_dict.get(unique_str, [])
+            draw_call_model_list.append(draw_call_model)
+            draw_call_model_dict[unique_str] = draw_call_model_list
 
+        for unique_str, draw_call_model_list in draw_call_model_dict.items():
+            submesh_model = SubMeshModel(drawcall_model_list=draw_call_model_list)
+            submesh_model_list.append(submesh_model)
 
-                
+        return submesh_model_list
 
-                
+    def parse_drawib_model_list(self, combine_ib: bool = False) -> list[DrawIBModel]:
+        """
+        从当前 BluePrintModel 解析出 DrawIBModel 列表。
+        适用于需要将多个 SubMesh 组合成一个 DrawIB 导出的游戏。
+        """
+        drawib_model_list: list[DrawIBModel] = []
+        draw_ib_submesh_model_list_dict: dict[str, list[SubMeshModel]] = {}
 
+        for submesh_model in self.parse_submesh_model_list():
+            draw_ib = submesh_model.match_draw_ib
+            tmp_submesh_model_list = draw_ib_submesh_model_list_dict.get(draw_ib, [])
+            tmp_submesh_model_list.append(submesh_model)
+            draw_ib_submesh_model_list_dict[draw_ib] = tmp_submesh_model_list
 
+        for draw_ib, submesh_model_list in draw_ib_submesh_model_list_dict.items():
+            drawib_model = DrawIBModel(submesh_model_list=submesh_model_list, combine_ib=combine_ib)
+            drawib_model_list.append(drawib_model)
 
+        return drawib_model_list

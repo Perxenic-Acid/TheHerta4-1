@@ -8,12 +8,17 @@ from ...common.global_config import GlobalConfig
 from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
-from .drawib_export_base import DrawIBExportBase
+from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 
 
-class ExportUnity(DrawIBExportBase):
+class ExportUnity:
     def __init__(self, blueprint_model):
-        super().__init__(blueprint_model=blueprint_model, combine_ib=False)
+        self.blueprint_model = blueprint_model
+        self.drawib_model_list = blueprint_model.parse_drawib_model_list(combine_ib=False)
+        alias_dict = BlueprintExportHelper.get_alias_dict()
+        if alias_dict:
+            for drawib_model in self.drawib_model_list:
+                drawib_model.apply_alias_dict(alias_dict)
 
     def add_unity_vs_texture_override_vb_sections(self, ini_builder: M_IniBuilder, drawib_model):
         d3d11_game_type = drawib_model.d3d11GameType

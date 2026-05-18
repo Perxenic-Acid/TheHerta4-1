@@ -6,12 +6,17 @@ from ...common.global_config import GlobalConfig
 from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
-from .drawib_export_base import DrawIBExportBase
+from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 
 
-class ExportIdentityV(DrawIBExportBase):
+class ExportIdentityV:
     def __init__(self, blueprint_model):
-        super().__init__(blueprint_model=blueprint_model, combine_ib=False)
+        self.blueprint_model = blueprint_model
+        self.drawib_model_list = blueprint_model.parse_drawib_model_list(combine_ib=False)
+        alias_dict = BlueprintExportHelper.get_alias_dict()
+        if alias_dict:
+            for drawib_model in self.drawib_model_list:
+                drawib_model.apply_alias_dict(alias_dict)
 
     def _get_drawib_submesh_entries(self, drawib_model):
         existing_submesh_dict = {}
