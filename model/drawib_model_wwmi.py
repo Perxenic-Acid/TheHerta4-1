@@ -7,12 +7,12 @@ from typing import TypedDict
 import bpy
 import numpy
 
-from ...common.global_properties import GlobalProterties
-from ...common.global_config import GlobalConfig
-from ...common.global_config import LogicName
-from ...utils.export_utils import ExportUtils, ObjElementContext, WWMIBufferBuildResult
-from ...utils.log_utils import LOG
-from ...utils.obj_utils import (
+from ..common.global_properties import GlobalProterties
+from ..common.global_config import GlobalConfig
+from ..common.global_config import LogicName
+from ..utils.export_utils import ExportUtils, ObjElementContext, WWMIBufferBuildResult
+from ..utils.log_utils import LOG
+from ..utils.obj_utils import (
     MergedObject,
     MergedObjectComponent,
     MergedObjectShapeKeys,
@@ -25,17 +25,17 @@ from ...utils.obj_utils import (
     select_object,
     set_active_object,
 )
-from ...utils.shapekey_utils import ShapeKeyUtils
-from ...utils.vertexgroup_utils import VertexGroupUtils
-from .extracted_object import ExtractedObject, ExtractedObjectHelper
-from ...common.buffer_export_helper import BufferExportHelper
-from ...common.obj_buffer_helper import ObjBufferHelper
-from ...workspace.workspace_helper import WorkSpaceHelper
-from ...common.d3d11_gametype import D3D11GameType
-from ...blueprint.blueprint_model import BluePrintModel
-from ...common.draw_call_model import DrawCallModel
-from ...workspace.submesh_metadata import SubmeshMetadata, SubmeshMetadataResolver
-from ...common.texture_metadata_helper import TextureMetadataResolver
+from ..utils.shapekey_utils import ShapeKeyUtils
+from ..utils.vertexgroup_utils import VertexGroupUtils
+from ..games.wwmi.extracted_object import ExtractedObject, ExtractedObjectHelper
+from ..common.buffer_export_helper import BufferExportHelper
+from ..common.obj_buffer_helper import ObjBufferHelper
+from ..workspace.workspace_helper import WorkSpaceHelper
+from ..common.d3d11_gametype import D3D11GameType
+from ..blueprint.blueprint_model import BluePrintModel
+from .draw_call_model import DrawCallModel
+from ..workspace.submesh_metadata import SubmeshMetadata, SubmeshMetadataResolver
+from ..common.texture_metadata_helper import TextureMetadataResolver
 
 
 class BlendRemapEntry(TypedDict):

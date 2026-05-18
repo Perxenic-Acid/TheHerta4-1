@@ -2,11 +2,11 @@
 from dataclasses import field, dataclass
 import os
 
-from .d3d11_gametype import D3D11GameType
-from .global_config import GlobalConfig
+from ..common.d3d11_gametype import D3D11GameType
+from ..common.global_config import GlobalConfig
 
 from ..utils.json_utils import JsonUtils
-from .texture_metadata_helper import TextureMetadataResolver
+from ..common.texture_metadata_helper import TextureMetadataResolver
 from ..workspace.submesh_metadata import SubmeshMetadataResolver
 from ..workspace.workspace_helper import WorkSpaceHelper
 

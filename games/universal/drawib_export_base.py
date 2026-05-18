@@ -1,8 +1,8 @@
 from ...blueprint.blueprint_model import BluePrintModel
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
-from ...common.draw_call_model import DrawCallModel
-from ...common.submesh_model import SubMeshModel
-from ...common.drawib_model import DrawIBModel
+from ...model.draw_call_model import DrawCallModel
+from ...model.submesh_model import SubMeshModel
+from ...model.drawib_model import DrawIBModel
 from ...common.buffer_export_helper import BufferExportHelper
 
 import os

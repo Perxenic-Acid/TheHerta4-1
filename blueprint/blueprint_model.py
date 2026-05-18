@@ -5,7 +5,7 @@ import copy
 from ..utils.log_utils import LOG
 
 from ..common.m_key import M_Key
-from ..common.draw_call_model import DrawCallModel
+from ..model.draw_call_model import DrawCallModel
 from ..common.global_config import GlobalConfig
 from .blueprint_export_helper import BlueprintExportHelper
 

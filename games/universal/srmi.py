@@ -9,7 +9,7 @@ from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
 from .drawib_export_base import DrawIBExportBase
-from ...common.drawib_model import DrawIBModel
+from ...model.drawib_model import DrawIBModel
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 
 import os

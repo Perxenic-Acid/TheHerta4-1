@@ -1,5 +1,5 @@
 from ..utils.ssmt_error_utils import SSMTErrorUtils
-from .m_key import M_Key
+from ..common.m_key import M_Key
 
 from dataclasses import dataclass, field
 from typing import Optional

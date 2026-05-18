@@ -3,7 +3,7 @@ import numpy
 import hashlib
 
 from ...blueprint.blueprint_model import BluePrintModel
-from ...common.drawib_model import DrawIBModel
+from ...model.drawib_model import DrawIBModel
 from ...common.global_config import GlobalConfig
 from ...common.global_properties import GlobalProterties
 from ...common.global_config import GlobalConfig
