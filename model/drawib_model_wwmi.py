@@ -31,7 +31,7 @@ from ..utils.vertexgroup_utils import VertexGroupUtils
 from ..games.wwmi.extracted_object import ExtractedObject, ExtractedObjectHelper
 from ..common.buffer_export_helper import BufferExportHelper
 from ..common.obj_buffer_helper import ObjBufferHelper
-from ..workspace.workspace_helper import SSMTWorkSpace
+from ..workspace.ssmt_workspace import SSMTWorkSpace
 from ..common.d3d11_gametype import D3D11GameType
 from ..blueprint.blueprint_model import BluePrintModel
 from .draw_call_model import DrawCallModel

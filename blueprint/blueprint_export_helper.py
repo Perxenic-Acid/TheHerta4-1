@@ -3,7 +3,7 @@ import os
 import bpy
 from ..common.global_config import GlobalConfig
 from ..common.m_key import M_Key
-from ..workspace.workspace_helper import SSMTWorkSpace
+from ..workspace.ssmt_workspace import SSMTWorkSpace
 
 class BlueprintExportHelper:
 

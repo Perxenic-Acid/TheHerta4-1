@@ -10,7 +10,7 @@ from ..common.global_config import LogicName
 from ..common.global_config import GlobalConfig
 from ..common.d3d11_gametype import D3D11GameType
 from ..common.obj_buffer_helper import ObjBufferHelper
-from ..workspace.workspace_helper import SSMTWorkSpace
+from ..workspace.ssmt_workspace import SSMTWorkSpace
 from ..workspace.submesh_json import SubmeshJson
 
 

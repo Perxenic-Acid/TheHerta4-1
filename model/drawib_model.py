@@ -9,7 +9,7 @@ from ..utils.json_utils import JsonUtils
 from ..utils.format_utils import Fatal
 from ..common.texture_metadata_helper import TextureMetadataResolver
 from ..workspace.submesh_json import SubmeshJson
-from ..workspace.workspace_helper import SSMTWorkSpace
+from ..workspace.ssmt_workspace import SSMTWorkSpace
 
 import numpy
 

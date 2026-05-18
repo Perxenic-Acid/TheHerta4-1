@@ -15,7 +15,7 @@ from ..utils.translate_utils import rpt_
 
 from ..common.global_config import GlobalConfig
 from ..common.ssmt_import_helper import SSMTImportHelper
-from ..workspace.workspace_helper import SSMTWorkSpace
+from ..workspace.ssmt_workspace import SSMTWorkSpace
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
 

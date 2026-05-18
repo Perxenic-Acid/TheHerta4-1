@@ -12,7 +12,7 @@ from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from .drawib_export_base import DrawIBExportBase
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
-from ...workspace.workspace_helper import SSMTWorkSpace
+from ...workspace.ssmt_workspace import SSMTWorkSpace
 from ...utils.format_utils import FormatUtils
 
 from dataclasses import dataclass, field

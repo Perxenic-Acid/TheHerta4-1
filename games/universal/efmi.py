@@ -13,7 +13,7 @@ from ...common.m_ini_helper_gui import M_IniHelperGUI
 from ...common.m_ini_builder import M_IniBuilder,M_IniSection, M_SectionType
 from .drawib_export_base import DrawIBExportBase
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
-from ...workspace.workspace_helper import SSMTWorkSpace
+from ...workspace.ssmt_workspace import SSMTWorkSpace
 
 import os
 

@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass, field
 
 from ..workspace.submesh_json import SubmeshJson
-from ..workspace.workspace_helper import SSMTWorkSpace
+from ..workspace.ssmt_workspace import SSMTWorkSpace
 
 
 @dataclass
