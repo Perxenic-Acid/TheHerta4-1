@@ -621,6 +621,3 @@ class ExportWWMI:
         for draw_ib_model in self.drawib_drawibmodel_dict.values():
             draw_ib_model.write_buffer_files()
         self.generate_unreal_vs_config_ini()
-
-
-ModModelWWMI = ExportWWMI

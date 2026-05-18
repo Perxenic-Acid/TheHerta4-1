@@ -204,7 +204,8 @@ class ExportIdentityV:
         ini_builder.append_section(resource_texture_section)
 
     def export(self):
-        self.generate_buffer_files(GlobalConfig.path_generatemod_buffer_folder())
+        for drawib_model in self.drawib_model_list:
+            drawib_model.generate_buffer_files(GlobalConfig.path_generatemod_buffer_folder())
         ini_builder = M_IniBuilder()
         drawib_drawibmodel_dict = {drawib_model.draw_ib: drawib_model for drawib_model in self.drawib_model_list}
         M_IniHelper.generate_hash_style_texture_ini(ini_builder=ini_builder, drawib_drawibmodel_dict=drawib_drawibmodel_dict)

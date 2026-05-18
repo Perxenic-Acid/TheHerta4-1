@@ -86,7 +86,8 @@ class ExportZZMI(ExportUnity):
         ini_builder.append_section(texture_override_ib_section)
 
     def export(self):
-        self.generate_buffer_files(GlobalConfig.path_generatemod_buffer_folder())
+        for drawib_model in self.drawib_model_list:
+            drawib_model.generate_buffer_files(GlobalConfig.path_generatemod_buffer_folder())
         ini_builder = M_IniBuilder()
         drawib_drawibmodel_dict = {drawib_model.draw_ib: drawib_model for drawib_model in self.drawib_model_list}
 

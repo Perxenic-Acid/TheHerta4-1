@@ -315,7 +315,8 @@ class ExportUnity:
         ini_builder.save_to_file(os.path.join(GlobalConfig.path_generate_mod_folder(), GlobalConfig.get_workspace_name() + ".ini"))
 
     def export(self):
-        self.generate_buffer_files(GlobalConfig.path_generatemod_buffer_folder())
+        for drawib_model in self.drawib_model_list:
+            drawib_model.generate_buffer_files(GlobalConfig.path_generatemod_buffer_folder())
         if GlobalConfig.logic_name in {LogicName.Naraka, LogicName.NarakaM, LogicName.AILIMIT}:
             self.generate_unity_cs_config_ini()
         else:

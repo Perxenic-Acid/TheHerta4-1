@@ -9,6 +9,7 @@ from ..utils.json_utils import JsonUtils
 from ..workspace.texture_metadata_helper import TextureMetadataResolver
 from ..workspace.submesh_json import SubmeshJson
 from ..workspace.ssmt_workspace import SSMTWorkSpace
+from ..common.buffer_export_helper import BufferExportHelper
 
 import numpy
 
@@ -306,6 +307,25 @@ class DrawIBModel:
 
     def get_submesh_texture_markup_info_list(self, submesh_model: SubMeshModel) -> list:
         return self.submesh_texturemarkinfolist_dict.get(submesh_model.submesh_name, [])
+
+    def generate_buffer_files(self, output_folder: str):
+        for submesh_model in self.submesh_model_list:
+            ib = self.submesh_ib_dict.get(submesh_model.submesh_name, [])
+            if ib:
+                ib_filename = submesh_model.display_str + "-Index.buf"
+                BufferExportHelper.write_buf_ib_r32_uint(ib, os.path.join(output_folder, ib_filename))
+
+        for category, category_buf in self.category_buffer_dict.items():
+            category_buf_filename = self.draw_ib + "-" + category + ".buf"
+            filepath = os.path.join(output_folder, category_buf_filename)
+            with open(filepath, 'wb') as f:
+                category_buf.tofile(f)
+
+        for shapekey_name, shapekey_buf in self.shapekey_name_bytelist_dict.items():
+            shapekey_buf_filename = self.draw_ib + "-Position." + shapekey_name + ".buf"
+            filepath = os.path.join(output_folder, shapekey_buf_filename)
+            with open(filepath, 'wb') as f:
+                shapekey_buf.tofile(f)
 
     @property
     def part_name_submesh_dict(self) -> dict:
