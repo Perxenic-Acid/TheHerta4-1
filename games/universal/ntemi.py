@@ -10,7 +10,7 @@ from ...common.global_config import GlobalConfig
 from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
 from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
-from .export_helper import ExportHelper
+from .drawib_export_base import DrawIBExportBase
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 from ...workspace.workspace_helper import WorkSpaceHelper
 from ...utils.format_utils import FormatUtils
@@ -48,7 +48,7 @@ class ExportNTEMI:
     drawib_model_list: list[DrawIBModel] = field(default_factory=list, init=False)
 
     def __post_init__(self):
-        self.drawib_model_list = ExportHelper.parse_drawib_model_list_from_blueprint_model(
+        self.drawib_model_list = DrawIBExportBase.parse_drawib_model_list_from_blueprint_model(
             self.blueprint_model, combine_ib=False,
         )
         print(f"ExportNTEMI: 解析完成，共 {len(self.drawib_model_list)} 个 DrawIBModel")
