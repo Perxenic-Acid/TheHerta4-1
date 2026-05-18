@@ -3,8 +3,8 @@ import shutil
 
 from .m_ini_builder import *
 from .m_key import M_Key
-from .draw_call_model import DrawCallModel
-from .drawib_model import DrawIBModel
+from ..model.draw_call_model import DrawCallModel
+from ..model.drawib_model import DrawIBModel
 from ..utils.json_utils import JsonUtils
 from ..utils.format_utils import Fatal
 from .global_config import GlobalConfig

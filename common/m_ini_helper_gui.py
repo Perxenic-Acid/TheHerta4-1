@@ -4,7 +4,7 @@ import shutil
 
 from .m_ini_builder import *
 from .m_key import M_Key
-from .draw_call_model import DrawCallModel
+from ..model.draw_call_model import DrawCallModel
 from .global_config import GlobalConfig
 from .global_properties import GlobalProterties
 
