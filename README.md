@@ -14,33 +14,179 @@
 
 </div>
 
-📦 A Blender addon for SSMT4
+<div align="center">
+
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4/pulls)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/StarBobis/TheHerta4?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4/commits/main)
+[![GitHub release](https://img.shields.io/github/v/release/StarBobis/TheHerta4?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4/releases)
+[![GitHub repo size](https://img.shields.io/github/repo-size/StarBobis/TheHerta4?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4)
+
+</div>
+
+📦 **A Blender addon for SSMT4** — Import and export SSMT4 model format directly in Blender. Built for 3Dmigoto-based game modding.
 
 - 🔄 SSMT4 and TheHerta4 versions are almost always updated together. Please use the latest versions of both to avoid feature mismatches.
-- 🐞 Blender 4.5 LTS or newer is recommended. If you encounter any bugs, please submit an Issue.
+- 🐞 **Blender 4.5 LTS** or newer is recommended. If you encounter any bugs, please submit an Issue.
+- 📦 **Requirements:** `fake-bpy-module-4.5`, `numpy`
 
-# 💖 Support Development
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🎮 **Multi-Game Support** | Import/export for 10+ popular games (see below) |
+| 🧩 **Blueprint Node System** | Visual node-based mod editing in Blender |
+| 📥 **SSMT4 Import** | Import models from SSMT4 workspace |
+| 📤 **Mod Export** | Export edited models back to 3Dmigoto Mod format |
+| 🔄 **Buffer & IB/VB Handling** | Full support for index/vertex buffer manipulation |
+| 🎨 **Texture Override** | Per-game texture slot mapping and override |
+| 🦴 **Shape Key Support** | Morph target / shape key editing |
+| ⚡ **Batch Processing** | Generate mods from blueprint trees |
+| 🔌 **Extensible** | Game-specific exporters via `LogicName` system |
+
+---
+
+## 🎮 Supported Games
+
+### ✅ Fully Supported (Active Maintenance)
+
+| Game | ID | Engine |
+|------|----|--------|
+| 🏔️ **Genshin Impact** | `GIMI` | Unity |
+| ⚡ **Honkai Impact 3rd** | `HIMI` | Unity |
+| 🌌 **Honkai: Star Rail** | `SRMI` | Unity |
+| 🌃 **Zenless Zone Zero** | `ZZMI` | Unity |
+| 🌊 **Wuthering Waves** | `WWMI` | Unreal |
+| 🌫️ **Eternal Force** | `EFMI` | Unity |
+
+### ⚠️ Community / Occasional Maintenance
+
+| Game | ID | Notes |
+|------|----|-------|
+| 🎭 **Identity V** | `IdentityV` | NeoX engine, limited maintenance |
+| ❄️ **Snowbreak: Containment Zone** | `SnowBreak` | Fallback option (native mod support available) |
+| 🏮 **Where Winds Meet** | `YYSLS` | Limited player base |
+| 🌐 **Neverness to Everness** | `NTEMI` | Beta testing phase |
+| 🔫 **Girls' Frontline 2** | `GF2` | CPU-PreSkinning approach |
+| 🌐 **Neverness to Everness** | `NEMI` |
+
+### 🔮 Reserved (In Testing / Upcoming)
+
+| Game | ID |
+|------|----|
+| 💙 **Azur Promilia** (蓝色星原) | `APMI` |
+---
+
+## 🚀 Quick Start
+
+### Installation
+
+1. 💾 [Download the latest release](https://github.com/StarBobis/TheHerta4/releases/latest)
+2. 🌀 Open Blender → `Edit` → `Preferences` → `Add-ons`
+3. 📂 Click **Install...** and select the downloaded `.zip`
+4. ✅ Enable **"TheHerta4"** from the add-ons list
+5. 🔍 Find the panel in `3D Viewport` → `Sidebar (N)` → **TheHerta4** and **Sword4** tab
+
+### Basic Workflow
+
+```
+1️⃣ Configure → Set your SSMT4 workspace path in the panel
+2️⃣ Select Game → Choose your game preset (GIMI, SRMI, etc.)
+3️⃣ Import → Load models from the workspace
+4️⃣ Edit → Modify meshes, weights, shape keys in Blender
+5️⃣ Export → Generate the mod files (buffers + ini) via blueprint tree
+```
+
+---
+
+## 💖 Support Development
+
+If you find this tool useful, consider supporting the project:
 
 <a href="https://afdian.com/a/NicoMico666"><img width="200" src="https://pic1.afdiancdn.com/static/img/welcome/button-sponsorme.png" alt=""></a>
 
-# 🔧 Where to find more blueprint nodes?
+---
 
-This repository (TheHerta4) only implements basic import/export functionality. Complex blueprint nodes are developed in fork versions.
+## 🔧 Blueprint Nodes & Forks
 
-You can use the versions maintained by XiEr for the full feature set:
+This repository (**TheHerta4**) focuses on the **core import/export engine**. Complex blueprint nodes are developed separately in fork versions.
 
-- https://github.com/xuhuan9102/TheHerta3
-- https://github.com/xuhuan9102/TheHerta4
+👉 For the full feature set, check out the versions maintained by **XiEr**:
+- [TheHerta3 by xuhuan9102](https://github.com/xuhuan9102/TheHerta3)
+- [TheHerta4 by xuhuan9102](https://github.com/xuhuan9102/TheHerta4)
 
-If you need to do large-scale feature extensions based on this repository, please fork it and develop in your own repository — do not push back to this main repo.
+> If you need large-scale feature extensions, please **fork** this repo and develop in your own repository. The main repo is dedicated to core architecture — additional extensions (blueprint nodes, etc.) are maintained by fork authors.
 
-Strictly speaking, the main TheHerta4 repo is only responsible for building the core architecture. Additional extensions (e.g. various blueprint nodes) will be maintained by the authors of each fork.
+📝 **Have your own branch?** Submit a PR to add it to this list!
 
-If you have your own maintained branch, feel free to submit a PR to add your branch info here.
+### For Developers
 
-For plugin development, please use VSCode with the Blender Development extension (by Jacques Lucke).
+To work on the plugin itself:
+- Use **VSCode** with the [**Blender Development**](https://github.com/JacquesLucke/blender_vscode) extension (by Jacques Lucke)
+- See [`README_DEV.md`](README_DEV.md) for detailed development notes
 
-# ⭐ Star History
+---
+
+## 🏗️ Project Structure
+
+```
+TheHerta4/
+├── __init__.py                 # Addon entry point
+├── common/                     # Shared utilities & configuration
+│   ├── global_config.py        # Global config & LogicName definitions
+│   ├── global_properties.py    # Blender properties
+│   ├── m_ini_builder.py        # INI file builder
+│   ├── m_ini_helper.py         # INI parsing helpers
+│   ├── buffer_export_helper.py # Buffer export utilities
+│   └── mesh_create_helper.py   # Mesh creation helpers
+├── games/                      # Game-specific exporters
+│   ├── gimi.py                 # Genshin Impact
+│   ├── srmi.py                 # Honkai: Star Rail
+│   ├── zzmi.py                 # Zenless Zone Zero
+│   ├── wwmi.py                 # Wuthering Waves
+│   ├── efmi.py                 # Eternal Force
+│   ├── himi.py                 # Honkai Impact 3rd
+│   ├── identityv.py            # Identity V
+│   ├── snowbreak.py            # Snowbreak
+│   ├── yysls.py                # Where Winds Meet
+│   ├── ntemi.py                # Neverness to Everness
+│   └── unity.py                # Unity base exporter
+├── model/                      # Data models
+│   ├── blueprint_model.py      # Blueprint tree model
+│   ├── drawib_model.py         # Draw IB model
+│   ├── draw_call_model.py      # Draw call model
+│   └── submesh_model.py        # Submesh model
+├── ui/                         # Blender UI panels
+│   ├── ui_panel_basic.py       # Basic info panel
+│   ├── ui_panel_model.py       # Model editing panel
+│   ├── ui_panel_fast_texture.py# Fast texture panel
+│   ├── ui_func_export.py       # Export logic
+│   └── ui_func_import_ssmt.py  # Import logic
+├── blueprint/                  # Blueprint node definitions
+│   ├── blueprint_node_base.py  # Base node classes
+│   ├── blueprint_node_obj.py   # Object info nodes
+│   └── blueprint_node_menu.py  # Node menu
+├── utils/                      # Utility functions
+│   ├── mesh_utils.py           # Mesh operations
+│   ├── obj_utils.py            # Object operations
+│   ├── shapekey_utils.py       # Shape key operations
+│   ├── vertexgroup_utils.py    # Vertex group utilities
+│   ├── texture_utils.py        # Texture utilities
+│   ├── file_utils.py           # File I/O
+│   └── algorithm_utils.py      # Algorithms (e.g. TBN codec)
+├── resources/                  # HLSL shader resources
+│   ├── draw_2d.hlsl
+│   ├── extract_cb1_ps.hlsl
+│   └── ...
+└── workspace/                  # Workspace management
+    ├── ssmt_workspace.py       # SSMT workspace
+    └── texture_metadata_helper.py
+```
+
+---
+
+## ⭐ Star History
 
 <div align="center">
 
@@ -48,19 +194,21 @@ For plugin development, please use VSCode with the Blender Development extension
 
 </div>
 
-# 🙏 Special Thanks
+---
+
+## 🙏 Special Thanks
 
 TheHerta4 learns from several different projects. Without their wonderful code, TheHerta4 wouldn't be this amazing.
 
 Great thanks to:
 
-- https://github.com/DarkStarSword/3d-fixes
-- https://github.com/SilentNightSound/GI-Model-Importer
-- https://github.com/leotorrez/XXMITools
-- https://github.com/leotorrez/LeoTools
-- https://github.com/leotorrez/ZZ-Model-Importer
-- https://github.com/SpectrumQT/WWMI-Tools
-- https://github.com/SpectrumQT/EFMI-Tools
-- https://github.com/ssice-a/mod_importer
+- [DarkStarSword / 3D-Fixes](https://github.com/DarkStarSword/3d-fixes)
+- [SilentNightSound / GI-Model-Importer](https://github.com/SilentNightSound/GI-Model-Importer)
+- [leotorrez / XXMITools](https://github.com/leotorrez/XXMITools)
+- [leotorrez / LeoTools](https://github.com/leotorrez/LeoTools)
+- [leotorrez / ZZ-Model-Importer](https://github.com/leotorrez/ZZ-Model-Importer)
+- [SpectrumQT / WWMI-Tools](https://github.com/SpectrumQT/WWMI-Tools)
+- [SpectrumQT / EFMI-Tools](https://github.com/SpectrumQT/EFMI-Tools)
+- [ssice-a / mod_importer](https://github.com/ssice-a/mod_importer)
 
 
