@@ -77,11 +77,11 @@ class ExtractedObjectHelper:
             return ExtractedObject(**json.load(f))
 
     @classmethod
-    def build_from_submesh_metadata_list(cls, metadata_list: list) -> ExtractedObject:
-        if not metadata_list:
-            raise Fatal("No SubmeshMetadata provided to build ExtractedObject.")
+    def build_from_submesh_metadata_list(cls, submesh_json_list: list) -> ExtractedObject:
+        if not submesh_json_list:
+            raise Fatal("No SubmeshJson provided to build ExtractedObject.")
 
-        first_json = metadata_list[0].submesh_json
+        first_json = submesh_json_list[0]
         vb0_hash = first_json.VertexLimitVB
         cb4_hash = first_json.CB4Hash
 
@@ -89,8 +89,7 @@ class ExtractedObjectHelper:
         total_index_count = 0
         max_vertex_end = 0
 
-        for meta in metadata_list:
-            j = meta.submesh_json
+        for j in submesh_json_list:
             vertex_offset = j.VertexOffset
             vertex_count = max(j.VertexCount, 0)
             index_offset = int(j.JsonDict.get("IndexOffset", 0))

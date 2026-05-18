@@ -10,6 +10,7 @@ import numpy
 from ..common.global_properties import GlobalProterties
 from ..common.global_config import GlobalConfig
 from ..common.global_config import LogicName
+from ..utils.format_utils import Fatal
 from ..utils.export_utils import ExportUtils, ObjElementContext, WWMIBufferBuildResult
 from ..utils.log_utils import LOG
 from ..utils.obj_utils import (
@@ -34,7 +35,7 @@ from ..workspace.workspace_helper import WorkSpaceHelper
 from ..common.d3d11_gametype import D3D11GameType
 from ..blueprint.blueprint_model import BluePrintModel
 from .draw_call_model import DrawCallModel
-from ..workspace.submesh_metadata import SubmeshMetadata, SubmeshMetadataResolver
+from ..workspace.submesh_json import SubmeshJson
 from ..common.texture_metadata_helper import TextureMetadataResolver
 
 
@@ -55,7 +56,6 @@ class DrawIBModelWWMI:
     blueprint_model: BluePrintModel
 
     draw_ib_alias: str = field(init=False, default="")
-    primary_submesh_metadata: SubmeshMetadata = field(init=False, repr=False)
     d3d11GameType: D3D11GameType = field(init=False, repr=False)
     extracted_object: ExtractedObject = field(init=False, repr=False)
 
@@ -93,26 +93,31 @@ class DrawIBModelWWMI:
             raise ValueError("当前 DrawIB 没有可导出的 DrawCallModel")
 
         primary_unique_str = self.ordered_drawcall_model_list[0].get_unique_str()
-        self.primary_submesh_metadata = SubmeshMetadataResolver.resolve(primary_unique_str)
-        self.d3d11GameType = self.primary_submesh_metadata.d3d11_game_type
+        exists, error_msg, primary_json_path = WorkSpaceHelper.check_and_get_submesh_json_path(primary_unique_str)
+        if not exists:
+            raise Fatal(error_msg)
+        primary_submesh_json = SubmeshJson(primary_json_path)
+        self.d3d11GameType = D3D11GameType.from_submesh_json_dict(primary_submesh_json.JsonDict, primary_json_path)
 
         self.component_model_list = []
         self.component_name_component_model_dict = {}
 
-        unique_str_metadata_dict: dict[str, SubmeshMetadata] = {primary_unique_str: self.primary_submesh_metadata}
+        unique_str_submesh_json_dict: dict[str, SubmeshJson] = {primary_unique_str: primary_submesh_json}
         component_name_drawcall_model_dict: dict[str, list[DrawCallModel]] = {}
         component_index_by_unique_str: dict[str, int] = {}
 
         for drawcall_model in self.ordered_drawcall_model_list:
             unique_str = drawcall_model.get_unique_str()
-            drawcall_metadata = unique_str_metadata_dict.get(unique_str)
-            if drawcall_metadata is None:
-                drawcall_metadata = SubmeshMetadataResolver.resolve(unique_str)
-                unique_str_metadata_dict[unique_str] = drawcall_metadata
+            submesh_json = unique_str_submesh_json_dict.get(unique_str)
+            if submesh_json is None:
+                sj_path = WorkSpaceHelper.check_and_get_submesh_json_path(unique_str)
+                if not sj_path[0]:
+                    raise Fatal(sj_path[1])
+                submesh_json = SubmeshJson(sj_path[2])
+                unique_str_submesh_json_dict[unique_str] = submesh_json
 
             component_index = component_index_by_unique_str.setdefault(unique_str, len(component_index_by_unique_str) + 1)
-            part_name = drawcall_metadata.part_name or str(component_index)
-            component_name = "Component " + str(component_index if not str(part_name).isdigit() else part_name)
+            component_name = "Component " + str(component_index)
             component_drawcall_model_list = component_name_drawcall_model_dict.get(component_name, [])
             component_drawcall_model_list.append(drawcall_model)
             component_name_drawcall_model_dict[component_name] = component_drawcall_model_list
@@ -125,8 +130,8 @@ class DrawIBModelWWMI:
             self.component_model_list.append(component_model)
             self.component_name_component_model_dict[component_model.component_name] = component_model
 
-        ordered_metadata = [unique_str_metadata_dict[unique_str] for unique_str in component_index_by_unique_str.keys()]
-        self.extracted_object = ExtractedObjectHelper.build_from_submesh_metadata_list(ordered_metadata)
+        ordered_submesh_json_list = [unique_str_submesh_json_dict[unique_str] for unique_str in component_index_by_unique_str.keys()]
+        self.extracted_object = ExtractedObjectHelper.build_from_submesh_metadata_list(ordered_submesh_json_list)
 
         LOG.newline()
 
@@ -165,9 +170,7 @@ class DrawIBModelWWMI:
                 match_first_index=mfi_int,
                 d3d11_game_type=self.d3d11GameType,
             ))
-            submesh_metadata = SubmeshMetadataResolver.resolve(unique_str)
-            part_name = submesh_metadata.part_name or unique_str
-            self.match_first_index_partname_dict[mfi_int] = part_name
+            self.match_first_index_partname_dict[mfi_int] = unique_str
 
         if self.submesh_model_list:
             self.submesh_texturemarkinfolist_dict = TextureMetadataResolver.load_submesh_texture_markup_info_from_all_submeshes(draw_ib_model=self)
@@ -519,34 +522,22 @@ class DrawIBModelWWMI:
 
         element_context.final_elementname_data_dict["BLENDINDICES"] = arr
 
-    def get_part_name_by_match_first_index(self, match_first_index):
-        try:
-            return self.match_first_index_partname_dict.get(int(match_first_index))
-        except (TypeError, ValueError):
-            return None
-
     @property
     def part_name_submesh_dict(self) -> dict:
         mapping = {}
         for submesh_model in self.submesh_model_list:
-            part_name = self.get_submesh_part_name(submesh_model)
-            if part_name is None:
-                continue
-            mapping[part_name] = submesh_model
+            mapping[submesh_model.unique_str] = submesh_model
         return mapping
 
     def get_submesh_part_name(self, submesh_model):
-        return self.get_part_name_by_match_first_index(submesh_model.match_first_index)
+        return submesh_model.unique_str
 
     def get_submesh_texture_markup_info_list(self, submesh_model):
         texture_markup_info_list = self.submesh_texturemarkinfolist_dict.get(submesh_model.unique_str, None)
         if texture_markup_info_list is not None:
             return texture_markup_info_list
 
-        part_name = self.get_submesh_part_name(submesh_model)
-        if part_name is None:
-            return []
-        return self.partname_texturemarkinfolist_dict.get(part_name, [])
+        return self.partname_texturemarkinfolist_dict.get(submesh_model.unique_str, [])
 
     def apply_alias_dict(self, alias_dict: dict):
         """

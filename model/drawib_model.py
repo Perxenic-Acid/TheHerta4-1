@@ -6,8 +6,9 @@ from ..common.d3d11_gametype import D3D11GameType
 from ..common.global_config import GlobalConfig
 
 from ..utils.json_utils import JsonUtils
+from ..utils.format_utils import Fatal
 from ..common.texture_metadata_helper import TextureMetadataResolver
-from ..workspace.submesh_metadata import SubmeshMetadataResolver
+from ..workspace.submesh_json import SubmeshJson
 from ..workspace.workspace_helper import WorkSpaceHelper
 
 import numpy
@@ -91,9 +92,12 @@ class DrawIBModel:
         folder_name = first_submesh.unique_str
         print("DrawIBModel: 开始读取导出元数据，DrawIB: " + self.draw_ib + "，unique_str: " + folder_name)
 
-        first_submesh_metadata = SubmeshMetadataResolver.resolve(folder_name)
-        self.import_json_path = first_submesh_metadata.submesh_json_path
-        self.import_json_dict = dict(first_submesh_metadata.submesh_json_dict)
+        exists, error_msg, submesh_json_path = WorkSpaceHelper.check_and_get_submesh_json_path(folder_name)
+        if not exists:
+            raise Fatal(error_msg)
+        submesh_json = SubmeshJson(submesh_json_path)
+        self.import_json_path = submesh_json.JsonFilePath
+        self.import_json_dict = dict(submesh_json.JsonDict)
         print("DrawIBModel: 已读取 SubmeshJson: " + self.import_json_path)
 
         if self.import_json_dict:
@@ -101,8 +105,7 @@ class DrawIBModel:
             self.match_first_index_list = [submesh_model.match_first_index for submesh_model in self.submesh_model_list]
             self.match_first_index_partname_dict = {}
             for submesh_model in self.submesh_model_list:
-                submesh_metadata = SubmeshMetadataResolver.resolve(submesh_model.unique_str)
-                self.match_first_index_partname_dict[int(submesh_model.match_first_index)] = submesh_metadata.part_name or submesh_model.unique_str
+                self.match_first_index_partname_dict[int(submesh_model.match_first_index)] = submesh_model.unique_str
             self.vshash_list = list(self.import_json_dict.get("VSHashList", []))
             self.submesh_texturemarkinfolist_dict = TextureMetadataResolver.load_submesh_texture_markup_info_from_all_submeshes(
                 draw_ib_model=self,
@@ -275,16 +278,8 @@ class DrawIBModel:
     def d3d11GameType(self) -> D3D11GameType:
         return self.d3d11_game_type
 
-    def get_submesh_part_name(self, submesh_model: SubMeshModel) -> str | None:
-        return self.get_part_name_by_match_first_index(submesh_model.match_first_index)
-
-    def get_part_name_by_match_first_index(self, match_first_index: int | str) -> str | None:
-        try:
-            normalized_match_first_index = int(match_first_index)
-        except (TypeError, ValueError):
-            return None
-
-        return self.match_first_index_partname_dict.get(normalized_match_first_index)
+    def get_submesh_part_name(self, submesh_model: SubMeshModel) -> str:
+        return submesh_model.unique_str
 
     def apply_alias_dict(self, alias_dict: dict):
         '''
@@ -334,31 +329,14 @@ class DrawIBModel:
         if texture_markup_info_list is not None:
             return texture_markup_info_list
 
-        part_name = self.get_submesh_part_name(submesh_model)
-        if part_name is None:
-            return []
-        return self.partname_texturemarkinfolist_dict.get(part_name, [])
+        return self.partname_texturemarkinfolist_dict.get(submesh_model.unique_str, [])
 
     @property
     def part_name_submesh_dict(self) -> dict:
         mapping = {}
-
         for submesh_model in self.submesh_model_list:
-            part_name = self.get_submesh_part_name(submesh_model)
-            if part_name is None:
-                continue
-            mapping[part_name] = submesh_model
-
+            mapping[submesh_model.unique_str] = submesh_model
         return mapping
-
-    def get_part_submesh(self, part_name: str) -> SubMeshModel | None:
-        return self.part_name_submesh_dict.get(part_name)
-
-    def get_part_unique_str(self, part_name: str) -> str:
-        submesh_model = self.get_part_submesh(part_name)
-        if submesh_model is None:
-            return ""
-        return submesh_model.unique_str
 
     def get_part_unique_key(self, part_name: str) -> str:
         return self.get_part_unique_str(part_name).replace("-", "_")

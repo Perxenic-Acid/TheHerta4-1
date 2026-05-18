@@ -5,11 +5,13 @@ from ..utils.export_utils import ExportUtils
 from ..utils.obj_utils import ObjUtils
 from ..utils.collection_utils import CollectionUtils
 from ..utils.json_utils import JsonUtils
+from ..utils.format_utils import Fatal
 from ..common.global_config import LogicName
 from ..common.global_config import GlobalConfig
 from ..common.d3d11_gametype import D3D11GameType
 from ..common.obj_buffer_helper import ObjBufferHelper
-from ..workspace.submesh_metadata import SubmeshMetadataResolver
+from ..workspace.workspace_helper import WorkSpaceHelper
+from ..workspace.submesh_json import SubmeshJson
 
 
 import bpy
@@ -66,8 +68,13 @@ class SubMeshModel:
 
         folder_name = self.unique_str
 
-        submesh_metadata = SubmeshMetadataResolver.resolve(folder_name)
-        self.d3d11_game_type = submesh_metadata.d3d11_game_type
+        exists, error_msg, submesh_json_path = WorkSpaceHelper.check_and_get_submesh_json_path(folder_name)
+        if not exists:
+            raise Fatal(error_msg)
+        submesh_json = SubmeshJson(submesh_json_path)
+        self.d3d11_game_type = D3D11GameType.from_submesh_json_dict(
+            submesh_json.JsonDict, submesh_json_path
+        )
         
         index_offset = 0
         submesh_temp_obj_list = []

@@ -21,11 +21,6 @@ class ExportYYSLS(DrawIBExportBase):
         texture_override_ib_section = M_IniSection(M_SectionType.TextureOverrideIB)
         draw_ib = drawib_model.draw_ib
         d3d11_game_type = drawib_model.d3d11GameType
-        part_name_by_unique_str = {
-            submesh_model.unique_str: part_name
-            for part_name, submesh_model in drawib_model.part_name_submesh_dict.items()
-        }
-
         for submesh_model in drawib_model.submesh_model_list:
             match_first_index = str(submesh_model.match_first_index)
             texture_override_name_suffix = submesh_model.unique_str.replace("-", "_")

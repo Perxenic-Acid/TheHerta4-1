@@ -2,6 +2,7 @@ from ..common.global_config import GlobalConfig
 
 from ..utils.json_utils import JsonUtils
 from ..utils.collection_utils import CollectionUtils, CollectionColor
+from ..utils.format_utils import Fatal
 import os
 import bpy
 from typing import List, Dict, Union
@@ -215,6 +216,57 @@ class WorkSpaceHelper:
                         drawib_aliasname_dict[draw_ib] = alias_name
         return drawib_aliasname_dict
     
+
+    @staticmethod
+    def check_and_get_submesh_json_path(unique_str: str) -> tuple[bool, str, str]:
+        """
+        根据 unique_str 查找对应的 SubmeshJson 文件路径。
+        返回 (exists, error_msg, submesh_json_path)。
+        """
+        workspace_folder = GlobalConfig.path_workspace_folder()
+
+        lod_name, bare_unique_str = WorkSpaceHelper.parse_lod_unique_str(unique_str)
+        unique_str_folder = WorkSpaceHelper.get_submesh_folder_path(unique_str)
+
+        if not os.path.exists(unique_str_folder):
+            return False, (
+                f"unique_str '{unique_str}' 没有找到对应的提取数据。\n"
+                + "请确保已从游戏中提取模型并执行「一键导入当前工作空间内容」操作。"
+            ), ""
+
+        workspace_import_json_path = os.path.join(workspace_folder, "Import.json")
+        workspace_import_json = JsonUtils.LoadFromFile(workspace_import_json_path) if os.path.exists(workspace_import_json_path) else {}
+        gametype_name = workspace_import_json.get(unique_str, "")
+
+        if gametype_name:
+            submesh_json_path = os.path.join(unique_str_folder, "TYPE_" + gametype_name, bare_unique_str + ".json")
+            if os.path.exists(submesh_json_path):
+                return True, "", submesh_json_path
+
+        found_type_paths = []
+        found_types = []
+        for dirname in os.listdir(unique_str_folder):
+            if not dirname.startswith("TYPE_"):
+                continue
+
+            submesh_json_path = os.path.join(unique_str_folder, dirname, bare_unique_str + ".json")
+            if os.path.exists(submesh_json_path):
+                found_type_paths.append(submesh_json_path)
+                found_types.append(dirname.replace("TYPE_", ""))
+
+        if len(found_type_paths) == 1:
+            return True, "", found_type_paths[0]
+
+        if len(found_type_paths) > 1:
+            return False, (
+                f"unique_str '{unique_str}' 找到以下数据类型但没有在 Import.json 中记录: {', '.join(found_types)}\n"
+                + "请尝试重新执行「一键导入当前工作空间内容」操作。"
+            ), ""
+
+        return False, (
+            f"unique_str '{unique_str}' 没有找到对应的 SubmeshJson。\n"
+            + "请确保已从游戏中提取模型并执行「一键导入当前工作空间内容」操作。"
+        ), ""
 
     @staticmethod
     def get_hash_deduped_texture_info_dict(submesh_folder_name:str) -> Dict[str,DedupedTextureInfo]:
