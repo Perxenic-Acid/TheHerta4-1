@@ -61,7 +61,6 @@ class DrawIBModelWWMI:
 
     ordered_drawcall_model_list: list[DrawCallModel] = field(init=False, default_factory=list, repr=False)
     component_model_list: list[ComponentModel] = field(init=False, default_factory=list, repr=False)
-    component_name_component_model_dict: dict[str, ComponentModel] = field(init=False, default_factory=dict, repr=False)
 
     mesh_vertex_count: int = field(init=False, default=0)
     merged_object: MergedObject | None = field(init=False, default=None, repr=False)
@@ -72,9 +71,7 @@ class DrawIBModelWWMI:
     component_real_vg_count_dict: dict[int, int] = field(init=False, default_factory=dict, repr=False)
 
     submesh_model_list: list = field(init=False, default_factory=list, repr=False)
-    match_first_index_partname_dict: dict[int, str] = field(init=False, default_factory=dict, repr=False)
     submesh_texturemarkinfolist_dict: dict = field(init=False, default_factory=dict, repr=False)
-    partname_texturemarkinfolist_dict: dict = field(init=False, default_factory=dict, repr=False)
 
     blend_remap_forward_buffer: numpy.ndarray | None = field(init=False, default=None, repr=False)
     blend_remap_reverse_buffer: numpy.ndarray | None = field(init=False, default=None, repr=False)
@@ -100,7 +97,6 @@ class DrawIBModelWWMI:
         self.d3d11GameType = D3D11GameType.from_submesh_json_dict(primary_submesh_json.JsonDict, primary_json_path)
 
         self.component_model_list = []
-        self.component_name_component_model_dict = {}
 
         unique_str_submesh_json_dict: dict[str, SubmeshJson] = {primary_unique_str: primary_submesh_json}
         component_name_drawcall_model_dict: dict[str, list[DrawCallModel]] = {}
@@ -128,7 +124,6 @@ class DrawIBModelWWMI:
                 final_ordered_draw_obj_model_list=component_drawcall_model_list,
             )
             self.component_model_list.append(component_model)
-            self.component_name_component_model_dict[component_model.component_name] = component_model
 
         ordered_submesh_json_list = [unique_str_submesh_json_dict[unique_str] for unique_str in component_index_by_unique_str.keys()]
         self.extracted_object = ExtractedObjectHelper.build_from_submesh_metadata_list(ordered_submesh_json_list)
@@ -152,7 +147,6 @@ class DrawIBModelWWMI:
                     drawcall_model.vertex_count = temp_object.vertex_count
                 updated_drawcall_model_list.append(drawcall_model)
             component_model.final_ordered_draw_obj_model_list = updated_drawcall_model_list
-            self.component_name_component_model_dict[component_model.component_name] = component_model
 
         # 构建 submesh_model_list 和纹理标记字典，供 M_IniHelper 纹理导出使用
         self.submesh_model_list = []
@@ -170,11 +164,9 @@ class DrawIBModelWWMI:
                 match_first_index=mfi_int,
                 d3d11_game_type=self.d3d11GameType,
             ))
-            self.match_first_index_partname_dict[mfi_int] = unique_str
 
         if self.submesh_model_list:
             self.submesh_texturemarkinfolist_dict = TextureMetadataResolver.load_submesh_texture_markup_info_from_all_submeshes(draw_ib_model=self)
-            self.partname_texturemarkinfolist_dict = TextureMetadataResolver.load_texture_markup_info_from_all_submeshes(draw_ib_model=self)
 
         ObjBufferHelper.check_and_verify_attributes(obj=self.merged_object.object, d3d11_game_type=self.d3d11GameType)
 
@@ -531,11 +523,7 @@ class DrawIBModelWWMI:
         return submesh_model.unique_str
 
     def get_submesh_texture_markup_info_list(self, submesh_model):
-        texture_markup_info_list = self.submesh_texturemarkinfolist_dict.get(submesh_model.unique_str, None)
-        if texture_markup_info_list is not None:
-            return texture_markup_info_list
-
-        return self.partname_texturemarkinfolist_dict.get(submesh_model.unique_str, [])
+        return self.submesh_texturemarkinfolist_dict.get(submesh_model.unique_str, [])
 
     def apply_alias_dict(self, alias_dict: dict):
         """

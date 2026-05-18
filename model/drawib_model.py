@@ -40,10 +40,6 @@ class DrawIBModel:
     import_json_path:str = field(init=False,repr=False,default="")
     import_json_dict:dict = field(init=False,repr=False,default_factory=dict)
     category_hash_dict:dict = field(init=False,repr=False,default_factory=dict)
-    match_first_index_list:list = field(init=False,repr=False,default_factory=list)
-    match_first_index_partname_dict:dict = field(init=False,repr=False,default_factory=dict)
-    vshash_list:list = field(init=False,repr=False,default_factory=list)
-    partname_texturemarkinfolist_dict:dict = field(init=False,repr=False,default_factory=dict)
     submesh_texturemarkinfolist_dict:dict = field(init=False,repr=False,default_factory=dict)
     vertex_limit_hash:str = field(init=False,repr=False,default="")
     original_vertex_count:int = field(init=False,repr=False,default=0)
@@ -102,25 +98,13 @@ class DrawIBModel:
 
         if self.import_json_dict:
             self.category_hash_dict = dict(self.import_json_dict.get("CategoryHash", {}))
-            self.match_first_index_list = [submesh_model.match_first_index for submesh_model in self.submesh_model_list]
-            self.match_first_index_partname_dict = {}
-            for submesh_model in self.submesh_model_list:
-                self.match_first_index_partname_dict[int(submesh_model.match_first_index)] = submesh_model.unique_str
-            self.vshash_list = list(self.import_json_dict.get("VSHashList", []))
             self.submesh_texturemarkinfolist_dict = TextureMetadataResolver.load_submesh_texture_markup_info_from_all_submeshes(
-                draw_ib_model=self,
-            )
-            self.partname_texturemarkinfolist_dict = TextureMetadataResolver.load_texture_markup_info_from_all_submeshes(
                 draw_ib_model=self,
             )
             self.vertex_limit_hash = self.import_json_dict.get("VertexLimitVB", "")
             self.original_vertex_count = self.import_json_dict.get("OriginalVertexCount", 0)
             print(
-                "DrawIBModel: 已使用新结构元数据，Part数量: "
-                + str(len(self.match_first_index_partname_dict))
-                + "，贴图标记Part数量: "
-                + str(len(self.partname_texturemarkinfolist_dict))
-                + "，贴图标记SubMesh数量: "
+                "DrawIBModel: 已使用新结构元数据，贴图标记SubMesh数量: "
                 + str(len(self.submesh_texturemarkinfolist_dict))
             )
             return
@@ -325,11 +309,7 @@ class DrawIBModel:
         return ""
 
     def get_submesh_texture_markup_info_list(self, submesh_model: SubMeshModel) -> list:
-        texture_markup_info_list = self.submesh_texturemarkinfolist_dict.get(submesh_model.unique_str, None)
-        if texture_markup_info_list is not None:
-            return texture_markup_info_list
-
-        return self.partname_texturemarkinfolist_dict.get(submesh_model.unique_str, [])
+        return self.submesh_texturemarkinfolist_dict.get(submesh_model.unique_str, [])
 
     @property
     def part_name_submesh_dict(self) -> dict:

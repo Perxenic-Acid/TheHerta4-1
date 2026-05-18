@@ -77,14 +77,6 @@ class TextureMetadataResolver:
         return normalized_texture_info_dict
 
     @staticmethod
-    def get_partname_texturemarkinfolist_dict(draw_ib_model) -> dict:
-        texture_info_dict = getattr(draw_ib_model, "partname_texturemarkinfolist_dict", None)
-        if texture_info_dict is None:
-            return {}
-
-        return TextureMetadataResolver.normalize_texture_markup_info_dict(texture_info_dict)
-
-    @staticmethod
     def get_submesh_texturemarkinfolist_dict(draw_ib_model) -> dict:
         texture_info_dict = getattr(draw_ib_model, "submesh_texturemarkinfolist_dict", None)
         if texture_info_dict is None:
