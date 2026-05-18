@@ -1,4 +1,4 @@
-import os
+﻿import os
 
 from ..common.global_config import GlobalConfig
 from ..common.global_properties import GlobalProterties
@@ -23,7 +23,7 @@ class ExportIdentityV:
         for submesh_model in drawib_model.submesh_model_list:
             existing_submesh_dict[int(submesh_model.match_first_index)] = {
                 "match_first_index": int(submesh_model.match_first_index),
-                "unique_str": submesh_model.unique_str,
+                "submesh_name": submesh_model.submesh_name,
                 "submesh_model": submesh_model,
                 "is_missing": False,
             }
@@ -53,7 +53,7 @@ class ExportIdentityV:
 
             existing_submesh_dict[match_first_index] = {
                 "match_first_index": match_first_index,
-                "unique_str": entry_name,
+                "submesh_name": entry_name,
                 "submesh_model": None,
                 "is_missing": True,
             }
@@ -64,7 +64,7 @@ class ExportIdentityV:
         ]
 
     def _append_missing_texture_override_ib_section(self, texture_override_ib_section, draw_ib, submesh_entry):
-        texture_override_name_suffix = submesh_entry["unique_str"].replace("-", "_")
+        texture_override_name_suffix = submesh_entry["submesh_name"].replace("-", "_")
         texture_override_ib_section.append("[TextureOverride_" + texture_override_name_suffix + "]")
         texture_override_ib_section.append("hash = " + draw_ib)
         texture_override_ib_section.append("match_first_index = " + str(submesh_entry["match_first_index"]))
@@ -180,7 +180,7 @@ class ExportIdentityV:
             resource_vb_section.append("[" + ib_resource_name + "]")
             resource_vb_section.append("type = Buffer")
             resource_vb_section.append("format = DXGI_FORMAT_R32_UINT")
-            resource_vb_section.append("filename = " + buffer_folder_name + "/" + submesh_model.unique_str + "-Index.buf")
+            resource_vb_section.append("filename = " + buffer_folder_name + "/" + submesh_model.submesh_name + "-Index.buf")
             resource_vb_section.new_line()
 
         ini_builder.append_section(resource_vb_section)

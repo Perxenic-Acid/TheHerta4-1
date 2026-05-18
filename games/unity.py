@@ -1,4 +1,4 @@
-import math
+﻿import math
 import os
 
 from ..common.global_config import GlobalConfig
@@ -66,7 +66,7 @@ class ExportUnity:
             texture_override_ib_section.append("match_first_index = " + str(submesh_model.match_first_index))
             texture_override_ib_section.append("handling = skip")
 
-            ib_buf = drawib_model.submesh_ib_dict.get(submesh_model.unique_str, None)
+            ib_buf = drawib_model.submesh_ib_dict.get(submesh_model.submesh_name, None)
             if ib_buf is None or len(ib_buf) == 0:
                 texture_override_ib_section.append("ib = null")
                 texture_override_ib_section.new_line()
@@ -207,7 +207,7 @@ class ExportUnity:
 
             texture_override_ib_section.append("handling = skip")
 
-            ib_buf = drawib_model.submesh_ib_dict.get(submesh_model.unique_str, None)
+            ib_buf = drawib_model.submesh_ib_dict.get(submesh_model.submesh_name, None)
             if ib_buf is None or len(ib_buf) == 0:
                 texture_override_ib_section.new_line()
                 continue

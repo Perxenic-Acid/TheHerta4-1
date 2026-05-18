@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+﻿from dataclasses import dataclass, field
 from .draw_call_model import DrawCallModel
 
 from ..utils.export_utils import ExportUtils
@@ -27,7 +27,7 @@ class SubMeshModel:
     match_draw_ib:str = field(init=False, default="")
     match_first_index:int = field(init=False, default=-1)
     match_index_count:int = field(init=False, default=-1)
-    unique_str:str = field(init=False, default="")
+    submesh_name:str = field(init=False, default="")
 
     # 调用组合obj并计算ib和vb得到这些属性
     vertex_count:int = field(init=False, default=0)
@@ -37,7 +37,7 @@ class SubMeshModel:
     d3d11_game_type:D3D11GameType = field(init=False,repr=False,default=None)
 
     # 用于文件名生成（别名应用后）。
-    # 默认等于 unique_str；如果用户在「自定义Submesh名称」节点中设置了别名，
+    # 默认等于 submesh_name；如果用户在「自定义Submesh名称」节点中设置了别名，
     # 由 DrawIBModel.apply_alias_dict() 在导出前更新为 "{lod_prefix}.{alias}"。
     display_str:str = field(init=False, default="")
 
@@ -54,10 +54,10 @@ class SubMeshModel:
             self.match_draw_ib = self.drawcall_model_list[0].match_draw_ib
             self.match_first_index = int(self.drawcall_model_list[0].match_first_index)
             self.match_index_count = int(self.drawcall_model_list[0].match_index_count)
-            self.unique_str = self.drawcall_model_list[0].get_submesh_name()
+            self.submesh_name = self.drawcall_model_list[0].get_submesh_name()
         
-        # display_str 默认等于 unique_str，导出前可被 apply_alias_dict 覆盖
-        self.display_str = self.unique_str
+        # display_str 默认等于 submesh_name，导出前可被 apply_alias_dict 覆盖
+        self.display_str = self.submesh_name
         
         self.calc_buffer()
     
@@ -65,9 +65,8 @@ class SubMeshModel:
     def calc_buffer(self):
         # 对每个obj都创建一个临时对象进行处理，这样不影响原本的对象
 
-        folder_name = self.unique_str
-
-        submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(folder_name))
+        submesh_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(self.submesh_name)
+        submesh_json = SubmeshJson(submesh_json_path)
         self.d3d11_game_type = D3D11GameType.from_submesh_json_dict(
             submesh_json.JsonDict, submesh_json_path
         )
@@ -79,7 +78,7 @@ class SubMeshModel:
             # 获取到原本的obj
             source_obj = ObjUtils.get_obj_by_name(draw_call_model.obj_name)
 
-            temp_collection = CollectionUtils.create_new_collection("TEMP_SUBMESH_COLLECTION_" + self.unique_str)
+            temp_collection = CollectionUtils.create_new_collection("TEMP_SUBMESH_COLLECTION_" + self.submesh_name)
             bpy.context.scene.collection.children.link(temp_collection)
             temp_collection_list.append(temp_collection)
 
@@ -135,7 +134,7 @@ class SubMeshModel:
         submesh_merged_obj = submesh_temp_obj_list[0]
 
         # 重命名为指定名称，等待后续操作
-        merged_obj_name = "TEMP_SUBMESH_MERGED_" + self.unique_str
+        merged_obj_name = "TEMP_SUBMESH_MERGED_" + self.submesh_name
         ObjUtils.rename_object(submesh_merged_obj, merged_obj_name)
 
         # 检查并校验是否有缺少的元素
@@ -163,7 +162,7 @@ class SubMeshModel:
                     bpy.context.scene.collection.children.unlink(temp_collection)
                 bpy.data.collections.remove(temp_collection)
 
-        print("SubMeshModel: " + self.unique_str + " 计算完成，临时对象已删除")
+        print("SubMeshModel: " + self.submesh_name + " 计算完成，临时对象已删除")
 
     def _normalize_temp_obj_for_export(self, temp_obj: bpy.types.Object):
         if self.d3d11_game_type is None:

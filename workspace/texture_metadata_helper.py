@@ -1,4 +1,4 @@
-import os
+﻿import os
 from dataclasses import dataclass, field
 
 from .submesh_json import SubmeshJson
@@ -83,27 +83,27 @@ class TextureMetadataResolver:
             return {}
 
         return {
-            unique_str: TextureMetadataResolver.normalize_texture_markup_info_list(texture_info_list)
-            for unique_str, texture_info_list in texture_info_dict.items()
+            submesh_name: TextureMetadataResolver.normalize_texture_markup_info_list(texture_info_list)
+            for submesh_name, texture_info_list in texture_info_dict.items()
         }
 
     @staticmethod
     def get_part_name_for_submesh(draw_ib_model, submesh_model) -> str:
-        return submesh_model.unique_str
+        return submesh_model.submesh_name
 
     @staticmethod
     def load_texture_markup_info_for_submesh(draw_ib_model, submesh_model) -> tuple[str, list]:
-        unique_str = submesh_model.unique_str
+        submesh_name = submesh_model.submesh_name
 
         try:
-            submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(unique_str))
+            submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(submesh_name))
         except Exception as ex:
-            print("TextureMetadataResolver: 跳过贴图标记读取，无法解析 SubmeshJson: " + unique_str + "，错误: " + str(ex))
-            return unique_str, []
+            print("TextureMetadataResolver: 跳过贴图标记读取，无法解析 SubmeshJson: " + submesh_name + "，错误: " + str(ex))
+            return submesh_name, []
 
         print(
-            "TextureMetadataResolver: 读取贴图标记，unique_str: "
-            + unique_str
+            "TextureMetadataResolver: 读取贴图标记，submesh_name: "
+            + submesh_name
             + "，submesh_json: "
             + submesh_json_path
         )
@@ -114,18 +114,18 @@ class TextureMetadataResolver:
         texture_markup_info_list = TextureMetadataResolver._dedupe_texture_markup_info_list(texture_markup_info_list)
 
         if not texture_markup_info_list:
-            print("TextureMetadataResolver: 当前 submesh 没有贴图标记: " + unique_str)
-            return unique_str, []
+            print("TextureMetadataResolver: 当前 submesh 没有贴图标记: " + submesh_name)
+            return submesh_name, []
 
         if texture_markup_info_list:
             print(
-                "TextureMetadataResolver: 当前 submesh 已匹配到贴图标记，unique_str: "
-                + unique_str
+                "TextureMetadataResolver: 当前 submesh 已匹配到贴图标记，submesh_name: "
+                + submesh_name
                 + "，数量: "
                 + str(len(texture_markup_info_list))
             )
 
-        return unique_str, texture_markup_info_list
+        return submesh_name, texture_markup_info_list
 
     @staticmethod
     def load_submesh_texture_markup_info_from_all_submeshes(draw_ib_model, workspace_import_json: dict | None = None) -> dict:
@@ -137,7 +137,7 @@ class TextureMetadataResolver:
                 submesh_model=submesh_model,
             )
             if texture_markup_info_list:
-                submesh_texture_markup_info_dict[submesh_model.unique_str] = texture_markup_info_list
+                submesh_texture_markup_info_dict[submesh_model.submesh_name] = texture_markup_info_list
 
         return submesh_texture_markup_info_dict
 

@@ -1,4 +1,4 @@
-import math
+﻿import math
 import os
 from dataclasses import dataclass, field
 from types import SimpleNamespace
@@ -87,7 +87,7 @@ class DrawIBModelWWMI:
         if len(self.ordered_drawcall_model_list) == 0:
             raise ValueError("当前 DrawIB 没有可导出的 DrawCallModel")
 
-        # 从第一个DrawCallModel的unique_str获取对应的SubmeshJson，解析出当前DrawIB的数据类型
+        # 从第一个DrawCallModel获取对应的SubmeshJson，解析出当前DrawIB的数据类型
         # 之所以是第一个，因为对于WWMI来说，整个DrawIB的数据类型是使用共同的唯一的一个的
         first_submesh_name = self.ordered_drawcall_model_list[0].get_submesh_name()
         first_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(first_submesh_name)
@@ -98,16 +98,16 @@ class DrawIBModelWWMI:
 
         submesh_json_dict: dict[str, SubmeshJson] = {first_submesh_name: first_submesh_json}
         component_name_drawcall_model_dict: dict[str, list[DrawCallModel]] = {}
-        component_index_by_unique_str: dict[str, int] = {}
+        component_index_by_submesh_name: dict[str, int] = {}
 
         for drawcall_model in self.ordered_drawcall_model_list:
-            unique_str = drawcall_model.get_submesh_name()
-            submesh_json = submesh_json_dict.get(unique_str)
+            submesh_name = drawcall_model.get_submesh_name()
+            submesh_json = submesh_json_dict.get(submesh_name)
             if submesh_json is None:
-                submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(unique_str))
-                submesh_json_dict[unique_str] = submesh_json
+                submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(submesh_name))
+                submesh_json_dict[submesh_name] = submesh_json
 
-            component_index = component_index_by_unique_str.setdefault(unique_str, len(component_index_by_unique_str) + 1)
+            component_index = component_index_by_submesh_name.setdefault(submesh_name, len(component_index_by_submesh_name) + 1)
             component_name = "Component " + str(component_index)
             component_drawcall_model_list = component_name_drawcall_model_dict.get(component_name, [])
             component_drawcall_model_list.append(drawcall_model)
@@ -116,7 +116,7 @@ class DrawIBModelWWMI:
         for component_drawcall_model_list in component_name_drawcall_model_dict.values():
             self.submesh_drawcall_groups.append(component_drawcall_model_list)
 
-        ordered_submesh_json_list = [submesh_json_dict[unique_str] for unique_str in component_index_by_unique_str.keys()]
+        ordered_submesh_json_list = [submesh_json_dict[submesh_name] for submesh_name in component_index_by_submesh_name.keys()]
         self.wwmi_info = WWMIInfoHelper.build_from_json_list(ordered_submesh_json_list)
 
         LOG.newline()
@@ -142,16 +142,16 @@ class DrawIBModelWWMI:
         # 构建 submesh_model_list 和纹理标记字典，供 M_IniHelper 纹理导出使用
         self.submesh_model_list = []
         for drawcall_model in self.ordered_drawcall_model_list:
-            unique_str = drawcall_model.match_unique_str
-            if not unique_str:
+            submesh_name = drawcall_model.match_submesh_name
+            if not submesh_name:
                 continue
             try:
                 mfi_int = int(drawcall_model.match_first_index)
             except (TypeError, ValueError):
                 mfi_int = 0
             self.submesh_model_list.append(SimpleNamespace(
-                unique_str=unique_str,
-                display_str=unique_str,  # 初始等于 unique_str，后续由 apply_alias_dict 覆盖
+                submesh_name=submesh_name,
+                display_str=submesh_name,  # 初始等于 submesh_name，后续由 apply_alias_dict 覆盖
                 match_first_index=mfi_int,
                 d3d11_game_type=self.d3d11GameType,
             ))
@@ -504,24 +504,24 @@ class DrawIBModelWWMI:
     def part_name_submesh_dict(self) -> dict:
         mapping = {}
         for submesh_model in self.submesh_model_list:
-            mapping[submesh_model.unique_str] = submesh_model
+            mapping[submesh_model.submesh_name] = submesh_model
         return mapping
 
     def get_submesh_part_name(self, submesh_model):
-        return submesh_model.unique_str
+        return submesh_model.submesh_name
 
     def get_submesh_texture_markup_info_list(self, submesh_model):
-        return self.submesh_texturemarkinfolist_dict.get(submesh_model.unique_str, [])
+        return self.submesh_texturemarkinfolist_dict.get(submesh_model.submesh_name, [])
 
     def apply_alias_dict(self, alias_dict: dict):
         """
         将别名字典应用到所有 submesh_model.display_str。
-        alias_dict: {unique_str: alias_name}
-        alias_name 为空字符串时，display_str 保持等于 unique_str。
+        alias_dict: {submesh_name: alias_name}
+        alias_name 为空字符串时，display_str 保持等于 submesh_name。
         """
         for submesh_model in self.submesh_model_list:
-            unique_str = submesh_model.unique_str
-            alias = str(alias_dict.get(unique_str, "") or "").strip()
+            submesh_name = submesh_model.submesh_name
+            alias = str(alias_dict.get(submesh_name, "") or "").strip()
             if alias:
-                lod_name, _ = SSMTWorkSpace.parse_lod_unique_str(unique_str)
+                lod_name, _ = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
                 submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias

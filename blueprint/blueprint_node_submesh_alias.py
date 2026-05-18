@@ -1,7 +1,7 @@
-'''
+﻿'''
 自定义Submesh名称节点
-允许用户为每个 unique_str（如 LOD0.5a4c1ef3-318-46683）起别名（如 身体）
-生成Mod时，文件名前缀使用别名，路径解析仍用原始 unique_str
+允许用户为每个 submesh_name（如 LOD0.5a4c1ef3-318-46683）起别名（如 身体）
+生成Mod时，文件名前缀使用别名，路径解析仍用原始 submesh_name
 '''
 import os
 import bpy
@@ -47,30 +47,30 @@ class SSMT_OT_RefreshSubmeshAlias(bpy.types.Operator):
             self.report({'WARNING'}, rpt_("未找到目标节点"))
             return {'CANCELLED'}
 
-        # 从工作空间扫描所有 LOD 下的 submesh unique_str
-        all_unique_strs = []
+        # 从工作空间扫描所有 LOD 下的 submesh submesh_name
+        all_submesh_names = []
         lod_submesh_dict = SSMTWorkSpace.get_lod_submesh_folderpath_dict()
         if lod_submesh_dict:
             for lod_name, submesh_folder_paths in lod_submesh_dict.items():
                 for folder_path in submesh_folder_paths:
                     bare_name = os.path.basename(folder_path)
-                    all_unique_strs.append(lod_name + "." + bare_name)
+                    all_submesh_names.append(lod_name + "." + bare_name)
         else:
             # 兼容旧版无 LOD 结构
             for folder_path in SSMTWorkSpace.get_submesh_folderpath_list():
-                all_unique_strs.append(os.path.basename(folder_path))
+                all_submesh_names.append(os.path.basename(folder_path))
 
-        # 保留已有别名，只增量合并新的 unique_str
+        # 保留已有别名，只增量合并新的 submesh_name
         existing = {item.submesh_name: item.alias_name for item in node.alias_items}
         node.alias_items.clear()
-        for ustr in all_unique_strs:
+        for sm_name in all_submesh_names:
             item = node.alias_items.add()
-            item.submesh_name = ustr
-            item.alias_name = existing.get(ustr, "")
+            item.submesh_name = sm_name
+            item.alias_name = existing.get(sm_name, "")
 
         self.report(
             {'INFO'},
-            rpt_("已刷新别名列表，共 {count} 项").format(count=len(all_unique_strs)),
+            rpt_("已刷新别名列表，共 {count} 项").format(count=len(all_submesh_names)),
         )
         return {'FINISHED'}
 

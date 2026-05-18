@@ -1,4 +1,4 @@
-import os
+﻿import os
 import shutil
 
 from .m_ini_builder import *
@@ -17,18 +17,18 @@ class M_IniHelper:
     @classmethod
     def _get_aliased_texture_output_filename(cls, mark_filename: str, submesh_model) -> str:
         '''
-        若 submesh_model 已应用别名（display_str != unique_str），则将 mark_filename 的
-        bare_unique_str 前缀替换为 display_str，以便输出文件名使用别名。
+        若 submesh_model 已应用别名（display_str != submesh_name），则将 mark_filename 的
+        bare_submesh_name 前缀替换为 display_str，以便输出文件名使用别名。
         例：mark_filename="5a4c1ef3-318-46683-DiffuseMap.dds", display_str="LOD0.身体"
         → 返回 "LOD0.身体-DiffuseMap.dds"
-        若无别名（display_str == unique_str），原样返回。
+        若无别名（display_str == submesh_name），原样返回。
         '''
         display_str = getattr(submesh_model, "display_str", "")
-        unique_str = getattr(submesh_model, "unique_str", "")
-        if not display_str or not unique_str or display_str == unique_str:
+        submesh_name = getattr(submesh_model, "submesh_name", "")
+        if not display_str or not submesh_name or display_str == submesh_name:
             return mark_filename
-        _, bare_unique_str = SSMTWorkSpace.parse_lod_unique_str(unique_str)
-        old_prefix = bare_unique_str + "-"
+        _, bare_submesh_name = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
+        old_prefix = bare_submesh_name + "-"
         if mark_filename.startswith(old_prefix):
             return display_str + "-" + mark_filename[len(old_prefix):]
         return mark_filename
@@ -55,11 +55,11 @@ class M_IniHelper:
         submesh_model_list = getattr(draw_ib_model, "submesh_model_list", [])
         if submesh_model_list:
             first_submesh_model = submesh_model_list[0]
-            unique_str = getattr(first_submesh_model, "unique_str", "")
+            submesh_name = getattr(first_submesh_model, "submesh_name", "")
             d3d11_game_type = getattr(first_submesh_model, "d3d11_game_type", None)
-            if unique_str and d3d11_game_type is not None:
+            if submesh_name and d3d11_game_type is not None:
                 return os.path.join(
-                    SSMTWorkSpace.get_submesh_folder_path(unique_str),
+                    SSMTWorkSpace.get_submesh_folder_path(submesh_name),
                     "TYPE_" + d3d11_game_type.GameTypeName,
                     "",
                 )
@@ -83,11 +83,11 @@ class M_IniHelper:
         d3d11_game_type = getattr(submesh_model, "d3d11_game_type", None)
         if d3d11_game_type is None:
             d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
-        unique_str = getattr(submesh_model, "unique_str", "")
-        if d3d11_game_type is None or unique_str == "":
+        submesh_name = getattr(submesh_model, "submesh_name", "")
+        if d3d11_game_type is None or submesh_name == "":
             return ""
 
-        submesh_folder = SSMTWorkSpace.get_submesh_folder_path(unique_str)
+        submesh_folder = SSMTWorkSpace.get_submesh_folder_path(submesh_name)
         return os.path.join(submesh_folder, "TYPE_" + d3d11_game_type.GameTypeName, "")
 
     @classmethod
@@ -105,12 +105,12 @@ class M_IniHelper:
             d3d11_game_type = getattr(submesh_model, "d3d11_game_type", None)
             if d3d11_game_type is None:
                 d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
-            unique_str = getattr(submesh_model, "unique_str", "")
-            if d3d11_game_type is None or unique_str == "":
+            submesh_name = getattr(submesh_model, "submesh_name", "")
+            if d3d11_game_type is None or submesh_name == "":
                 continue
 
             candidate_source_path = os.path.join(
-                SSMTWorkSpace.get_submesh_folder_path(unique_str),
+                SSMTWorkSpace.get_submesh_folder_path(submesh_name),
                 "TYPE_" + d3d11_game_type.GameTypeName,
                 texture_markup_info.mark_filename,
             )
@@ -127,14 +127,14 @@ class M_IniHelper:
             print("M_IniHelper: part_name 未匹配到 submesh，DrawIB: " + draw_ib_model.draw_ib + "，Part: " + str(part_name))
             return ""
 
-        submesh_folder_name = getattr(submesh_model, "unique_str", "")
-        print("M_IniHelper: Part " + str(part_name) + " 对应 unique_str: " + submesh_folder_name)
+        submesh_folder_name = getattr(submesh_model, "submesh_name", "")
+        print("M_IniHelper: Part " + str(part_name) + " 对应 submesh_name: " + submesh_folder_name)
         return submesh_folder_name
 
     @classmethod
     def _get_hash_deduped_texture_info(cls, draw_ib_model: DrawIBModel, mark_hash: str):
         for submesh_model in getattr(draw_ib_model, "submesh_model_list", []):
-            submesh_folder_name = getattr(submesh_model, "unique_str", "")
+            submesh_folder_name = getattr(submesh_model, "submesh_name", "")
             if not submesh_folder_name:
                 continue
 
@@ -142,14 +142,14 @@ class M_IniHelper:
             deduped_texture_info = hash_deduped_texture_info_dict.get(mark_hash, None)
             if deduped_texture_info is not None:
                 print(
-                    "M_IniHelper: 在 unique_str "
+                    "M_IniHelper: 在 submesh_name "
                     + submesh_folder_name
                     + " 中找到 Hash 去重信息，Hash: "
                     + mark_hash
                 )
                 return deduped_texture_info
 
-        print("M_IniHelper: 当前 DrawIB 的所有 unique_str 中都未找到 Hash 去重信息，Hash: " + mark_hash)
+        print("M_IniHelper: 当前 DrawIB 的所有 submesh_name 中都未找到 Hash 去重信息，Hash: " + mark_hash)
         return None
 
     @classmethod
@@ -253,9 +253,9 @@ class M_IniHelper:
                     continue
 
                 part_name = draw_ib_model.get_submesh_part_name(submesh_model)
-                submesh_folder_name = getattr(submesh_model, "unique_str", "")
+                submesh_folder_name = getattr(submesh_model, "submesh_name", "")
                 if not submesh_folder_name:
-                    print("M_IniHelper: 跳过 Hash 贴图处理，未找到 unique_str，Part: " + str(part_name))
+                    print("M_IniHelper: 跳过 Hash 贴图处理，未找到 submesh_name，Part: " + str(part_name))
                     continue
 
                 # 读取该 SubMesh 的 Hash 去重信息字典
@@ -292,7 +292,7 @@ class M_IniHelper:
                     )
                     if deduped_texture_info is None:
                         for sm in getattr(draw_ib_model, "submesh_model_list", []):
-                            sm_folder = getattr(sm, "unique_str", "")
+                            sm_folder = getattr(sm, "submesh_name", "")
                             if not sm_folder:
                                 continue
                             sm_deduped_dict = SSMTWorkSpace.get_hash_deduped_texture_info_dict(
@@ -383,14 +383,14 @@ class M_IniHelper:
 
         for idx, submesh_model in enumerate(submesh_model_list):
             texture_markup_info_list = draw_ib_model.get_submesh_texture_markup_info_list(submesh_model)
-            unique_str = getattr(submesh_model, "unique_str", "<无>")
-            print("[TRACE] submesh[" + str(idx) + "] unique_str=" + unique_str + ", 贴图标记数=" + str(len(texture_markup_info_list)))
+            submesh_name = getattr(submesh_model, "submesh_name", "<无>")
+            print("[TRACE] submesh[" + str(idx) + "] submesh_name=" + submesh_name + ", 贴图标记数=" + str(len(texture_markup_info_list)))
 
             if not texture_markup_info_list:
                 print("[TRACE] submesh[" + str(idx) + "] 无贴图标记，跳过")
                 continue
 
-            part_name = draw_ib_model.get_submesh_part_name(submesh_model) or submesh_model.unique_str
+            part_name = draw_ib_model.get_submesh_part_name(submesh_model) or submesh_model.submesh_name
             for ti, texture_markup_info in enumerate(texture_markup_info_list):
                 print("[TRACE]   贴图[" + str(ti) + "]: mark_type=" + texture_markup_info.mark_type
                       + ", mark_filename=" + texture_markup_info.mark_filename

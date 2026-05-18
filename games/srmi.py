@@ -40,7 +40,7 @@ class ExportSRMI:
                 BufferExportHelper.write_buf_ib_r32_uint(drawib_model.ib, ib_filepath)
             else:
                 for submesh_model in drawib_model.submesh_model_list:
-                    ib = drawib_model.submesh_ib_dict.get(submesh_model.unique_str, [])
+                    ib = drawib_model.submesh_ib_dict.get(submesh_model.submesh_name, [])
                     ib_filename = submesh_model.display_str + "-Index.buf"
                     ib_filepath = os.path.join(buf_output_folder, ib_filename)
                     BufferExportHelper.write_buf_ib_r32_uint(ib, ib_filepath)
@@ -174,7 +174,7 @@ class ExportSRMI:
                 texture_override_ib_section.append("match_first_index = " + str(submesh_model.match_first_index))
                 texture_override_ib_section.append("handling = skip")
 
-                ib_buf = drawib_model.submesh_ib_dict.get(submesh_model.unique_str, [])
+                ib_buf = drawib_model.submesh_ib_dict.get(submesh_model.submesh_name, [])
                 if not ib_buf:
                     texture_override_ib_section.new_line()
                     continue

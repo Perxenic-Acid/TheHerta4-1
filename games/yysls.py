@@ -20,7 +20,7 @@ class ExportYYSLS:
 
     @staticmethod
     def _get_submesh_ib_resource_name(submesh_model) -> str:
-        return "Resource_" + submesh_model.unique_str.replace("-", "_") + "_Index"
+        return "Resource_" + submesh_model.submesh_name.replace("-", "_") + "_Index"
 
     def add_unity_vs_texture_override_ib_sections(self, ini_builder: M_IniBuilder, drawib_model):
         texture_override_ib_section = M_IniSection(M_SectionType.TextureOverrideIB)
@@ -28,7 +28,7 @@ class ExportYYSLS:
         d3d11_game_type = drawib_model.d3d11GameType
         for submesh_model in drawib_model.submesh_model_list:
             match_first_index = str(submesh_model.match_first_index)
-            texture_override_name_suffix = submesh_model.unique_str.replace("-", "_")
+            texture_override_name_suffix = submesh_model.submesh_name.replace("-", "_")
             ib_resource_name = self._get_submesh_ib_resource_name(submesh_model)
 
             texture_override_ib_section.append("[TextureOverride_" + texture_override_name_suffix + "]")
@@ -37,7 +37,7 @@ class ExportYYSLS:
             texture_override_ib_section.append("match_index_count = " + str(submesh_model.match_index_count))
             texture_override_ib_section.append("handling = skip")
             
-            ib_buf = drawib_model.submesh_ib_dict.get(submesh_model.unique_str, None)
+            ib_buf = drawib_model.submesh_ib_dict.get(submesh_model.submesh_name, None)
             if ib_buf is None or len(ib_buf) == 0:
                 texture_override_ib_section.append("ib = null")
                 texture_override_ib_section.new_line()
@@ -96,7 +96,7 @@ class ExportYYSLS:
             resource_vb_section.append("[" + ib_resource_name + "]")
             resource_vb_section.append("type = Buffer")
             resource_vb_section.append("format = DXGI_FORMAT_R32_UINT")
-            resource_vb_section.append("filename = " + buffer_folder_name + "/" + submesh_model.unique_str + "-Index.buf")
+            resource_vb_section.append("filename = " + buffer_folder_name + "/" + submesh_model.submesh_name + "-Index.buf")
             resource_vb_section.new_line()
         ini_builder.append_section(resource_vb_section)
 

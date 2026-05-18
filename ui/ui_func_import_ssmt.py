@@ -1,4 +1,4 @@
-
+﻿
 '''
 导入模型配置面板
 '''
@@ -34,7 +34,7 @@ def ImprotFromWorkSpaceFull(self, context):
 
     # 读取时保存每个导入文件夹里导入的 GameType 名称到工作空间根目录的 Import.json
     # 生成 Mod 时会用它来确定应该进入哪个 TYPE_xxx 目录读取 SubmeshJson
-    # key: LOD 前缀的 unique_str（如 "LOD0.67f829fc-2653-0"）, value: gametype_name
+    # key: LOD 前缀的 submesh_name（如 "LOD0.67f829fc-2653-0"）, value: gametype_name
     foldername_gametypename_dict = {}
     foldername_imported_obj_dict = {}
     all_submesh_display_names = []
@@ -138,9 +138,9 @@ def ImprotFromWorkSpaceFull(self, context):
             if imported_obj.type != 'MESH':
                 continue
 
-            # 解析裸 unique_str 用于获取 component 编号
-            _, bare_unique_str = SSMTWorkSpace.parse_lod_unique_str(lod_prefixed_name)
-            namesplits = bare_unique_str.split('-')
+            # 解析裸 submesh_name 用于获取 component 编号
+            _, bare_submesh_name = SSMTWorkSpace.parse_lod_submesh_name(lod_prefixed_name)
+            namesplits = bare_submesh_name.split('-')
 
             # 创建节点
             node = tree.nodes.new('SSMTNode_Object_Info')

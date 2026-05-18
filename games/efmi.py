@@ -35,10 +35,10 @@ class ExportEFMI:
                 drawib_model.apply_alias_dict(alias_dict)
             # self.submesh_model_list 鏄嫭绔嬪垱寤虹殑 SubMeshModel 鍓湰锛岄渶鍚屾搴旂敤鍒悕
             for submesh_model in self.submesh_model_list:
-                unique_str = submesh_model.unique_str
-                alias = str(alias_dict.get(unique_str, "") or "").strip()
+                submesh_name = submesh_model.submesh_name
+                alias = str(alias_dict.get(submesh_name, "") or "").strip()
                 if alias:
-                    lod_name, _ = SSMTWorkSpace.parse_lod_unique_str(unique_str)
+                    lod_name, _ = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
                     submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias
 
     def generate_buffer_files(self):
@@ -46,7 +46,7 @@ class ExportEFMI:
 
         # 鏂扮増EFMI鍙渶瑕佷緷娆″鍑烘瘡涓猄ubMeshModel鐨勫唴瀹癸紝鐢氳嚦鏃犻渶鍚堝苟锛岄潪甯哥畝鍗?
         for submesh_model in self.submesh_model_list:
-            print("ExportEFMI: 瀵煎嚭SubMeshModel锛孶nique鏍囪瘑: " + submesh_model.unique_str)
+            print("ExportEFMI: 瀵煎嚭SubMeshModel锛孶nique鏍囪瘑: " + submesh_model.submesh_name)
 
             # 鐢熸垚IndexBuffer
             ib_filename = submesh_model.display_str + "-Index.buf"

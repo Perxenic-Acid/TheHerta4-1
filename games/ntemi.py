@@ -55,10 +55,10 @@ class ExportNTEMI:
             for drawib_model in self.drawib_model_list:
                 drawib_model.apply_alias_dict(alias_dict)
                 for submesh_model in drawib_model.submesh_model_list:
-                    unique_str = submesh_model.unique_str
-                    alias = str(alias_dict.get(unique_str, "") or "").strip()
+                    submesh_name = submesh_model.submesh_name
+                    alias = str(alias_dict.get(submesh_name, "") or "").strip()
                     if alias:
-                        lod_name, _ = SSMTWorkSpace.parse_lod_unique_str(unique_str)
+                        lod_name, _ = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
                         submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias
 
     # 鈹€鈹€ buffer file generation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€

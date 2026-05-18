@@ -1,4 +1,4 @@
-import os
+﻿import os
 
 import bpy
 from ..common.global_config import GlobalConfig
@@ -217,7 +217,7 @@ class BlueprintExportHelper:
     def get_alias_dict(tree=None, context=None) -> dict:
         '''
         从当前蓝图树中找到 SSMTNode_Submesh_Alias 节点，
-        返回 {unique_str: alias_name} 字典（只包含 alias_name 非空的项）。
+        返回 {submesh_name: alias_name} 字典（只包含 alias_name 非空的项）。
         若蓝图中不存在该节点或列表为空，返回空字典。
         '''
         current_tree = tree or BlueprintExportHelper.get_current_blueprint_tree(context=context)

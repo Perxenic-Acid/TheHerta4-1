@@ -1,4 +1,4 @@
-
+﻿
 import bpy
 import copy
 
@@ -157,18 +157,18 @@ class BluePrintModel:
     def parse_submesh_model_list(self) -> list[SubMeshModel]:
         """
         从当前 BluePrintModel 解析出 SubMeshModel 列表。
-        将相同 unique_str 的 DrawCallModel 分在一起，每个组创建一个 SubMeshModel。
+        将相同 submesh_name 的 DrawCallModel 分在一起，每个组创建一个 SubMeshModel。
         """
         submesh_model_list: list[SubMeshModel] = []
         draw_call_model_dict: dict[str, list[DrawCallModel]] = {}
 
         for draw_call_model in self.ordered_draw_obj_data_model_list:
-            unique_str = draw_call_model.get_submesh_name()
-            draw_call_model_list = draw_call_model_dict.get(unique_str, [])
+            submesh_name = draw_call_model.get_submesh_name()
+            draw_call_model_list = draw_call_model_dict.get(submesh_name, [])
             draw_call_model_list.append(draw_call_model)
-            draw_call_model_dict[unique_str] = draw_call_model_list
+            draw_call_model_dict[submesh_name] = draw_call_model_list
 
-        for unique_str, draw_call_model_list in draw_call_model_dict.items():
+        for submesh_name, draw_call_model_list in draw_call_model_dict.items():
             submesh_model = SubMeshModel(drawcall_model_list=draw_call_model_list)
             submesh_model_list.append(submesh_model)
 

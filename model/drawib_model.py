@@ -1,4 +1,4 @@
-
+﻿
 from dataclasses import field, dataclass
 import os
 
@@ -84,8 +84,8 @@ class DrawIBModel:
             return
 
         first_submesh = self.submesh_model_list[0]
-        folder_name = first_submesh.unique_str
-        print("DrawIBModel: 开始读取导出元数据，DrawIB: " + self.draw_ib + "，unique_str: " + folder_name)
+        folder_name = first_submesh.submesh_name
+        print("DrawIBModel: 开始读取导出元数据，DrawIB: " + self.draw_ib + "，submesh_name: " + folder_name)
 
         submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(folder_name))
         self.import_json_path = submesh_json.JsonFilePath
@@ -114,7 +114,7 @@ class DrawIBModel:
         vertex_offset = 0
 
         for submesh_model in self.submesh_model_list:
-            submesh_vertex_base_dict[submesh_model.unique_str] = vertex_offset
+            submesh_vertex_base_dict[submesh_model.submesh_name] = vertex_offset
 
             for category, category_buf in submesh_model.category_buffer_dict.items():
                 if category not in total_category_buffer_chunks:
@@ -140,7 +140,7 @@ class DrawIBModel:
         submesh_index_offset = 0
 
         for submesh_model in self.submesh_model_list:
-            vertex_base = submesh_vertex_base_dict.get(submesh_model.unique_str, 0)
+            vertex_base = submesh_vertex_base_dict.get(submesh_model.submesh_name, 0)
             total_ib.extend(index + vertex_base for index in submesh_model.ib)
 
             for draw_call_model in submesh_model.drawcall_model_list:
@@ -156,9 +156,9 @@ class DrawIBModel:
         total_index_count = 0
 
         for submesh_model in self.submesh_model_list:
-            vertex_base = submesh_vertex_base_dict.get(submesh_model.unique_str, 0)
+            vertex_base = submesh_vertex_base_dict.get(submesh_model.submesh_name, 0)
             remapped_ib = [index + vertex_base for index in submesh_model.ib]
-            submesh_ib_dict[submesh_model.unique_str] = remapped_ib
+            submesh_ib_dict[submesh_model.submesh_name] = remapped_ib
             total_index_count += len(remapped_ib)
 
             for draw_call_model in submesh_model.drawcall_model_list:
@@ -259,25 +259,25 @@ class DrawIBModel:
         return self.d3d11_game_type
 
     def get_submesh_part_name(self, submesh_model: SubMeshModel) -> str:
-        return submesh_model.unique_str
+        return submesh_model.submesh_name
 
     def apply_alias_dict(self, alias_dict: dict):
         '''
         将别名字典应用到所有 submesh_model.display_str。
-        alias_dict: {unique_str: alias_name}，例如 {"LOD0.5a4c1ef3-318-46683": "身体"}
-        alias_name 为空字符串时，display_str 保持等于 unique_str。
+        alias_dict: {submesh_name: alias_name}，例如 {"LOD0.5a4c1ef3-318-46683": "身体"}
+        alias_name 为空字符串时，display_str 保持等于 submesh_name。
         '''
         for submesh_model in self.submesh_model_list:
-            unique_str = submesh_model.unique_str
-            alias = str(alias_dict.get(unique_str, "") or "").strip()
+            submesh_name = submesh_model.submesh_name
+            alias = str(alias_dict.get(submesh_name, "") or "").strip()
             if alias:
-                lod_name, _ = SSMTWorkSpace.parse_lod_unique_str(unique_str)
+                lod_name, _ = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
                 if lod_name:
                     submesh_model.display_str = lod_name + "." + alias
                 else:
                     submesh_model.display_str = alias
             else:
-                submesh_model.display_str = unique_str
+                submesh_model.display_str = submesh_name
 
     def get_submesh_unique_key(self, submesh_model: SubMeshModel) -> str:
         return submesh_model.display_str.replace("-", "_")
@@ -305,17 +305,17 @@ class DrawIBModel:
         return ""
 
     def get_submesh_texture_markup_info_list(self, submesh_model: SubMeshModel) -> list:
-        return self.submesh_texturemarkinfolist_dict.get(submesh_model.unique_str, [])
+        return self.submesh_texturemarkinfolist_dict.get(submesh_model.submesh_name, [])
 
     @property
     def part_name_submesh_dict(self) -> dict:
         mapping = {}
         for submesh_model in self.submesh_model_list:
-            mapping[submesh_model.unique_str] = submesh_model
+            mapping[submesh_model.submesh_name] = submesh_model
         return mapping
 
     def get_part_unique_key(self, part_name: str) -> str:
-        return self.get_part_unique_str(part_name).replace("-", "_")
+        return self.get_part_submesh_name(part_name).replace("-", "_")
 
     def get_part_ib_resource_name(self, part_name: str) -> str:
         submesh_model = self.get_part_submesh(part_name)
@@ -347,7 +347,7 @@ class DrawIBModel:
     def componentname_ibbuf_dict(self) -> dict:
         result = {}
         for part_name, submesh_model in self.part_name_submesh_dict.items():
-            result["Component " + part_name] = self.submesh_ib_dict.get(submesh_model.unique_str, [])
+            result["Component " + part_name] = self.submesh_ib_dict.get(submesh_model.submesh_name, [])
         return result
 
         

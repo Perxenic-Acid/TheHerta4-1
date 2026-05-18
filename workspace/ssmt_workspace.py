@@ -1,4 +1,4 @@
-from ..common.global_config import GlobalConfig
+﻿from ..common.global_config import GlobalConfig
 
 from ..utils.json_utils import JsonUtils
 from ..utils.collection_utils import CollectionUtils, CollectionColor
@@ -81,7 +81,7 @@ class SSMTWorkSpace:
         return final_import_folder_path_list
 
     @staticmethod
-    def parse_lod_unique_str(submesh_name: str):
+    def parse_lod_submesh_name(submesh_name: str):
         '''
         解析 submesh_name，返回 (lod_name, bare_name)。
         如果有 LOD 前缀（如 "LOD0.67f829fc-2653-0"），返回 ("LOD0", "67f829fc-2653-0")；
@@ -102,7 +102,7 @@ class SSMTWorkSpace:
         LOD0.67f829fc-2653-0 → workspace/LOD0/67f829fc-2653-0/
         67f829fc-2653-0      → workspace/67f829fc-2653-0/
         '''
-        lod_name, bare_name = SSMTWorkSpace.parse_lod_unique_str(submesh_name)
+        lod_name, bare_name = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
         workspace_folder = GlobalConfig.path_workspace_folder()
         if lod_name:
             return os.path.join(workspace_folder, lod_name, bare_name)
@@ -225,7 +225,7 @@ class SSMTWorkSpace:
         """
         workspace_folder = GlobalConfig.path_workspace_folder()
 
-        lod_name, bare_name = SSMTWorkSpace.parse_lod_unique_str(submesh_name)
+        lod_name, bare_name = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
         submesh_folder = SSMTWorkSpace.get_submesh_folder_path(submesh_name)
 
         if not os.path.exists(submesh_folder):

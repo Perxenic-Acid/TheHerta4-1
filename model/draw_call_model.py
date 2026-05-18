@@ -1,4 +1,4 @@
-from ..utils.ssmt_error_utils import SSMTErrorUtils
+﻿from ..utils.ssmt_error_utils import SSMTErrorUtils
 from ..common.m_key import M_Key
 
 from dataclasses import dataclass, field
@@ -13,7 +13,7 @@ class DrawCallModel:
     match_draw_ib:str = field(init=False,repr=False,default="") # 用于匹配的DrawIB
     match_index_count:str = field(init=False,repr=False,default="") # 用于匹配的IndexCount
     match_first_index:str = field(init=False,repr=False,default="") # 用于匹配的FirstIndex
-    match_unique_str:str = field(init=False,repr=False,default="") # 用于工作空间目录匹配的唯一标识，不包含'.'后的显示后缀
+    match_submesh_name:str = field(init=False,repr=False,default="") # 用于工作空间目录匹配的submesh标识
     comment_alias_name:str = field(init=False,repr=False,default="") # 用于显示在注释中的自定义名称
 
     # 生效条件，在BlueprintModel解析的时候得到
@@ -30,14 +30,14 @@ class DrawCallModel:
 
         submesh_parse_result = self._try_parse_name(self.submesh_name)
         if submesh_parse_result is not None:
-            self.match_draw_ib, self.match_index_count, self.match_first_index, self.match_unique_str, self.comment_alias_name = submesh_parse_result
+            self.match_draw_ib, self.match_index_count, self.match_first_index, self.match_submesh_name, self.comment_alias_name = submesh_parse_result
             return
 
         # submesh_name 解析失败，退而解析 obj_name
         # 先尝试通过 _try_parse_name 解析 obj_name（支持 LOD 前缀）
         obj_name_parse_result = self._try_parse_name(self.obj_name)
         if obj_name_parse_result is not None:
-            self.match_draw_ib, self.match_index_count, self.match_first_index, self.match_unique_str, self.comment_alias_name = obj_name_parse_result
+            self.match_draw_ib, self.match_index_count, self.match_first_index, self.match_submesh_name, self.comment_alias_name = obj_name_parse_result
             return
 
         obj_name_total_split = self.obj_name.split(".") if self.obj_name else []
@@ -57,7 +57,7 @@ class DrawCallModel:
         self.match_draw_ib = obj_name_split[0]
         self.match_index_count = obj_name_split[1]
         self.match_first_index = obj_name_split[2]
-        self.match_unique_str = self.match_draw_ib + "-" + self.match_index_count + "-" + self.match_first_index
+        self.match_submesh_name = self.match_draw_ib + "-" + self.match_index_count + "-" + self.match_first_index
 
     def _try_parse_name(self, name: str):
         normalized_name = str(name or "").strip()
@@ -79,13 +79,13 @@ class DrawCallModel:
         if len(name_split) < 3:
             return None
 
-        # match_unique_str 保留 LOD 前缀，以便路径解析时能定位到正确目录
-        lod_unique_str = lod_prefix + name_prefix if lod_prefix else name_prefix
-        return name_split[0], name_split[1], name_split[2], lod_unique_str, alias_suffix
+        # match_submesh_name 保留 LOD 前缀，以便路径解析时能定位到正确目录
+        lod_submesh_name = lod_prefix + name_prefix if lod_prefix else name_prefix
+        return name_split[0], name_split[1], name_split[2], lod_submesh_name, alias_suffix
     
     def get_submesh_name(self) -> str:
         # 返回这个 DrawCall 所属 submesh 的名称
-        return self.match_unique_str
+        return self.match_submesh_name
 
     def get_condition_str(self) -> str:
         if len(self.work_key_list) == 0:
