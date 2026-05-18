@@ -4,7 +4,7 @@ import os
 
 from .d3d11_element import D3D11Element
 from .mesh_create_helper import MeshCreateHelper
-from .submesh_json import SubmeshJson, SubmeshCategoryBuffer
+from ..workspace.submesh_json import SubmeshJson, SubmeshCategoryBuffer
 from .global_properties import GlobalProterties
 from ..utils.format_utils import Fatal, FormatUtils
 

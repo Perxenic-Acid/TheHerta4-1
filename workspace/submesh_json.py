@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import os
 
 from ..utils.json_utils import JsonUtils
-from .d3d11_element import D3D11Element
+from ..common.d3d11_element import D3D11Element
 
 
 @dataclass

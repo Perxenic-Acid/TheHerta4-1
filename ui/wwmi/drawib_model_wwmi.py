@@ -30,11 +30,11 @@ from ...utils.vertexgroup_utils import VertexGroupUtils
 from .extracted_object import ExtractedObject, ExtractedObjectHelper
 from ...common.buffer_export_helper import BufferExportHelper
 from ...common.obj_buffer_helper import ObjBufferHelper
-from ...common.workspace_helper import WorkSpaceHelper
+from ...workspace.workspace_helper import WorkSpaceHelper
 from ...common.d3d11_gametype import D3D11GameType
 from ...blueprint.blueprint_model import BluePrintModel
 from ...common.draw_call_model import DrawCallModel
-from ...common.submesh_metadata import SubmeshMetadata, SubmeshMetadataResolver
+from ...workspace.submesh_metadata import SubmeshMetadata, SubmeshMetadataResolver
 from ...common.texture_metadata_helper import TextureMetadataResolver
 
 

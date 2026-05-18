@@ -8,7 +8,7 @@ from .utils import translate_utils
 # UI界面
 from .ui import ui_panel_basic
 from .ui import ui_panel_model
-from .ui.sword import ui_panel_sword
+from .sword import ui_panel_sword
 from .ui import ui_func_import_ssmt
 from .ui import ui_panel_fast_texture
 

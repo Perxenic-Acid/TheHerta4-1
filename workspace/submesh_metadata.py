@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 
 from ..utils.format_utils import Fatal
 from ..utils.json_utils import JsonUtils
-from .d3d11_gametype import D3D11GameType
-from .global_config import GlobalConfig
+from ..common.d3d11_gametype import D3D11GameType
+from ..common.global_config import GlobalConfig
 from .submesh_json import SubmeshJson
 from .workspace_helper import WorkSpaceHelper
 

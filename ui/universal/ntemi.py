@@ -12,7 +12,7 @@ from ...common.m_ini_helper import M_IniHelper
 from ...common.m_ini_helper_gui import M_IniHelperGUI
 from .export_helper import ExportHelper
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
-from ...common.workspace_helper import WorkSpaceHelper
+from ...workspace.workspace_helper import WorkSpaceHelper
 from ...utils.format_utils import FormatUtils
 
 from dataclasses import dataclass, field

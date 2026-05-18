@@ -12,7 +12,7 @@ from .global_properties import GlobalProterties
 from .global_config import LogicName
 
 from .global_config import GlobalConfig
-from .workspace_helper import WorkSpaceHelper
+from ..workspace.workspace_helper import WorkSpaceHelper
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from .texture_metadata_helper import TextureMetadataResolver, TextureMarkUpInfo
 

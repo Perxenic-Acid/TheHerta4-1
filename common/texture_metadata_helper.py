@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass, field
 
-from .submesh_metadata import SubmeshMetadataResolver
+from ..workspace.submesh_metadata import SubmeshMetadataResolver
 
 
 @dataclass

@@ -7,8 +7,8 @@ from .global_config import GlobalConfig
 
 from ..utils.json_utils import JsonUtils
 from .texture_metadata_helper import TextureMetadataResolver
-from .submesh_metadata import SubmeshMetadataResolver
-from .workspace_helper import WorkSpaceHelper
+from ..workspace.submesh_metadata import SubmeshMetadataResolver
+from ..workspace.workspace_helper import WorkSpaceHelper
 
 import numpy
 

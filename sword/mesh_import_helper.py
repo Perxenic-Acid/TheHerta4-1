@@ -2,7 +2,7 @@
 
 import bpy
 
-from ...common.mesh_create_helper import MeshCreateHelper
+from ..common.mesh_create_helper import MeshCreateHelper
 from .migoto_binary_file import MigotoBinaryFile
 
 

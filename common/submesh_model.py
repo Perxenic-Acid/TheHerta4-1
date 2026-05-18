@@ -9,7 +9,7 @@ from .global_config import LogicName
 from .global_config import GlobalConfig
 from .d3d11_gametype import D3D11GameType
 from .obj_buffer_helper import ObjBufferHelper
-from .submesh_metadata import SubmeshMetadataResolver
+from ..workspace.submesh_metadata import SubmeshMetadataResolver
 
 
 import bpy
