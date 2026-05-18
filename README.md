@@ -3,8 +3,6 @@
 
 <div align="center">
 
-[![Vibe Coding](https://img.shields.io/badge/Vibe_Coding-💫-ff69b4?style=for-the-badge)](https://github.com/StarBobis/TheHerta4)
-[![VibeCoding With DeepSeek V4 Pro](https://img.shields.io/badge/VibeCoding_With-DeepSeek_V4_Pro-4D6BFE?style=for-the-badge&logo=deepseek&logoColor=white)](https://deepseek.com/)
 
 [![GitHub stars](https://img.shields.io/github/stars/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=gold)](https://github.com/StarBobis/TheHerta4/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=blue)](https://github.com/StarBobis/TheHerta4/forks)
@@ -14,6 +12,8 @@
 [![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?style=for-the-badge&logo=github&color=blue&label=最新版下载量)](https://github.com/StarBobis/TheHerta4/releases/latest)
 [![Blender](https://img.shields.io/badge/Blender-4.5+-e67e22?style=for-the-badge&logo=blender&logoColor=white)](https://www.blender.org/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+
+[![VibeCoding With DeepSeek V4 Pro](https://img.shields.io/badge/VibeCoding_With-DeepSeek_V4_Pro-4D6BFE?style=for-the-badge&logo=deepseek&logoColor=white)](https://deepseek.com/)
 
 </div>
 
