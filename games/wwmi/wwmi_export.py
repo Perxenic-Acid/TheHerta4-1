@@ -4,7 +4,7 @@ from ...common.global_properties import GlobalProterties
 from ...common.global_config import GlobalConfig
 from ...common.global_config import LogicName
 from ...model.drawib_model_wwmi import DrawIBModelWWMI
-from ...blueprint.blueprint_model import BluePrintModel
+from ...model.blueprint_model import BluePrintModel
 from ...blueprint.blueprint_export_helper import BlueprintExportHelper
 from ...common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
 from ...common.global_config import GlobalConfig

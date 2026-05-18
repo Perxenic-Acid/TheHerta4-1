@@ -1,4 +1,4 @@
-from ...blueprint.blueprint_model import BluePrintModel
+from ...model.blueprint_model import BluePrintModel
 from dataclasses import dataclass,field
 from ...common.global_config import GlobalConfig
 from ...common.global_properties import GlobalProterties

@@ -33,10 +33,10 @@ from ..common.buffer_export_helper import BufferExportHelper
 from ..common.obj_buffer_helper import ObjBufferHelper
 from ..workspace.ssmt_workspace import SSMTWorkSpace
 from ..common.d3d11_gametype import D3D11GameType
-from ..blueprint.blueprint_model import BluePrintModel
+from .blueprint_model import BluePrintModel
 from .draw_call_model import DrawCallModel
 from ..workspace.submesh_json import SubmeshJson
-from ..common.texture_metadata_helper import TextureMetadataResolver
+from ..workspace.texture_metadata_helper import TextureMetadataResolver
 
 
 class BlendRemapEntry(TypedDict):

@@ -1,8 +1,8 @@
 import os
 from dataclasses import dataclass, field
 
-from ..workspace.submesh_json import SubmeshJson
-from ..workspace.ssmt_workspace import SSMTWorkSpace
+from .submesh_json import SubmeshJson
+from .ssmt_workspace import SSMTWorkSpace
 
 
 @dataclass

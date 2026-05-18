@@ -7,7 +7,7 @@ from ..common.global_config import GlobalConfig
 
 from ..utils.json_utils import JsonUtils
 from ..utils.format_utils import Fatal
-from ..common.texture_metadata_helper import TextureMetadataResolver
+from ..workspace.texture_metadata_helper import TextureMetadataResolver
 from ..workspace.submesh_json import SubmeshJson
 from ..workspace.ssmt_workspace import SSMTWorkSpace
 

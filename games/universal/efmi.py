@@ -1,4 +1,4 @@
-from ...blueprint.blueprint_model import BluePrintModel
+from ...model.blueprint_model import BluePrintModel
 from ...model.draw_call_model import DrawCallModel
 from ...model.submesh_model import SubMeshModel
 from ...model.drawib_model import DrawIBModel

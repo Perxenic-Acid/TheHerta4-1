@@ -11,7 +11,7 @@ from .global_config import GlobalConfig
 from .global_properties import GlobalProterties
 from ..workspace.ssmt_workspace import SSMTWorkSpace
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
-from .texture_metadata_helper import TextureMetadataResolver, TextureMarkUpInfo
+from ..workspace.texture_metadata_helper import TextureMetadataResolver, TextureMarkUpInfo
 
 class M_IniHelper:
     @classmethod

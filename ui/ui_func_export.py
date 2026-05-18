@@ -20,7 +20,7 @@ from ..games.universal.ntemi import ExportNTEMI
 from ..games.universal.yysls import ExportYYSLS
 from ..games.universal.zzmi import ExportZZMI
 
-from ..blueprint.blueprint_model import BluePrintModel
+from ..model.blueprint_model import BluePrintModel
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from ..blueprint.blueprint_node_obj import refresh_all_object_info_nodes
 
