@@ -61,7 +61,7 @@ class ObjBufferHelper:
                     SSMTErrorUtils.raise_fatal("your object [" +obj.name + "] need at leat one valid Vertex Group, Please check if your model's Vertex Group is correct.")
 
     @staticmethod
-    def get_obj_data_model_list_by_draw_ib(ordered_draw_obj_data_model_list:list[DrawCallModel], draw_ib:str):
+    def get_ordered_obj_models_by_draw_ib(ordered_draw_obj_data_model_list:list[DrawCallModel], draw_ib:str):
         '''
         只返回指定draw_ib的obj列表
         这个方法存在的目的是为了兼容鸣潮的MergedObj

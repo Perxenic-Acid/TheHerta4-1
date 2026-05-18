@@ -83,9 +83,8 @@ class DrawCallModel:
         lod_unique_str = lod_prefix + name_prefix if lod_prefix else name_prefix
         return name_split[0], name_split[1], name_split[2], lod_unique_str, alias_suffix
     
-    def get_unique_str(self) -> str:
-        # 这个唯一标识符是根据DrawIB、FirstIndex和IndexCount组成的字符串，作为一个整体来标识一个DrawCall
-        # 同时也和提取出来的工作空间目录下对应的目录名称一致
+    def get_submesh_name(self) -> str:
+        # 返回这个 DrawCall 所属 submesh 的名称
         return self.match_unique_str
 
     def get_condition_str(self) -> str:

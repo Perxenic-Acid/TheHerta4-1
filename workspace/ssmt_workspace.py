@@ -2,7 +2,7 @@ from ..common.global_config import GlobalConfig
 
 from ..utils.json_utils import JsonUtils
 from ..utils.collection_utils import CollectionUtils, CollectionColor
-from ..utils.format_utils import Fatal
+from ..utils.ssmt_error_utils import SSMTErrorUtils
 import os
 import bpy
 from typing import List, Dict, Union
@@ -81,32 +81,32 @@ class SSMTWorkSpace:
         return final_import_folder_path_list
 
     @staticmethod
-    def parse_lod_unique_str(unique_str: str):
+    def parse_lod_unique_str(submesh_name: str):
         '''
-        解析 unique_str，返回 (lod_name, bare_unique_str)。
+        解析 submesh_name，返回 (lod_name, bare_name)。
         如果有 LOD 前缀（如 "LOD0.67f829fc-2653-0"），返回 ("LOD0", "67f829fc-2653-0")；
-        否则返回 ("", unique_str)。
+        否则返回 ("", submesh_name)。
         '''
-        if unique_str and unique_str.upper().startswith("LOD") and "." in unique_str:
-            dot_idx = unique_str.index(".")
-            potential_lod = unique_str[:dot_idx]
+        if submesh_name and submesh_name.upper().startswith("LOD") and "." in submesh_name:
+            dot_idx = submesh_name.index(".")
+            potential_lod = submesh_name[:dot_idx]
             lod_suffix = potential_lod[3:]
             if lod_suffix.isdigit():
-                return potential_lod, unique_str[dot_idx + 1:]
-        return "", unique_str
+                return potential_lod, submesh_name[dot_idx + 1:]
+        return "", submesh_name
 
     @staticmethod
-    def get_submesh_folder_path(unique_str: str) -> str:
+    def get_submesh_folder_path(submesh_name: str) -> str:
         '''
-        根据 unique_str（可带 LOD 前缀）返回工作空间内实际的 submesh 文件夹路径。
+        根据 submesh_name（可带 LOD 前缀）返回工作空间内实际的 submesh 文件夹路径。
         LOD0.67f829fc-2653-0 → workspace/LOD0/67f829fc-2653-0/
         67f829fc-2653-0      → workspace/67f829fc-2653-0/
         '''
-        lod_name, bare_unique_str = SSMTWorkSpace.parse_lod_unique_str(unique_str)
+        lod_name, bare_name = SSMTWorkSpace.parse_lod_unique_str(submesh_name)
         workspace_folder = GlobalConfig.path_workspace_folder()
         if lod_name:
-            return os.path.join(workspace_folder, lod_name, bare_unique_str)
-        return os.path.join(workspace_folder, bare_unique_str)
+            return os.path.join(workspace_folder, lod_name, bare_name)
+        return os.path.join(workspace_folder, bare_name)
 
     @staticmethod
     def create_and_get_workspace_collection() -> bpy.types.Collection:
@@ -218,55 +218,55 @@ class SSMTWorkSpace:
     
 
     @staticmethod
-    def check_and_get_submesh_json_path(unique_str: str) -> tuple[bool, str, str]:
+    def check_and_get_submesh_json_path(submesh_name: str) -> str:
         """
-        根据 unique_str 查找对应的 SubmeshJson 文件路径。
-        返回 (exists, error_msg, submesh_json_path)。
+        根据 submesh_name 查找对应的 SubmeshJson 文件路径。
+        找到返回路径，找不到抛出 SSMTErrorUtils 错误。
         """
         workspace_folder = GlobalConfig.path_workspace_folder()
 
-        lod_name, bare_unique_str = SSMTWorkSpace.parse_lod_unique_str(unique_str)
-        unique_str_folder = SSMTWorkSpace.get_submesh_folder_path(unique_str)
+        lod_name, bare_name = SSMTWorkSpace.parse_lod_unique_str(submesh_name)
+        submesh_folder = SSMTWorkSpace.get_submesh_folder_path(submesh_name)
 
-        if not os.path.exists(unique_str_folder):
-            return False, (
-                f"unique_str '{unique_str}' 没有找到对应的提取数据。\n"
+        if not os.path.exists(submesh_folder):
+            SSMTErrorUtils.raise_fatal(
+                f"submesh_name '{submesh_name}' 没有找到对应的提取数据。\n"
                 + "请确保已从游戏中提取模型并执行「一键导入当前工作空间内容」操作。"
-            ), ""
+            )
 
         workspace_import_json_path = os.path.join(workspace_folder, "Import.json")
         workspace_import_json = JsonUtils.LoadFromFile(workspace_import_json_path) if os.path.exists(workspace_import_json_path) else {}
-        gametype_name = workspace_import_json.get(unique_str, "")
+        gametype_name = workspace_import_json.get(submesh_name, "")
 
         if gametype_name:
-            submesh_json_path = os.path.join(unique_str_folder, "TYPE_" + gametype_name, bare_unique_str + ".json")
+            submesh_json_path = os.path.join(submesh_folder, "TYPE_" + gametype_name, bare_name + ".json")
             if os.path.exists(submesh_json_path):
-                return True, "", submesh_json_path
+                return submesh_json_path
 
         found_type_paths = []
         found_types = []
-        for dirname in os.listdir(unique_str_folder):
+        for dirname in os.listdir(submesh_folder):
             if not dirname.startswith("TYPE_"):
                 continue
 
-            submesh_json_path = os.path.join(unique_str_folder, dirname, bare_unique_str + ".json")
+            submesh_json_path = os.path.join(submesh_folder, dirname, bare_name + ".json")
             if os.path.exists(submesh_json_path):
                 found_type_paths.append(submesh_json_path)
                 found_types.append(dirname.replace("TYPE_", ""))
 
         if len(found_type_paths) == 1:
-            return True, "", found_type_paths[0]
+            return found_type_paths[0]
 
         if len(found_type_paths) > 1:
-            return False, (
-                f"unique_str '{unique_str}' 找到以下数据类型但没有在 Import.json 中记录: {', '.join(found_types)}\n"
+            SSMTErrorUtils.raise_fatal(
+                f"submesh_name '{submesh_name}' 找到以下数据类型但没有在 Import.json 中记录: {', '.join(found_types)}\n"
                 + "请尝试重新执行「一键导入当前工作空间内容」操作。"
-            ), ""
+            )
 
-        return False, (
-            f"unique_str '{unique_str}' 没有找到对应的 SubmeshJson。\n"
+        SSMTErrorUtils.raise_fatal(
+            f"submesh_name '{submesh_name}' 没有找到对应的 SubmeshJson。\n"
             + "请确保已从游戏中提取模型并执行「一键导入当前工作空间内容」操作。"
-        ), ""
+        )
 
     @staticmethod
     def get_hash_deduped_texture_info_dict(submesh_folder_name:str) -> Dict[str,DedupedTextureInfo]:

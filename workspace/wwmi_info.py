@@ -3,7 +3,7 @@ from typing import Dict, List
 
 
 @dataclass
-class ExtractedObjectComponent:
+class WWMIInfoComponent:
     vertex_offset: int
     vertex_count: int
     index_offset: int
@@ -14,7 +14,7 @@ class ExtractedObjectComponent:
 
 
 @dataclass
-class ExtractedObjectShapeKeys:
+class WWMIInfoShapeKeys:
     offsets_hash: str = ''
     scale_hash: str = ''
     vertex_count: int = 0
@@ -23,20 +23,20 @@ class ExtractedObjectShapeKeys:
 
 
 @dataclass
-class ExtractedObject:
+class WWMIInfoObject:
     vb0_hash: str
     cb4_hash: str
     vertex_count: int
     index_count: int
-    components: List[ExtractedObjectComponent]
-    shapekeys: ExtractedObjectShapeKeys
+    components: List[WWMIInfoComponent]
+    shapekeys: WWMIInfoShapeKeys
 
 
-class ExtractedObjectHelper:
+class WWMIInfoHelper:
     @classmethod
-    def build_from_submesh_metadata_list(cls, submesh_json_list: list) -> ExtractedObject:
+    def build_from_json_list(cls, submesh_json_list: list) -> WWMIInfoObject:
         if not submesh_json_list:
-            raise ValueError("No SubmeshJson provided to build ExtractedObject.")
+            raise ValueError("No SubmeshJson provided to build WWMIInfoObject.")
 
         first_json = submesh_json_list[0]
         vb0_hash = first_json.VertexLimitVB
@@ -55,7 +55,7 @@ class ExtractedObjectHelper:
             vg_count = j.VGCount
             vg_map = {str(k): int(v) for k, v in j.VGMap.items()}
 
-            component = ExtractedObjectComponent(
+            component = WWMIInfoComponent(
                 vertex_offset=vertex_offset,
                 vertex_count=vertex_count,
                 index_offset=index_offset,
@@ -69,7 +69,7 @@ class ExtractedObjectHelper:
             max_vertex_end = max(max_vertex_end, vertex_offset + vertex_count)
 
         sk_info = first_json.ShapeKeysInfo
-        shapekeys = ExtractedObjectShapeKeys(
+        shapekeys = WWMIInfoShapeKeys(
             offsets_hash=sk_info.get("offsets_hash", ""),
             scale_hash=sk_info.get("scale_hash", ""),
             vertex_count=sk_info.get("vertex_count", 0),
@@ -77,7 +77,7 @@ class ExtractedObjectHelper:
             checksum=sk_info.get("checksum", 0),
         )
 
-        return ExtractedObject(
+        return WWMIInfoObject(
             vb0_hash=vb0_hash,
             cb4_hash=cb4_hash,
             vertex_count=max_vertex_end,

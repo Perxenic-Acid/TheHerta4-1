@@ -39,7 +39,7 @@ class ExportWWMI:
         constants_section = M_IniSection(M_SectionType.Constants)
         constants_section.append("[Constants]")
         constants_section.append("global $required_wwmi_version = 0.91")
-        constants_section.append("global $object_guid = " + str(draw_ib_model.extracted_object.index_count))
+        constants_section.append("global $object_guid = " + str(draw_ib_model.wwmi_info.index_count))
         constants_section.append("global $mesh_vertex_count = " + str(draw_ib_model.mesh_vertex_count))
         constants_section.append("global $shapekey_vertex_count = " + str(len(draw_ib_model.obj_buffer_model_wwmi.shapekey_vertex_ids)))
         constants_section.append("global $mod_id = -1000")
@@ -324,7 +324,7 @@ class ExportWWMI:
     def add_texture_override_mark_bone_data_cb(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
         texture_override_mark_bonedatacb_section = M_IniSection(M_SectionType.TextureOverrideGeneral)
         texture_override_mark_bonedatacb_section.append("[TextureOverrideMarkBoneDataCB]")
-        texture_override_mark_bonedatacb_section.append("hash = " + draw_ib_model.extracted_object.cb4_hash)
+        texture_override_mark_bonedatacb_section.append("hash = " + draw_ib_model.wwmi_info.cb4_hash)
         texture_override_mark_bonedatacb_section.append("match_priority = 0")
         texture_override_mark_bonedatacb_section.append("filter_index = 3381.7777")
         texture_override_mark_bonedatacb_section.new_line()
@@ -337,10 +337,10 @@ class ExportWWMI:
         for component_tmp_obj_name, component_blend_remap_used in draw_ib_model.blend_remap_used.items():
             component_name = "Component " + str(component_count + 1)
             component_count_str = str(component_count)
-            component_object = draw_ib_model.extracted_object.components[component_count]
+            component_object = draw_ib_model.wwmi_info.components[component_count]
 
             texture_override_component.append("[TextureOverrideComponent" + component_count_str + "]")
-            texture_override_component.append("hash = " + draw_ib_model.extracted_object.vb0_hash)
+            texture_override_component.append("hash = " + draw_ib_model.wwmi_info.vb0_hash)
             texture_override_component.append("match_first_index = " + str(component_object.index_offset))
             texture_override_component.append("match_index_count = " + str(component_object.index_count))
             texture_override_component.append("$object_detected = 1")
@@ -401,7 +401,7 @@ class ExportWWMI:
     def add_texture_override_shapekeys(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
         texture_override_shapekeys_section = M_IniSection(M_SectionType.TextureOverrideShapeKeys)
 
-        shapekey_offsets_hash = draw_ib_model.extracted_object.shapekeys.offsets_hash
+        shapekey_offsets_hash = draw_ib_model.wwmi_info.shapekeys.offsets_hash
         if shapekey_offsets_hash != "":
             texture_override_shapekeys_section.append("[TextureOverrideShapeKeyOffsets]")
             texture_override_shapekeys_section.append("hash = " + shapekey_offsets_hash)
@@ -410,17 +410,17 @@ class ExportWWMI:
             texture_override_shapekeys_section.append("override_vertex_count = $mesh_vertex_count")
             texture_override_shapekeys_section.new_line()
 
-        shapekey_scale_hash = draw_ib_model.extracted_object.shapekeys.scale_hash
+        shapekey_scale_hash = draw_ib_model.wwmi_info.shapekeys.scale_hash
         if shapekey_scale_hash != "":
             texture_override_shapekeys_section.append("[TextureOverrideShapeKeyScale]")
-            texture_override_shapekeys_section.append("hash = " + draw_ib_model.extracted_object.shapekeys.scale_hash)
+            texture_override_shapekeys_section.append("hash = " + draw_ib_model.wwmi_info.shapekeys.scale_hash)
             texture_override_shapekeys_section.append("match_priority = 0")
             texture_override_shapekeys_section.append("override_byte_stride = 4")
             texture_override_shapekeys_section.append("override_vertex_count = $mesh_vertex_count")
             texture_override_shapekeys_section.new_line()
 
         texture_override_shapekeys_section.append("[CommandListSetupShapeKeys]")
-        texture_override_shapekeys_section.append("$\\WWMIv1\\shapekey_checksum = " + str(draw_ib_model.extracted_object.shapekeys.checksum))
+        texture_override_shapekeys_section.append("$\\WWMIv1\\shapekey_checksum = " + str(draw_ib_model.wwmi_info.shapekeys.checksum))
         texture_override_shapekeys_section.append("cs-t33 = ResourceShapeKeyOffsetBuffer")
         texture_override_shapekeys_section.append("cs-u5 = ResourceCustomShapeKeyValuesRW")
         texture_override_shapekeys_section.append("cs-u6 = ResourceShapeKeyCBRW")
@@ -437,7 +437,7 @@ class ExportWWMI:
 
         if shapekey_offsets_hash != "":
             texture_override_shapekeys_section.append("[TextureOverrideShapeKeyLoaderCallback]")
-            texture_override_shapekeys_section.append("hash = " + draw_ib_model.extracted_object.shapekeys.offsets_hash)
+            texture_override_shapekeys_section.append("hash = " + draw_ib_model.wwmi_info.shapekeys.offsets_hash)
             texture_override_shapekeys_section.append("match_priority = 0")
             texture_override_shapekeys_section.append("if $mod_enabled")
             if GlobalProterties.import_merged_vgmap():
@@ -458,7 +458,7 @@ class ExportWWMI:
 
         if shapekey_offsets_hash != "":
             texture_override_shapekeys_section.append("[TextureOverrideShapeKeyMultiplierCallback]")
-            texture_override_shapekeys_section.append("hash = " + draw_ib_model.extracted_object.shapekeys.offsets_hash)
+            texture_override_shapekeys_section.append("hash = " + draw_ib_model.wwmi_info.shapekeys.offsets_hash)
             texture_override_shapekeys_section.append("match_priority = 0")
             texture_override_shapekeys_section.append("if $mod_enabled")
             if GlobalProterties.import_merged_vgmap():

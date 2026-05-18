@@ -96,10 +96,7 @@ class TextureMetadataResolver:
         unique_str = submesh_model.unique_str
 
         try:
-            exists, error_msg, submesh_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(unique_str)
-            if not exists:
-                raise Exception(error_msg)
-            submesh_json = SubmeshJson(submesh_json_path)
+            submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(unique_str))
         except Exception as ex:
             print("TextureMetadataResolver: 跳过贴图标记读取，无法解析 SubmeshJson: " + unique_str + "，错误: " + str(ex))
             return unique_str, []

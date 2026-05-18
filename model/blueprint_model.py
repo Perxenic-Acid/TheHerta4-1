@@ -163,7 +163,7 @@ class BluePrintModel:
         draw_call_model_dict: dict[str, list[DrawCallModel]] = {}
 
         for draw_call_model in self.ordered_draw_obj_data_model_list:
-            unique_str = draw_call_model.get_unique_str()
+            unique_str = draw_call_model.get_submesh_name()
             draw_call_model_list = draw_call_model_dict.get(unique_str, [])
             draw_call_model_list.append(draw_call_model)
             draw_call_model_dict[unique_str] = draw_call_model_list

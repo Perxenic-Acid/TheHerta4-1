@@ -6,7 +6,6 @@ from ..common.d3d11_gametype import D3D11GameType
 from ..common.global_config import GlobalConfig
 
 from ..utils.json_utils import JsonUtils
-from ..utils.format_utils import Fatal
 from ..workspace.texture_metadata_helper import TextureMetadataResolver
 from ..workspace.submesh_json import SubmeshJson
 from ..workspace.ssmt_workspace import SSMTWorkSpace
@@ -88,10 +87,7 @@ class DrawIBModel:
         folder_name = first_submesh.unique_str
         print("DrawIBModel: 开始读取导出元数据，DrawIB: " + self.draw_ib + "，unique_str: " + folder_name)
 
-        exists, error_msg, submesh_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(folder_name)
-        if not exists:
-            raise Fatal(error_msg)
-        submesh_json = SubmeshJson(submesh_json_path)
+        submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(folder_name))
         self.import_json_path = submesh_json.JsonFilePath
         self.import_json_dict = dict(submesh_json.JsonDict)
         print("DrawIBModel: 已读取 SubmeshJson: " + self.import_json_path)

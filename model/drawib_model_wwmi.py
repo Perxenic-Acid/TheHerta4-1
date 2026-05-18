@@ -10,7 +10,6 @@ import numpy
 from ..common.global_properties import GlobalProterties
 from ..common.global_config import GlobalConfig
 from ..common.global_config import LogicName
-from ..utils.format_utils import Fatal
 from ..utils.export_utils import ExportUtils, ObjElementContext, WWMIBufferBuildResult
 from ..utils.log_utils import LOG
 from ..utils.obj_utils import (
@@ -28,7 +27,7 @@ from ..utils.obj_utils import (
 )
 from ..utils.shapekey_utils import ShapeKeyUtils
 from ..utils.vertexgroup_utils import VertexGroupUtils
-from ..workspace.wwmi_info import ExtractedObject, ExtractedObjectHelper
+from ..workspace.wwmi_info import WWMIInfoObject, WWMIInfoHelper
 from ..common.buffer_export_helper import BufferExportHelper
 from ..common.obj_buffer_helper import ObjBufferHelper
 from ..workspace.ssmt_workspace import SSMTWorkSpace
@@ -45,22 +44,16 @@ class BlendRemapEntry(TypedDict):
 
 
 @dataclass
-class ComponentModel:
-    component_name: str
-    final_ordered_draw_obj_model_list: list[DrawCallModel] = field(default_factory=list)
-
-
-@dataclass
 class DrawIBModelWWMI:
-    draw_ib: str
-    blueprint_model: BluePrintModel
+    draw_ib: str # 当前DrawIB
+    blueprint_model: BluePrintModel # 当前DrawIBModel对应的BlueprintModel
 
-    draw_ib_alias: str = field(init=False, default="")
-    d3d11GameType: D3D11GameType = field(init=False, repr=False)
-    extracted_object: ExtractedObject = field(init=False, repr=False)
+    draw_ib_alias: str = field(init=False, default="") # 当前DrawIB的别名
+    d3d11GameType: D3D11GameType = field(init=False, repr=False) # 当前DrawIB的数据类型，因为WWMI中每个DrawIB只可能是一个数据类型
+    wwmi_info: WWMIInfoObject = field(init=False, repr=False) 
 
     ordered_drawcall_model_list: list[DrawCallModel] = field(init=False, default_factory=list, repr=False)
-    component_model_list: list[ComponentModel] = field(init=False, default_factory=list, repr=False)
+    submesh_drawcall_groups: list[list[DrawCallModel]] = field(init=False, default_factory=list, repr=False)
 
     mesh_vertex_count: int = field(init=False, default=0)
     merged_object: MergedObject | None = field(init=False, default=None, repr=False)
@@ -78,39 +71,41 @@ class DrawIBModelWWMI:
     blend_remap_vertex_vg_buffer: numpy.ndarray | None = field(init=False, default=None, repr=False)
 
     def __post_init__(self):
+        # 从工作空间获取别名列表
         drawib_aliasname_dict: dict[str, str] = SSMTWorkSpace.get_drawib_aliasname_dict()
+
+        # 设置别名
         self.draw_ib_alias = drawib_aliasname_dict.get(self.draw_ib, self.draw_ib)
 
-        self.ordered_drawcall_model_list = ObjBufferHelper.get_obj_data_model_list_by_draw_ib(
+        # 获取当前DrawIB包含的DrawCallModel列表
+        self.ordered_drawcall_model_list = ObjBufferHelper.get_ordered_obj_models_by_draw_ib(
             ordered_draw_obj_data_model_list=self.blueprint_model.ordered_draw_obj_data_model_list,
             draw_ib=self.draw_ib,
         )
 
+        # 如果一个DrawCallModel都没有，说明这个DrawIB没有可导出的对象，抛出错误
         if len(self.ordered_drawcall_model_list) == 0:
             raise ValueError("当前 DrawIB 没有可导出的 DrawCallModel")
 
-        primary_unique_str = self.ordered_drawcall_model_list[0].get_unique_str()
-        exists, error_msg, primary_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(primary_unique_str)
-        if not exists:
-            raise Fatal(error_msg)
-        primary_submesh_json = SubmeshJson(primary_json_path)
-        self.d3d11GameType = D3D11GameType.from_submesh_json_dict(primary_submesh_json.JsonDict, primary_json_path)
+        # 从第一个DrawCallModel的unique_str获取对应的SubmeshJson，解析出当前DrawIB的数据类型
+        # 之所以是第一个，因为对于WWMI来说，整个DrawIB的数据类型是使用共同的唯一的一个的
+        first_submesh_name = self.ordered_drawcall_model_list[0].get_submesh_name()
+        first_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(first_submesh_name)
+        first_submesh_json = SubmeshJson(first_json_path)
+        self.d3d11GameType = D3D11GameType.from_submesh_json_dict(first_submesh_json.JsonDict, first_json_path)
 
-        self.component_model_list = []
+        self.submesh_drawcall_groups = []
 
-        unique_str_submesh_json_dict: dict[str, SubmeshJson] = {primary_unique_str: primary_submesh_json}
+        submesh_json_dict: dict[str, SubmeshJson] = {first_submesh_name: first_submesh_json}
         component_name_drawcall_model_dict: dict[str, list[DrawCallModel]] = {}
         component_index_by_unique_str: dict[str, int] = {}
 
         for drawcall_model in self.ordered_drawcall_model_list:
-            unique_str = drawcall_model.get_unique_str()
-            submesh_json = unique_str_submesh_json_dict.get(unique_str)
+            unique_str = drawcall_model.get_submesh_name()
+            submesh_json = submesh_json_dict.get(unique_str)
             if submesh_json is None:
-                sj_path = SSMTWorkSpace.check_and_get_submesh_json_path(unique_str)
-                if not sj_path[0]:
-                    raise Fatal(sj_path[1])
-                submesh_json = SubmeshJson(sj_path[2])
-                unique_str_submesh_json_dict[unique_str] = submesh_json
+                submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(unique_str))
+                submesh_json_dict[unique_str] = submesh_json
 
             component_index = component_index_by_unique_str.setdefault(unique_str, len(component_index_by_unique_str) + 1)
             component_name = "Component " + str(component_index)
@@ -118,15 +113,11 @@ class DrawIBModelWWMI:
             component_drawcall_model_list.append(drawcall_model)
             component_name_drawcall_model_dict[component_name] = component_drawcall_model_list
 
-        for component_name, component_drawcall_model_list in component_name_drawcall_model_dict.items():
-            component_model = ComponentModel(
-                component_name=component_name,
-                final_ordered_draw_obj_model_list=component_drawcall_model_list,
-            )
-            self.component_model_list.append(component_model)
+        for component_drawcall_model_list in component_name_drawcall_model_dict.values():
+            self.submesh_drawcall_groups.append(component_drawcall_model_list)
 
-        ordered_submesh_json_list = [unique_str_submesh_json_dict[unique_str] for unique_str in component_index_by_unique_str.keys()]
-        self.extracted_object = ExtractedObjectHelper.build_from_submesh_metadata_list(ordered_submesh_json_list)
+        ordered_submesh_json_list = [submesh_json_dict[unique_str] for unique_str in component_index_by_unique_str.keys()]
+        self.wwmi_info = WWMIInfoHelper.build_from_json_list(ordered_submesh_json_list)
 
         LOG.newline()
 
@@ -137,16 +128,16 @@ class DrawIBModelWWMI:
             for temp_object in component.objects:
                 obj_name_temp_object_dict[temp_object.name] = temp_object
 
-        for component_model in self.component_model_list:
+        for idx, drawcall_model_list in enumerate(self.submesh_drawcall_groups):
             updated_drawcall_model_list: list[DrawCallModel] = []
-            for drawcall_model in component_model.final_ordered_draw_obj_model_list:
+            for drawcall_model in drawcall_model_list:
                 temp_object = obj_name_temp_object_dict.get(drawcall_model.obj_name)
                 if temp_object is not None:
                     drawcall_model.index_count = temp_object.index_count
                     drawcall_model.index_offset = temp_object.index_offset
                     drawcall_model.vertex_count = temp_object.vertex_count
                 updated_drawcall_model_list.append(drawcall_model)
-            component_model.final_ordered_draw_obj_model_list = updated_drawcall_model_list
+            self.submesh_drawcall_groups[idx] = updated_drawcall_model_list
 
         # 构建 submesh_model_list 和纹理标记字典，供 M_IniHelper 纹理导出使用
         self.submesh_model_list = []
@@ -241,17 +232,14 @@ class DrawIBModelWWMI:
 
     def build_merged_object(self) -> MergedObject:
         components: list[MergedObjectComponent] = []
-        for _component in self.extracted_object.components:
+        for _component in self.wwmi_info.components:
             components.append(MergedObjectComponent(objects=[], index_count=0))
 
         workspace_collection = bpy.context.collection
         processed_obj_name_list: list[str] = []
 
-        for component_model in self.component_model_list:
-            component_count = str(component_model.component_name)[10:]
-            component_id = int(component_count) - 1
-
-            for drawcall_model in component_model.final_ordered_draw_obj_model_list:
+        for component_id, component_drawcall_model_list in enumerate(self.submesh_drawcall_groups):
+            for drawcall_model in component_drawcall_model_list:
                 obj_name = drawcall_model.obj_name
                 if obj_name in processed_obj_name_list:
                     continue
@@ -300,14 +288,14 @@ class DrawIBModelWWMI:
 
                 vertex_groups = ObjUtils.get_vertex_groups(temp_obj)
                 if GlobalProterties.import_merged_vgmap():
-                    total_vg_count = sum(ec.vg_count for ec in self.extracted_object.components)
+                    total_vg_count = sum(ec.vg_count for ec in self.wwmi_info.components)
                     ignore_list = [
                         vertex_group
                         for vertex_group in vertex_groups
                         if "ignore" in vertex_group.name.lower() or vertex_group.index >= total_vg_count
                     ]
                 else:
-                    extracted_component = self.extracted_object.components[component_id]
+                    extracted_component = self.wwmi_info.components[component_id]
                     total_vg_count = len(extracted_component.vg_map)
                     ignore_list = [
                         vertex_group

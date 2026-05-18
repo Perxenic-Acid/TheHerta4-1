@@ -5,7 +5,6 @@ from ..utils.export_utils import ExportUtils
 from ..utils.obj_utils import ObjUtils
 from ..utils.collection_utils import CollectionUtils
 from ..utils.json_utils import JsonUtils
-from ..utils.format_utils import Fatal
 from ..common.global_config import LogicName
 from ..common.global_config import GlobalConfig
 from ..common.d3d11_gametype import D3D11GameType
@@ -55,7 +54,7 @@ class SubMeshModel:
             self.match_draw_ib = self.drawcall_model_list[0].match_draw_ib
             self.match_first_index = int(self.drawcall_model_list[0].match_first_index)
             self.match_index_count = int(self.drawcall_model_list[0].match_index_count)
-            self.unique_str = self.drawcall_model_list[0].get_unique_str()
+            self.unique_str = self.drawcall_model_list[0].get_submesh_name()
         
         # display_str 默认等于 unique_str，导出前可被 apply_alias_dict 覆盖
         self.display_str = self.unique_str
@@ -68,10 +67,7 @@ class SubMeshModel:
 
         folder_name = self.unique_str
 
-        exists, error_msg, submesh_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(folder_name)
-        if not exists:
-            raise Fatal(error_msg)
-        submesh_json = SubmeshJson(submesh_json_path)
+        submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(folder_name))
         self.d3d11_game_type = D3D11GameType.from_submesh_json_dict(
             submesh_json.JsonDict, submesh_json_path
         )
