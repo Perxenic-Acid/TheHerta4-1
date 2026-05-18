@@ -599,7 +599,7 @@ class ExportWWMI:
 
             if GlobalProterties.import_merged_vgmap():
                 self.add_resource_merged_skeleton(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
-
+            
             self.add_resource_buffer(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
 
             print("=" * 60)

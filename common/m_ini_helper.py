@@ -75,73 +75,38 @@ class M_IniHelper:
 
     @classmethod
     def _get_part_extract_gametype_folder_path(cls, draw_ib_model: DrawIBModel, part_name: str) -> str:
-        print("[TRACE] _get_part_extract_gametype_folder_path: part_name=" + str(part_name))
         part_name_submesh_dict = getattr(draw_ib_model, "part_name_submesh_dict", {})
-        print("[TRACE]   part_name_submesh_dict keys: " + str(list(part_name_submesh_dict.keys())))
         submesh_model = part_name_submesh_dict.get(part_name)
         if submesh_model is None:
-            print("[TRACE]   part_name 未匹配到 submesh_model，返回空字符串!")
             return ""
 
-        print("[TRACE]   匹配到 submesh_model, unique_str=" + str(getattr(submesh_model, "unique_str", "<无>")))
-
         d3d11_game_type = getattr(submesh_model, "d3d11_game_type", None)
-        print("[TRACE]   submesh.d3d11_game_type: " + str(d3d11_game_type))
         if d3d11_game_type is None:
             d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
-            print("[TRACE]   降级使用 draw_ib_model.d3d11_game_type: " + str(d3d11_game_type))
         unique_str = getattr(submesh_model, "unique_str", "")
         if d3d11_game_type is None or unique_str == "":
-            print("[TRACE]   返回空字符串! d3d11_game_type=" + str(d3d11_game_type) + ", unique_str=" + str(unique_str))
             return ""
 
         submesh_folder = WorkSpaceHelper.get_submesh_folder_path(unique_str)
-        result = os.path.join(submesh_folder, "TYPE_" + d3d11_game_type.GameTypeName, "")
-        print("[TRACE]   构造路径: " + result)
-        print("[TRACE]   路径是否存在: " + str(os.path.exists(result)))
-        return result
+        return os.path.join(submesh_folder, "TYPE_" + d3d11_game_type.GameTypeName, "")
 
     @classmethod
+    @classmethod
     def _get_slot_texture_source_path(cls, draw_ib_model: DrawIBModel, part_name: str, texture_markup_info) -> str:
-        print("[TRACE] _get_slot_texture_source_path 入口:")
-        print("[TRACE]   DrawIB: " + draw_ib_model.draw_ib)
-        print("[TRACE]   part_name: " + str(part_name))
-        print("[TRACE]   mark_filename: " + texture_markup_info.mark_filename)
-        print("[TRACE]   mark_hash: " + str(getattr(texture_markup_info, "mark_hash", "<无>")))
-
         # 策略1: 通过 part_name 精确定位
         extract_gametype_folder_path = cls._get_part_extract_gametype_folder_path(draw_ib_model, part_name)
-        print("[TRACE] 策略1 _get_part_extract_gametype_folder_path 返回: '" + extract_gametype_folder_path + "'")
         if extract_gametype_folder_path:
             source_path = extract_gametype_folder_path + texture_markup_info.mark_filename
-            print("[TRACE] 策略1 source_path: " + source_path)
-            print("[TRACE] 策略1 source_path 文件存在: " + str(os.path.exists(source_path)))
             if os.path.exists(source_path):
-                print("[TRACE] 策略1 命中! 返回: " + source_path)
                 return source_path
-            else:
-                print("[TRACE] 策略1 路径已构造但文件不存在，尝试列出目录内容:")
-                if os.path.exists(extract_gametype_folder_path):
-                    files_in_dir = os.listdir(extract_gametype_folder_path)
-                    print("[TRACE]   目录存在，文件列表(前20个): " + str(files_in_dir[:20]))
-                    print("[TRACE]   目录总文件数: " + str(len(files_in_dir)))
-                else:
-                    print("[TRACE]   目录本身不存在: " + extract_gametype_folder_path)
-        else:
-            print("[TRACE] 策略1 返回空字符串，进入策略2")
 
         # 策略2: 遍历所有 submesh 的 TYPE_<gametype> 目录
-        print("[TRACE] 策略2: 遍历 submesh_model_list 查找贴图文件")
-        submesh_list = getattr(draw_ib_model, "submesh_model_list", [])
-        print("[TRACE]   submesh_model_list 数量: " + str(len(submesh_list)))
-        for si, submesh_model in enumerate(submesh_list):
+        for submesh_model in getattr(draw_ib_model, "submesh_model_list", []):
             d3d11_game_type = getattr(submesh_model, "d3d11_game_type", None)
             if d3d11_game_type is None:
                 d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
             unique_str = getattr(submesh_model, "unique_str", "")
-            print("[TRACE]   策略2 submesh[" + str(si) + "]: unique_str=" + unique_str + ", d3d11_game_type=" + str(d3d11_game_type))
             if d3d11_game_type is None or unique_str == "":
-                print("[TRACE]   策略2 submesh[" + str(si) + "]: 跳过 (d3d11_game_type=None 或 unique_str为空)")
                 continue
 
             candidate_source_path = os.path.join(
@@ -149,31 +114,10 @@ class M_IniHelper:
                 "TYPE_" + d3d11_game_type.GameTypeName,
                 texture_markup_info.mark_filename,
             )
-            print("[TRACE]   策略2 submesh[" + str(si) + "]: 候选路径=" + candidate_source_path)
-            print("[TRACE]   策略2 submesh[" + str(si) + "]: 文件存在=" + str(os.path.exists(candidate_source_path)))
             if os.path.exists(candidate_source_path):
-                print("[TRACE] 策略2 命中! 返回: " + candidate_source_path)
                 return candidate_source_path
 
-        print("[TRACE] 策略1和策略2均未找到贴图源文件!")
-        print("[TRACE]   DrawIB: " + draw_ib_model.draw_ib)
-        print("[TRACE]   part_name: " + str(part_name))
-        print("[TRACE]   文件: " + texture_markup_info.mark_filename)
         return ""
-
-    @classmethod
-    def _get_hash_texture_source_path(cls, draw_ib_model: DrawIBModel, part_name: str, texture_markup_info) -> str:
-        print("-" * 40)
-        print("[TRACE] _get_hash_texture_source_path 入口 (Hash贴图源路径解析):")
-        print("[TRACE]   DrawIB: " + draw_ib_model.draw_ib)
-        print("[TRACE]   part_name: " + str(part_name))
-        print("[TRACE]   mark_filename: " + texture_markup_info.mark_filename)
-        print("[TRACE]   mark_hash: " + str(getattr(texture_markup_info, "mark_hash", "<无>")))
-        print("[TRACE]   委托给 _get_slot_texture_source_path (Hash和Slot共用源路径解析):")
-        result = cls._get_slot_texture_source_path(draw_ib_model, part_name, texture_markup_info)
-        print("[TRACE] _get_hash_texture_source_path 最终返回: '" + result + "'")
-        print("-" * 40)
-        return result
 
     @classmethod
     def _get_part_submesh_folder_name(cls, draw_ib_model: DrawIBModel, part_name: str) -> str:
@@ -279,177 +223,138 @@ class M_IniHelper:
         return drawindexed_str_list
 
     @classmethod
-    def generate_hash_style_texture_ini(cls,ini_builder:M_IniBuilder,drawib_drawibmodel_dict:dict[str,DrawIBModel]):
-        '''
-        Hash风格贴图
-        '''
-        print("=" * 60)
-        print("[TRACE] generate_hash_style_texture_ini() 入口")
-        print("[TRACE]   DrawIB 总数: " + str(len(drawib_drawibmodel_dict)))
-        print("[TRACE]   DrawIB 列表: " + str(list(drawib_drawibmodel_dict.keys())))
-        print("=" * 60)
+    def generate_hash_style_texture_ini(cls, ini_builder: M_IniBuilder, drawib_drawibmodel_dict: dict[str, DrawIBModel]):
+        """
+        Hash 风格贴图：生成贴图配置段（Resource_Texture + TextureOverride），并复制贴图文件。
+        整体流程：遍历 DrawIB → 遍历 SubMesh → 逐张贴图处理。
+        """
 
+        # ═══════════════════════════════════════════════════
+        # 步骤1: 检查全局开关，禁止时跳过全部处理
+        # ═══════════════════════════════════════════════════
         if GlobalProterties.forbid_auto_texture_ini():
             print("[TRACE] generate_hash_style_texture_ini: forbid_auto_texture_ini=True, 跳过!")
             return
 
-        # 先统计当前标记的具有Slot风格的Hash值，后续Render里搞图片的时候跳过这些
-        slot_style_texture_hash_list = []
-        for draw_ib_model in drawib_drawibmodel_dict.values():
-            for submesh_model in getattr(draw_ib_model, "submesh_model_list", []):
-                for texture_markup_info in draw_ib_model.get_submesh_texture_markup_info_list(submesh_model):
-                    if texture_markup_info.mark_type == "Slot":
-                        slot_style_texture_hash_list.append(texture_markup_info.mark_hash)
+        # ═══════════════════════════════════════════════════
+        # 步骤2: 初始化去重列表，遍历每个 DrawIB 处理 Hash 贴图
+        # ═══════════════════════════════════════════════════
+        repeat_hash_list: list[str] = []
 
-        print("slot_style_texture_hash_list:" + str(slot_style_texture_hash_list))
-        print("M_IniHelper: 开始生成 Hash 风格贴图配置，DrawIB 数量: " + str(len(drawib_drawibmodel_dict)))
-
-        repeat_hash_list = []
-        hash_copied = 0
-        hash_skipped_exists = 0
-        hash_skipped_no_source = 0
-        hash_skipped_repeat = 0
-        hash_skipped_non_hash = 0
-
-        # 遍历当前drawib的Render文件夹
-        for draw_ib,draw_ib_model in drawib_drawibmodel_dict.items():
-            marked_hash_count = cls._count_marked_textures(draw_ib_model, mark_type="Hash")
-            print("M_IniHelper: DrawIB " + draw_ib + " 的 Hash 标记数量: " + str(marked_hash_count))
-
+        for draw_ib, draw_ib_model in drawib_drawibmodel_dict.items():
             submesh_list = getattr(draw_ib_model, "submesh_model_list", [])
-            print("[TRACE] generate_hash_style_texture_ini: DrawIB " + draw_ib + " submesh 数量: " + str(len(submesh_list)))
+            print("M_IniHelper: DrawIB " + draw_ib + " Hash 标记数: "
+                  + str(cls._count_marked_textures(draw_ib_model, mark_type="Hash"))
+                  + "，SubMesh 数: " + str(len(submesh_list)))
 
-            # 添加标记的Hash风格贴图
-            for si, submesh_model in enumerate(submesh_list):
+            for submesh_model in submesh_list:
                 texture_markup_info_list = draw_ib_model.get_submesh_texture_markup_info_list(submesh_model)
-                unique_str = getattr(submesh_model, "unique_str", "<无>")
-                print("[TRACE]   submesh[" + str(si) + "]: unique_str=" + unique_str + ", 贴图数=" + str(len(texture_markup_info_list)))
-
                 if not texture_markup_info_list:
                     continue
-                    
+
                 part_name = draw_ib_model.get_submesh_part_name(submesh_model)
                 submesh_folder_name = getattr(submesh_model, "unique_str", "")
                 if not submesh_folder_name:
                     print("M_IniHelper: 跳过 Hash 贴图处理，未找到 unique_str，Part: " + str(part_name))
                     continue
 
-                hash_deduped_texture_info_dict = WorkSpaceHelper.get_hash_deduped_texture_info_dict(submesh_folder_name=submesh_folder_name)
-                print(
-                    "M_IniHelper: 已读取 Hash 去重信息，unique_str: "
-                    + submesh_folder_name
-                    + "，记录数: "
-                    + str(len(hash_deduped_texture_info_dict))
+                # 读取该 SubMesh 的 Hash 去重信息字典
+                hash_deduped_texture_info_dict = WorkSpaceHelper.get_hash_deduped_texture_info_dict(
+                    submesh_folder_name=submesh_folder_name,
                 )
 
-                for ti, texture_markup_info in enumerate(texture_markup_info_list):
-                    print("[TRACE]     Hash贴图[" + str(ti) + "]: mark_type=" + texture_markup_info.mark_type
-                          + " mark_filename=" + texture_markup_info.mark_filename
-                          + " mark_hash=" + str(getattr(texture_markup_info, "mark_hash", "<无>")))
-
+                for texture_markup_info in texture_markup_info_list:
+                    # ── 类型过滤 —— 仅处理 Hash 类型标记 ──
                     if texture_markup_info.mark_type != "Hash":
-                        print("[TRACE]     跳过: mark_type 不是 Hash (实际=" + texture_markup_info.mark_type + ")")
-                        hash_skipped_non_hash += 1
                         continue
 
-                    texture_output_folder = GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib)
-                    print("M_IniHelper: Hash 贴图输出目录: " + texture_output_folder)
-
+                    # ── 去重检查 —— 同一 Hash 只处理一次 ──
                     if texture_markup_info.mark_hash in repeat_hash_list:
-                        print("[TRACE]     跳过: mark_hash 重复: " + texture_markup_info.mark_hash)
-                        hash_skipped_repeat += 1
                         continue
-                    else:
-                        repeat_hash_list.append(texture_markup_info.mark_hash)
+                    repeat_hash_list.append(texture_markup_info.mark_hash)
 
-                    d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
-                    print("[TRACE]     d3d11_game_type: " + str(d3d11_game_type))
-                    if d3d11_game_type is None:
-                        print("[TRACE]     跳过: d3d11_game_type 为 None!")
-                        hash_skipped_no_source += 1
-                        continue
-
-                    print("[TRACE]     调用 _get_hash_texture_source_path...")
-                    original_texture_file_path = cls._get_hash_texture_source_path(
+                    # ── 查找源贴图文件路径 ──
+                    original_texture_file_path = cls._get_slot_texture_source_path(
                         draw_ib_model=draw_ib_model,
                         part_name=part_name,
                         texture_markup_info=texture_markup_info,
                     )
-                    print("[TRACE]     _get_hash_texture_source_path 返回: '" + original_texture_file_path + "'")
                     if not original_texture_file_path or not os.path.exists(original_texture_file_path):
-                        print("[TRACE]     跳过: 源文件不存在或路径为空: '" + original_texture_file_path + "'")
-                        hash_skipped_no_source += 1
                         continue
 
-                    hash_style_texture_filename = ""
-                    hash_style_texture_filename = hash_style_texture_filename + draw_ib + "_" + draw_ib_model.draw_ib_alias + "_"
+                    # ── 构造输出文件名 ──
+                    #  前缀: "{draw_ib}_{alias}_"
+                    hash_style_texture_filename = draw_ib + "_" + draw_ib_model.draw_ib_alias + "_"
 
-                    deduped_texture_info = hash_deduped_texture_info_dict.get(texture_markup_info.mark_hash,None)
+                    #  查找 Hash 去重信息，优先使用当前 SubMesh 的，失败时查询所有 SubMesh
+                    deduped_texture_info = hash_deduped_texture_info_dict.get(
+                        texture_markup_info.mark_hash, None,
+                    )
                     if deduped_texture_info is None:
-                        deduped_texture_info = cls._get_hash_deduped_texture_info(
-                            draw_ib_model=draw_ib_model,
-                            mark_hash=texture_markup_info.mark_hash,
-                        )
+                        for sm in getattr(draw_ib_model, "submesh_model_list", []):
+                            sm_folder = getattr(sm, "unique_str", "")
+                            if not sm_folder:
+                                continue
+                            sm_deduped_dict = WorkSpaceHelper.get_hash_deduped_texture_info_dict(
+                                submesh_folder_name=sm_folder,
+                            )
+                            deduped_texture_info = sm_deduped_dict.get(
+                                texture_markup_info.mark_hash, None,
+                            )
+                            if deduped_texture_info is not None:
+                                break
 
                     if deduped_texture_info is None:
-                        print(
-                            "M_IniHelper: 未找到 Hash 去重信息，降级使用原始标记文件名继续导出。DrawIB: "
-                            + draw_ib
-                            + "，文件名: "
-                            + texture_markup_info.mark_filename
-                            + "，Hash: "
-                            + texture_markup_info.mark_hash
-                        )
                         hash_style_texture_filename = texture_markup_info.mark_filename
-                        hash_style_texture_filename = cls._get_aliased_texture_output_filename(hash_style_texture_filename, submesh_model)
+                        hash_style_texture_filename = cls._get_aliased_texture_output_filename(
+                            hash_style_texture_filename, submesh_model,
+                        )
                     else:
-                        component_count_list_str = deduped_texture_info.componet_count_list_str
-                        hash_style_texture_filename = hash_style_texture_filename + "_" + component_count_list_str + "_"
-                        hash_style_texture_filename = hash_style_texture_filename + deduped_texture_info.original_hash + "_" + deduped_texture_info.render_hash + "_" + deduped_texture_info.format + "_" + texture_markup_info.mark_name
-                        hash_style_texture_filename = hash_style_texture_filename + "." + texture_markup_info.mark_filename.split(".")[1]
-                    print("[TRACE]     输出文件名: " + hash_style_texture_filename)
+                        hash_style_texture_filename += (
+                            "_" + deduped_texture_info.componet_count_list_str + "_"
+                            + deduped_texture_info.original_hash + "_"
+                            + deduped_texture_info.render_hash + "_"
+                            + deduped_texture_info.format + "_"
+                            + texture_markup_info.mark_name
+                            + "." + texture_markup_info.mark_filename.split(".")[1]
+                        )
 
-                    target_texture_file_path = GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib) + hash_style_texture_filename
-                    print("[TRACE]     目标路径: " + target_texture_file_path)
-                    print("[TRACE]     目标已存在: " + str(os.path.exists(target_texture_file_path)))
+                    # ── 组装目标路径 ──
+                    target_texture_file_path = (
+                        GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib)
+                        + hash_style_texture_filename
+                    )
 
-                    resource_and_textureoverride_texture_section = M_IniSection(M_SectionType.ResourceAndTextureOverride_Texture)
-                    resource_and_textureoverride_texture_section.append("[Resource_Texture_" + texture_markup_info.mark_hash + "]")
-                    resource_and_textureoverride_texture_section.append("filename = Textures/" + hash_style_texture_filename)
-                    resource_and_textureoverride_texture_section.new_line()
+                    # ── 生成 INI 配置段（Resource_Texture + TextureOverride）──
+                    resource_texture_section = M_IniSection(
+                        M_SectionType.ResourceAndTextureOverride_Texture,
+                    )
+                    resource_texture_section.append(
+                        "[Resource_Texture_" + texture_markup_info.mark_hash + "]",
+                    )
+                    resource_texture_section.append(
+                        "filename = Textures/" + hash_style_texture_filename,
+                    )
+                    resource_texture_section.new_line()
+                    resource_texture_section.append(
+                        "[TextureOverride_" + texture_markup_info.mark_hash + "]",
+                    )
+                    resource_texture_section.append(
+                        "; " + texture_markup_info.mark_filename,
+                    )
+                    resource_texture_section.append(
+                        "hash = " + texture_markup_info.mark_hash,
+                    )
+                    resource_texture_section.append("match_priority = 0")
+                    resource_texture_section.append(
+                        "this = Resource_Texture_" + texture_markup_info.mark_hash,
+                    )
+                    resource_texture_section.new_line()
+                    ini_builder.append_section(resource_texture_section)
 
-                    resource_and_textureoverride_texture_section.append("[TextureOverride_" + texture_markup_info.mark_hash + "]")
-                    resource_and_textureoverride_texture_section.append("; " + texture_markup_info.mark_filename)
-                    resource_and_textureoverride_texture_section.append("hash = " + texture_markup_info.mark_hash)
-                    resource_and_textureoverride_texture_section.append("match_priority = 0")
-                    resource_and_textureoverride_texture_section.append("this = Resource_Texture_" + texture_markup_info.mark_hash)
-                    resource_and_textureoverride_texture_section.new_line()
-
-                    ini_builder.append_section(resource_and_textureoverride_texture_section)
-
-                    # copy only if target not exists avoid overwrite texture manually replaced by mod author.
+                    # ── 复制贴图文件（不覆盖已有，保留手动替换）──
                     if not os.path.exists(target_texture_file_path):
-                        print("[TRACE] >>> 执行 shutil.copy2: " + original_texture_file_path + " -> " + target_texture_file_path)
-                        try:
-                            shutil.copy2(original_texture_file_path,target_texture_file_path)
-                            print("[TRACE] <<< shutil.copy2 成功: " + target_texture_file_path)
-                            hash_copied += 1
-                        except Exception as e:
-                            print("[TRACE] <<< shutil.copy2 失败! 异常: " + str(e))
-                    else:
-                        print("[TRACE]     跳过复制: 目标已存在")
-                        hash_skipped_exists += 1
-
-        print("[TRACE] generate_hash_style_texture_ini() 汇总:")
-        print("[TRACE]   Hash 复制成功: " + str(hash_copied))
-        print("[TRACE]   Hash 跳过(目标已存在): " + str(hash_skipped_exists))
-        print("[TRACE]   Hash 跳过(源文件缺失): " + str(hash_skipped_no_source))
-        print("[TRACE]   Hash 跳过(重复hash): " + str(hash_skipped_repeat))
-        print("[TRACE]   Hash 跳过(非Hash类型): " + str(hash_skipped_non_hash))
-        print("=" * 60)
-
-        # if len(repeat_hash_list) != 0:
-        #     texture_ini_builder.save_to_file(MainConfig.path_generate_mod_folder() + MainConfig.workspacename + "_Texture.ini")
+                        shutil.copy2(original_texture_file_path, target_texture_file_path)
 
     @classmethod
     def move_slot_style_textures(cls,draw_ib_model:DrawIBModel):
