@@ -130,14 +130,14 @@ class MaterialCombinerPanel(bpy.types.Panel):
             layout: The layout to draw into.
             scene: The current scene containing property values.
         """
-        layout.prop(scene, "smc_crop", text="裁剪")
-        layout.prop(scene, "smc_pixel_art", text="像素艺术")
-        if globs.is_blender_modern:
-            layout.prop(scene, "smc_include_extra_textures", text="图集PBR贴图")
         uniform_row = layout.row()
         uniform_row.prop(scene, "smc_uniform_size", text="统一贴图尺寸")
         if scene.smc_uniform_size:
             uniform_row.prop(scene, "smc_uniform_size_value", text="")
+        layout.prop(scene, "smc_crop", text="根据UV边界裁剪")
+        layout.prop(scene, "smc_pixel_art", text="禁用抗锯齿缩放")
+        if globs.is_blender_modern:
+            layout.prop(scene, "smc_include_extra_textures", text="图集PBR贴图")
 
     def _add_packing_section(
         self, layout: bpy.types.UILayout, scene: bpy.types.Scene
@@ -148,16 +148,16 @@ class MaterialCombinerPanel(bpy.types.Panel):
             layout: The layout to draw into.
             scene: The current scene containing property values.
         """
-        layout.separator()
+        self._create_property_row(layout, scene, "smc_diffuse_size", "纯色纹理尺寸:")
+        self._create_property_row(layout, scene, "smc_gaps", "纹理间距:")
         layout.prop(scene, "smc_size", text="图集尺寸")
         if scene.smc_size in {"CUST", "STRICTCUST"}:
             size_col = layout.column(align=True)
             size_col.scale_y = 1.2
             size_col.prop(scene, "smc_size_width", text="宽度")
             size_col.prop(scene, "smc_size_height", text="高度")
-        self._create_property_row(layout, scene, "smc_diffuse_size", "纯色纹理尺寸:")
-        self._create_property_row(layout, scene, "smc_gaps", "纹理间距:")
         layout.prop(scene, "smc_packer_type", text="打包算法")
+        layout.prop(scene, "smc_image_format", text="输出格式")
 
     @staticmethod
     def _create_property_row(

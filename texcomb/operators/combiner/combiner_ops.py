@@ -876,13 +876,25 @@ def _save_atlas_with_type(
     Returns:
         Path to the saved atlas image.
     """
-    filename = "{}{}{}.png".format(
+    ext = {
+        "PNG": "png",
+        "TGA": "tga",
+        "TIFF": "tif",
+        "BMP": "bmp",
+    }.get(scn.smc_image_format, "png")
+
+    filename = "{}{}{}.{}".format(
         atlas_prefix,
         "{}_".format(tex_type.title()) if tex_type != "albedo" else "",
         unique_id,
+        ext,
     )
 
     path = os.path.join(scn.smc_save_path, filename)
+    # 确保输出始终为 RGBA 模式，即使源贴图无 Alpha（如 JPG）
+    # 这样输出的图片始终带 Alpha 通道，为后续需要透明度的场景做好准备
+    if atlas.mode != "RGBA":
+        atlas = atlas.convert("RGBA")
     atlas.save(path)
     return path
 

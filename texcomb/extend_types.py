@@ -33,6 +33,7 @@ _SCENE_PROPS = (
     "smc_include_extra_textures",
     "smc_uniform_size",
     "smc_uniform_size_value",
+    "smc_image_format",
 )
 
 _MATERIAL_PROPS = (
@@ -47,6 +48,14 @@ _DEFAULT_ATLAS_SIZE = "QUAD"
 _DEFAULT_DIMENSION = 4096
 _MIN_DIMENSION = 8
 _MAX_DIMENSION = 8192
+_DEFAULT_IMAGE_FORMAT = "PNG"
+
+_IMAGE_FORMAT_ITEMS = [
+    ("PNG", "PNG", "便携网络图形格式，无损，支持 Alpha，通用性最佳", 0),
+    ("TGA", "TGA", "Truevision Targa 格式，无损，支持 Alpha，游戏引擎广泛支持", 1),
+    ("TIFF", "TIFF", "标签图像文件格式，无损，支持 Alpha，适合存档", 2),
+    ("BMP", "BMP", "Windows 位图格式，无损，支持 Alpha，但文件体积较大", 3),
+]
 
 _ATLAS_SIZE_ITEMS = [
     ("PO2", "2的幂", "合并后的图片尺寸取2的幂（如 1024、2048、4096）"),
@@ -162,15 +171,15 @@ def _register_scene_properties() -> None:
     )
 
     bpy.types.Scene.smc_crop = BoolProperty(
-        name="裁剪UV",
+        name="根据UV边界裁剪",
         default=True,
-        description="根据 UV 边界裁剪纹理，去除多余空白区域",
+        description="可去掉多余区域",
     )
 
     bpy.types.Scene.smc_pixel_art = BoolProperty(
-        name="像素艺术模式",
+        name="禁用抗锯齿缩放",
         default=False,
-        description="优化像素风格纹理的设置，禁用抗锯齿缩放",
+        description="适合像素画之类的贴图",
     )
 
     bpy.types.Scene.smc_diffuse_size = IntProperty(
@@ -192,7 +201,7 @@ def _register_scene_properties() -> None:
 
     bpy.types.Scene.smc_include_extra_textures = BoolProperty(
         name="图集PBR贴图",
-        default=True,
+        default=False,
         description="同时生成金属度、粗糙度、高光、法线和自发光贴图的图集",
     )
 
@@ -208,6 +217,13 @@ def _register_scene_properties() -> None:
         max=8192,
         default=1024,
         description="所有小贴图统一缩放到的像素尺寸（宽=高）",
+    )
+
+    bpy.types.Scene.smc_image_format = EnumProperty(
+        name="输出格式",
+        items=_IMAGE_FORMAT_ITEMS,
+        default=_DEFAULT_IMAGE_FORMAT,
+        description="图集输出图片的格式，PNG 支持 Alpha 通道",
     )
 
     bpy.types.Scene.smc_save_path = StringProperty(
