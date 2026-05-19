@@ -269,10 +269,18 @@ class GlobalProterties(bpy.types.PropertyGroup):
 
 
 def register():
-    bpy.utils.register_class(GlobalProterties)
-    bpy.types.Scene.global_properties = bpy.props.PointerProperty(type=GlobalProterties)
+    try:
+        bpy.utils.register_class(GlobalProterties)
+    except ValueError:
+        pass
+    if not hasattr(bpy.types.Scene, "global_properties"):
+        bpy.types.Scene.global_properties = bpy.props.PointerProperty(type=GlobalProterties)
 
 
 def unregister():
-    del bpy.types.Scene.global_properties
-    bpy.utils.unregister_class(GlobalProterties)
+    if hasattr(bpy.types.Scene, "global_properties"):
+        del bpy.types.Scene.global_properties
+    try:
+        bpy.utils.unregister_class(GlobalProterties)
+    except (ValueError, RuntimeError):
+        pass

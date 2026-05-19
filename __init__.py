@@ -24,6 +24,9 @@ from .ui import ui_func_export
 # 自动更新功能
 from . import addon_updater_ops
 
+# 贴图合并工具 (texcomb) - 从另一个插件集成过来的材质合并功能
+from . import texcomb
+
 # 开发时确保同时自动更新 addon_updater_ops
 import importlib
 importlib.reload(addon_updater_ops)
@@ -137,9 +140,14 @@ def register():
     blueprint_node_panel.register()
     blueprint_node_submesh_alias.register()
 
+    # 贴图合并工具 (texcomb)
+    texcomb.register()
 
 
 def unregister():
+    # 贴图合并工具 (texcomb)
+    texcomb.unregister()
+
     # 蓝图系统
     blueprint_node_submesh_alias.unregister()
     blueprint_node_obj.unregister()
