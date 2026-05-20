@@ -370,6 +370,9 @@ class M_IniHelper:
             return
 
         repeat_hash_list: list[str] = []
+        appended_resource_names: set[str] = set()
+        # 缓存: mark_hash → hash_style_filename，跨所有 DrawIB 共享，确保同一 hash 只拷贝一次
+        hash_filename_cache: dict[str, str] = {}
 
         for draw_ib, draw_ib_model in drawib_drawibmodel_dict.items():
             submesh_list = getattr(draw_ib_model, "submesh_model_list", [])
@@ -400,69 +403,74 @@ class M_IniHelper:
                     if texture_markup_info.mark_type != "SharedSlot":
                         continue
 
-                    # ── 去重检查 —— 同一 Hash 只处理一次 ──
-                    if texture_markup_info.mark_hash in repeat_hash_list:
-                        continue
-                    repeat_hash_list.append(texture_markup_info.mark_hash)
-
-                    # ── 查找源贴图文件路径 ──
-                    original_texture_file_path = cls._get_slot_texture_source_path(
-                        draw_ib_model=draw_ib_model,
-                        part_name=part_name,
-                        texture_markup_info=texture_markup_info,
-                    )
-                    if not original_texture_file_path or not os.path.exists(original_texture_file_path):
-                        continue
-
-                    # ── 构造输出文件名（同 Hash 风格）──
-                    hash_style_texture_filename = draw_ib + "_" + draw_ib_model.draw_ib_alias + "_"
-
-                    deduped_texture_info = hash_deduped_texture_info_dict.get(
-                        texture_markup_info.mark_hash, None,
-                    )
-                    if deduped_texture_info is None:
-                        for sm in getattr(draw_ib_model, "submesh_model_list", []):
-                            sm_folder = getattr(sm, "submesh_name", "")
-                            if not sm_folder:
-                                continue
-                            sm_deduped_dict = SSMTWorkSpace.get_hash_deduped_texture_info_dict(
-                                submesh_folder_name=sm_folder,
-                            )
-                            deduped_texture_info = sm_deduped_dict.get(
-                                texture_markup_info.mark_hash, None,
-                            )
-                            if deduped_texture_info is not None:
-                                break
-
-                    if deduped_texture_info is None:
-                        hash_style_texture_filename = texture_markup_info.mark_filename
-                        hash_style_texture_filename = cls._get_aliased_texture_output_filename(
-                            hash_style_texture_filename, submesh_model,
+                    # ── 文件拷贝 + 文件名构造（按 hash 去重）──
+                    hash_style_texture_filename: str | None = hash_filename_cache.get(texture_markup_info.mark_hash)
+                    if hash_style_texture_filename is None:
+                        # 首次遇到该 hash：查找源文件、构造文件名、拷贝
+                        original_texture_file_path = cls._get_slot_texture_source_path(
+                            draw_ib_model=draw_ib_model,
+                            part_name=part_name,
+                            texture_markup_info=texture_markup_info,
                         )
+                        if not original_texture_file_path or not os.path.exists(original_texture_file_path):
+                            continue
+
+                        hash_style_texture_filename = draw_ib + "_" + draw_ib_model.draw_ib_alias + "_"
+
+                        deduped_texture_info = hash_deduped_texture_info_dict.get(
+                            texture_markup_info.mark_hash, None,
+                        )
+                        if deduped_texture_info is None:
+                            for sm in getattr(draw_ib_model, "submesh_model_list", []):
+                                sm_folder = getattr(sm, "submesh_name", "")
+                                if not sm_folder:
+                                    continue
+                                sm_deduped_dict = SSMTWorkSpace.get_hash_deduped_texture_info_dict(
+                                    submesh_folder_name=sm_folder,
+                                )
+                                deduped_texture_info = sm_deduped_dict.get(
+                                    texture_markup_info.mark_hash, None,
+                                )
+                                if deduped_texture_info is not None:
+                                    break
+
+                        if deduped_texture_info is None:
+                            hash_style_texture_filename = texture_markup_info.mark_filename
+                            hash_style_texture_filename = cls._get_aliased_texture_output_filename(
+                                hash_style_texture_filename, submesh_model,
+                            )
+                        else:
+                            hash_style_texture_filename += (
+                                "_" + deduped_texture_info.componet_count_list_str + "_"
+                                + deduped_texture_info.original_hash + "_"
+                                + deduped_texture_info.render_hash + "_"
+                                + deduped_texture_info.format + "_"
+                                + texture_markup_info.mark_name
+                                + "." + texture_markup_info.mark_filename.split(".")[1]
+                            )
+
+                        # ── 拷贝文件（去重）──
+                        target_texture_file_path = (
+                            GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib)
+                            + hash_style_texture_filename
+                        )
+                        if not os.path.exists(target_texture_file_path):
+                            shutil.copy2(original_texture_file_path, target_texture_file_path)
+
+                        hash_filename_cache[texture_markup_info.mark_hash] = hash_style_texture_filename
+                        repeat_hash_list.append(texture_markup_info.mark_hash)
                     else:
-                        hash_style_texture_filename += (
-                            "_" + deduped_texture_info.componet_count_list_str + "_"
-                            + deduped_texture_info.original_hash + "_"
-                            + deduped_texture_info.render_hash + "_"
-                            + deduped_texture_info.format + "_"
-                            + texture_markup_info.mark_name
-                            + "." + texture_markup_info.mark_filename.split(".")[1]
-                        )
+                        # 已处理过的 hash —— 跳过文件拷贝，但仍需写入 Resource 段
+                        pass
 
-                    # ── 组装目标路径并拷贝文件（去重）──
-                    target_texture_file_path = (
-                        GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib)
-                        + hash_style_texture_filename
-                    )
-                    if not os.path.exists(target_texture_file_path):
-                        shutil.copy2(original_texture_file_path, target_texture_file_path)
-
-                    # ── 生成 Slot 风格的 Resource 段 ──
+                    # ── 生成 Slot 风格的 Resource 段（按 resource name 去重）──
                     has_shared_slot = True
                     resource_name = texture_markup_info.get_resource_name()
-                    shared_slot_resource_section.append("[" + resource_name + "]")
-                    shared_slot_resource_section.append("filename = Textures/" + hash_style_texture_filename)
-                    shared_slot_resource_section.new_line()
+                    if resource_name not in appended_resource_names:
+                        appended_resource_names.add(resource_name)
+                        shared_slot_resource_section.append("[" + resource_name + "]")
+                        shared_slot_resource_section.append("filename = Textures/" + hash_style_texture_filename)
+                        shared_slot_resource_section.new_line()
 
             if has_shared_slot:
                 ini_builder.append_section(shared_slot_resource_section)
