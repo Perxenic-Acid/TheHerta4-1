@@ -75,6 +75,10 @@ class ExportEFMI:
             ini_builder=ini_builder,
             drawib_drawibmodel_dict=drawib_drawibmodel_dict,
         )
+        M_IniHelper.generate_shared_slot_style_texture_ini(
+            ini_builder=ini_builder,
+            drawib_drawibmodel_dict=drawib_drawibmodel_dict,
+        )
 
         texture_override_ib_section = M_IniSection(M_SectionType.TextureOverrideIB)
 
@@ -102,7 +106,7 @@ class ExportEFMI:
             if not GlobalProterties.forbid_auto_texture_ini() and drawib_model is not None:
                 texture_markup_info_list = drawib_model.get_submesh_texture_markup_info_list(submesh_model)
                 for texture_markup_info in texture_markup_info_list:
-                    if getattr(texture_markup_info, "mark_type", "") != "Slot":
+                    if getattr(texture_markup_info, "mark_type", "") not in ("Slot", "SharedSlot"):
                         continue
                     texture_override_ib_section.append(texture_markup_info.mark_slot + " = " + texture_markup_info.get_resource_name())
 

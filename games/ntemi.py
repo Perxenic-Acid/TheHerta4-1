@@ -317,6 +317,10 @@ class ExportNTEMI:
                 ini_builder=tex_ini_builder,
                 drawib_drawibmodel_dict=drawib_drawibmodel_dict,
             )
+            M_IniHelper.generate_shared_slot_style_texture_ini(
+                ini_builder=tex_ini_builder,
+                drawib_drawibmodel_dict=drawib_drawibmodel_dict,
+            )
             for section in tex_ini_builder.ini_section_list:
                 for sl in section.SectionLineList:
                     if sl:
@@ -655,7 +659,7 @@ class ExportNTEMI:
                 if not GlobalProterties.forbid_auto_texture_ini():
                     texture_markup_info_list = drawib_model.get_submesh_texture_markup_info_list(submesh_model)
                     for tmi in texture_markup_info_list:
-                        if getattr(tmi, "mark_type", "") != "Slot":
+                        if getattr(tmi, "mark_type", "") not in ("Slot", "SharedSlot"):
                             continue
                         lines.append(f"{tmi.mark_slot} = {tmi.get_resource_name()}")
 

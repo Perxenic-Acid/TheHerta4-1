@@ -83,6 +83,10 @@ class ExportSRMI:
             ini_builder=ini_builder,
             drawib_drawibmodel_dict=drawib_drawibmodel_dict,
         )
+        M_IniHelper.generate_shared_slot_style_texture_ini(
+            ini_builder=ini_builder,
+            drawib_drawibmodel_dict=drawib_drawibmodel_dict,
+        )
         print("ExportSRMI: 宸插畬鎴?Hash 椋庢牸璐村浘閰嶇疆鐢熸垚")
 
         for drawib_model in self.drawib_model_list:
@@ -184,7 +188,7 @@ class ExportSRMI:
                 if not GlobalProterties.forbid_auto_texture_ini():
                     texture_markup_info_list = drawib_model.get_submesh_texture_markup_info_list(submesh_model)
                     for texture_markup_info in texture_markup_info_list:
-                        if getattr(texture_markup_info, "mark_type", "") != "Slot":
+                        if getattr(texture_markup_info, "mark_type", "") not in ("Slot", "SharedSlot"):
                             continue
                         texture_override_ib_section.append(texture_markup_info.mark_slot + " = " + texture_markup_info.get_resource_name())
 

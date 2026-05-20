@@ -57,7 +57,7 @@ class ExportZZMI(ExportUnity):
                 uses_slot_fix = False
 
                 for texture_markup_info in texture_markup_info_list:
-                    if texture_markup_info.mark_type != "Slot":
+                    if texture_markup_info.mark_type not in ("Slot", "SharedSlot"):
                         continue
 
                     slot_fix_resource_name = self.SLOT_FIX_RESOURCE_NAME_DICT.get(texture_markup_info.mark_name)
@@ -92,6 +92,7 @@ class ExportZZMI(ExportUnity):
         drawib_drawibmodel_dict = {drawib_model.draw_ib: drawib_model for drawib_model in self.drawib_model_list}
 
         M_IniHelper.generate_hash_style_texture_ini(ini_builder=ini_builder, drawib_drawibmodel_dict=drawib_drawibmodel_dict)
+        M_IniHelper.generate_shared_slot_style_texture_ini(ini_builder=ini_builder, drawib_drawibmodel_dict=drawib_drawibmodel_dict)
         for drawib_model in self.drawib_model_list:
             self.add_unity_vs_texture_override_vlr_section(ini_builder=ini_builder, drawib_model=drawib_model)
             self.add_unity_vs_texture_override_vb_sections(ini_builder=ini_builder, drawib_model=drawib_model)

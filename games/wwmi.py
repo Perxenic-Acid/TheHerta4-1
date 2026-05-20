@@ -611,7 +611,8 @@ class ExportWWMI:
 
             print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - 寮€濮嬬敓鎴?Hash 璐村浘 INI...")
             M_IniHelper.generate_hash_style_texture_ini(ini_builder=config_ini_builder, drawib_drawibmodel_dict=self.drawib_drawibmodel_dict)
-            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - Hash 璐村浘 INI 鐢熸垚瀹屾垚")
+            M_IniHelper.generate_shared_slot_style_texture_ini(ini_builder=config_ini_builder, drawib_drawibmodel_dict=self.drawib_drawibmodel_dict)
+            print("[TRACE] generate_unreal_vs_config_ini: DrawIB=" + draw_ib + " - Hash/SharedSlot 璐村浘 INI 鐢熸垚瀹屾垚")
             print("=" * 60)
 
             config_ini_builder.save_to_file_not_reorder(os.path.join(GlobalConfig.path_generate_mod_folder(), GlobalConfig.get_workspace_name() + "_" + draw_ib + ".ini"))

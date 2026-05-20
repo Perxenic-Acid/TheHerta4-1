@@ -53,7 +53,7 @@ class ExportYYSLS:
                 texture_markup_info_list = drawib_model.get_submesh_texture_markup_info_list(submesh_model)
                 if texture_markup_info_list:
                     for texture_markup_info in texture_markup_info_list:
-                        if texture_markup_info.mark_type == "Slot":
+                        if texture_markup_info.mark_type in ("Slot", "SharedSlot"):
                             texture_override_ib_section.append(texture_markup_info.mark_slot + " = " + texture_markup_info.get_resource_name())
 
             if not d3d11_game_type.GPU_PreSkinning:
@@ -123,6 +123,7 @@ class ExportYYSLS:
         ini_builder = M_IniBuilder()
         drawib_drawibmodel_dict = {drawib_model.draw_ib: drawib_model for drawib_model in self.drawib_model_list}
         M_IniHelper.generate_hash_style_texture_ini(ini_builder=ini_builder, drawib_drawibmodel_dict=drawib_drawibmodel_dict)
+        M_IniHelper.generate_shared_slot_style_texture_ini(ini_builder=ini_builder, drawib_drawibmodel_dict=drawib_drawibmodel_dict)
         for drawib_model in self.drawib_model_list:
             self.add_unity_vs_texture_override_ib_sections(ini_builder=ini_builder, drawib_model=drawib_model)
             self.add_unity_vs_resource_vb_sections(ini_builder=ini_builder, drawib_model=drawib_model)
