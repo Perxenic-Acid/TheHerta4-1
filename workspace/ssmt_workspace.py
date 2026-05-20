@@ -96,6 +96,52 @@ class SSMTWorkSpace:
         return "", submesh_name
 
     @staticmethod
+    def parse_object_name_to_folder_info(object_name: str):
+        '''
+        解析导入后的物体名称，返回 (lod_name, submesh_folder_name, draw_ib)。
+        物体格式: LOD0.{submesh_folder_name}[.{alias}]
+        例如: "LOD0.3ed2b2ba-2592-76086.身体"
+          → ("LOD0", "3ed2b2ba-2592-76086", "3ed2b2ba")
+        submesh_folder_name 的特征是包含至少 2 个 '-'（即 split('-') 长度 >= 3）。
+        '''
+        lod_name = ""
+        bare_name = ""
+
+        # 1. 去掉 LOD 前缀
+        if object_name and object_name.upper().startswith("LOD") and "." in object_name:
+            dot_idx = object_name.index(".")
+            potential_lod = object_name[:dot_idx]
+            lod_suffix = potential_lod[3:]
+            if lod_suffix.isdigit():
+                lod_name = potential_lod
+                bare_name = object_name[dot_idx + 1:]
+            else:
+                # 没有 LOD 前缀，整体当作 bare_name
+                bare_name = object_name
+        else:
+            bare_name = object_name
+
+        # 2. 从 bare_name 中分离 submesh_folder_name
+        #    bare_name 可能是 "3ed2b2ba-2592-76086.身体" 或 "3ed2b2ba-2592-76086"
+        #    submesh_folder_name 的特征是包含 >= 2 个 '-'
+        parts = bare_name.split(".")
+        submesh_folder_name = ""
+        for i, part in enumerate(parts):
+            if part.count("-") >= 2:
+                submesh_folder_name = part
+                break
+
+        if not submesh_folder_name:
+            # fallback: 如果找不到符合特征的段，说明要么 bare_name 本身既是 folder name
+            # 要么解析失败；直接整体返回，由调用方判断
+            submesh_folder_name = bare_name
+
+        # 3. 提取 DrawIB（第一个 '-' 之前的部分）
+        draw_ib = submesh_folder_name.split("-")[0] if submesh_folder_name else ""
+
+        return lod_name, submesh_folder_name, draw_ib
+
+    @staticmethod
     def get_submesh_folder_path(submesh_name: str) -> str:
         '''
         根据 submesh_name（可带 LOD 前缀）返回工作空间内实际的 submesh 文件夹路径。

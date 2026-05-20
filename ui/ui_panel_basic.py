@@ -78,7 +78,10 @@ class PanelBasicInformation(bpy.types.Panel):
             recalculate_tangent = obj.get("3DMigoto:RecalculateTANGENT", False)
             recalculate_color = obj.get("3DMigoto:RecalculateCOLOR", False)
 
-            layout.label(text=iface_("游戏类型: ") + gametypename)
+            row = layout.row(align=True)
+            row.label(text=iface_("数据类型: ") + gametypename)
+            row.operator("ssmt4.fix_drawib_datatype", text="", icon='TOOL_SETTINGS', emboss=False)
+            row.operator("ssmt4.fix_submesh_datatype", text="", icon='TOOL_SETTINGS', emboss=False)
             layout.label(text=iface_("重计算TANGENT: ") + str(recalculate_tangent))
             layout.label(text=iface_("重计算COLOR: ") + str(recalculate_color))
 

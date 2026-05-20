@@ -3,6 +3,7 @@
 导入模型配置面板
 '''
 import os
+import shutil
 import bpy
 
 # 用于解决 AttributeError: 'IMPORT_MESH_OT_migoto_raw_buffers_mmt' object has no attribute 'filepath'
@@ -273,11 +274,473 @@ class SSMT4ImportRaw(bpy.types.Operator, ImportHelper):
 
         return {'FINISHED'}
 
+# =============================================================================
+# 筛选导入逻辑 — 只导入指定的 submesh 文件夹列表
+# =============================================================================
+def _get_or_create_lod_collection(workspace_collection, lod_name):
+    '''查找或创建 LOD 子集合（重用已有集合，避免重复创建）。'''
+    if lod_name in workspace_collection.children:
+        return workspace_collection.children[lod_name]
+    # 检查 bpy.data.collections 中是否已存在
+    if lod_name in bpy.data.collections:
+        existing = bpy.data.collections[lod_name]
+        # 如果已存在但尚未挂到 workspace 下，则链接
+        if existing.name not in workspace_collection.children:
+            workspace_collection.children.link(existing)
+        return existing
+    lod_collection = CollectionUtils.create_new_collection(
+        collection_name=lod_name,
+        color_tag=CollectionColor.Blue,
+    )
+    workspace_collection.children.link(lod_collection)
+    return lod_collection
+
+
+def _get_or_create_workspace_collection():
+    '''查找或创建工作空间集合（重用已有集合，避免重复创建）。'''
+    workspace_name = GlobalConfig.get_workspace_name()
+    if workspace_name in bpy.data.collections:
+        ws_coll = bpy.data.collections[workspace_name]
+        # 确保链接到 scene
+        if ws_coll.name not in bpy.context.scene.collection.children:
+            bpy.context.scene.collection.children.link(ws_coll)
+        return ws_coll
+    return SSMTWorkSpace.create_and_get_workspace_collection()
+
+
+def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_gametype_name=None):
+    '''
+    仅导入指定的 submesh 列表。
+    submesh_lod_info_list: [(lod_name, submesh_folder_path), ...]
+    例如: [("LOD0", r"D:\SSMTCacheFolder\WorkSpace\GF2\Default\LOD0\3ed2b2ba-2592-76086"), ...]
+    force_gametype_name: 如果指定（如 "CPU_P12_N12_TA16_C16_T4_"），
+      则强制所有 submesh 只尝试该数据类型（用于 DrawIB 统一类型场景）。
+      传入 "__AUTO__" 表示：第一个 submesh 正常尝试所有类型，
+      确定哪个类型可用，后续 submesh 全部使用同一类型。
+    '''
+    workspace_collection = _get_or_create_workspace_collection()
+
+    foldername_gametypename_dict = {}
+    foldername_imported_obj_dict = {}
+    all_submesh_display_names = []
+    successful_import_count = 0
+
+    # 当 force_gametype_name == "__AUTO__" 时，第一个成功后锁定该类型
+    locked_gametype = None
+
+    # 按 LOD 分组
+    lod_submesh_map: dict[str, list[str]] = {}
+    for lod_name, submesh_folder_path in submesh_lod_info_list:
+        if lod_name not in lod_submesh_map:
+            lod_submesh_map[lod_name] = []
+        lod_submesh_map[lod_name].append(submesh_folder_path)
+
+    for lod_name, submesh_folder_paths in lod_submesh_map.items():
+        # 查找或创建 LOD 子集合（复用已有的）
+        lod_collection = _get_or_create_lod_collection(workspace_collection, lod_name)
+
+        lod_folder_path = os.path.join(GlobalConfig.path_workspace_folder(), lod_name)
+        drawib_aliasname_dict = SSMTWorkSpace.get_drawib_aliasname_dict_for_path(lod_folder_path)
+
+        for submesh_folder_path in submesh_folder_paths:
+            submesh_folder_name = os.path.basename(submesh_folder_path)
+            lod_prefixed_name = lod_name + "." + submesh_folder_name
+            print("Re-Import FolderName: " + lod_prefixed_name)
+
+            # 确定要尝试的数据类型文件夹列表
+            if locked_gametype is not None:
+                # 已有锁定类型，只尝试该类型
+                final_import_folder_path_list = [
+                    os.path.join(submesh_folder_path, "TYPE_" + locked_gametype)
+                ]
+            elif force_gametype_name and force_gametype_name != "__AUTO__":
+                final_import_folder_path_list = [
+                    os.path.join(submesh_folder_path, "TYPE_" + force_gametype_name)
+                ]
+            else:
+                final_import_folder_path_list = SSMTWorkSpace.get_ordered_gpu_cpu_import_folderpath_list(submesh_folder_path)
+            print("Re-Import Folder Path List: " + str(final_import_folder_path_list))
+
+            for import_folder_path in final_import_folder_path_list:
+                if not os.path.isdir(import_folder_path):
+                    print(f"数据类型文件夹不存在，跳过: {import_folder_path}")
+                    continue
+                gametype_name = import_folder_path.split("TYPE_")[1]
+
+                try:
+                    print("尝试导入路径: " + import_folder_path)
+                    bare_display_name = SSMTWorkSpace.get_display_submesh_name(
+                        submesh_folder_name,
+                        drawib_aliasname_dict=drawib_aliasname_dict,
+                    )
+                    object_display_name = lod_name + "." + bare_display_name
+
+                    json_file_path = os.path.join(import_folder_path, submesh_folder_name + ".json")
+                    imported_obj = SSMTImportHelper.create_mesh_from_json(
+                        json_file_path=json_file_path,
+                        import_collection=lod_collection,
+                    )
+                    if imported_obj is not None:
+                        imported_obj.name = object_display_name
+                        imported_obj.data.name = imported_obj.name
+                        foldername_imported_obj_dict[lod_prefixed_name] = imported_obj
+                        all_submesh_display_names.append(object_display_name)
+                        successful_import_count += 1
+
+                    foldername_gametypename_dict[lod_prefixed_name] = gametype_name
+                    self.report({'INFO'}, "成功导入 " + lod_prefixed_name + " 的数据类型: " + gametype_name)
+
+                    # 如果是 __AUTO__ 模式且第一次成功，锁定该类型供后续使用
+                    if locked_gametype is None and force_gametype_name == "__AUTO__":
+                        locked_gametype = gametype_name
+                        self.report({'INFO'}, f"DrawIB 统一类型锁定为: {locked_gametype}，后续 submesh 全部使用此类型")
+                except Exception as e:
+                    print(f"Failed to re-import from {import_folder_path}: {e}")
+                    continue
+                break
+
+    if successful_import_count == 0:
+        self.report({'ERROR'}, "所选 submesh 没有成功导入任何模型。")
+        return
+
+    # 更新 Import.json（保留已有记录，覆盖本次导入的）
+    save_import_json_path = os.path.join(GlobalConfig.path_workspace_folder(), "Import.json")
+    existing_import_json = {}
+    if os.path.exists(save_import_json_path):
+        try:
+            existing_import_json = JsonUtils.LoadFromFile(save_import_json_path) or {}
+        except Exception:
+            existing_import_json = {}
+    existing_import_json.update(foldername_gametypename_dict)
+    JsonUtils.SaveToFile(json_dict=existing_import_json, filepath=save_import_json_path)
+
+    CollectionUtils.select_collection_objects(workspace_collection)
+
+    # 生成蓝图
+    _generate_blueprint_for_imported_objects(context, foldername_imported_obj_dict, all_submesh_display_names)
+
+
+def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_dict, all_submesh_display_names):
+    '''更新已存在的蓝图节点（不新建），若没有已有蓝图则跳过。'''
+    tree_name = GlobalConfig.get_workspace_name()
+    if not tree_name:
+        return
+
+    # 查找已有蓝图，不存在则跳过
+    tree = bpy.data.node_groups.get(tree_name)
+    if not tree:
+        print(f"未找到已有蓝图 '{tree_name}'，跳过蓝图更新")
+        return
+    if not BlueprintExportHelper._is_valid_blueprint_tree(tree):
+        print(f"已有节点组 '{tree_name}' 不是有效的 SSMT 蓝图，跳过")
+        return
+
+    try:
+        # 清空所有节点和连接
+        tree.nodes.clear()
+
+        tree.use_fake_user = True
+        BlueprintExportHelper.set_tree_submesh_names(all_submesh_display_names, tree=tree)
+
+        group_node = tree.nodes.new('SSMTNode_Object_Group')
+        group_node.label = "Default Group"
+
+        current_x = 0
+        current_y = 0
+        y_gap = 200
+        count = 0
+        min_y = 0
+
+        for lod_prefixed_name, imported_obj in foldername_imported_obj_dict.items():
+            if imported_obj.type != 'MESH':
+                continue
+
+            _, bare_submesh_name = SSMTWorkSpace.parse_lod_submesh_name(lod_prefixed_name)
+            namesplits = bare_submesh_name.split('-')
+
+            node = tree.nodes.new('SSMTNode_Object_Info')
+            node.location = (current_x, current_y)
+
+            node.object_name = imported_obj.name
+            node.original_object_name = imported_obj.name
+
+            if len(namesplits) >= 2:
+                node.component = namesplits[1]
+            else:
+                node.component = "1"
+
+            node.submesh_name = imported_obj.name
+            node.label = imported_obj.name
+
+            if group_node.inputs[-1].is_linked:
+                group_node.inputs.new('SSMTSocketObject', f"Input {len(group_node.inputs) + 1}")
+
+            tree.links.new(node.outputs[0], group_node.inputs[-1])
+
+            count += 1
+            current_y -= y_gap
+            min_y = min(min_y, current_y)
+
+        final_center_y = min_y / 2 if count <= 5 else -200
+        group_node.location = (current_x + 400, final_center_y)
+
+        output_node = tree.nodes.new('SSMTNode_Result_Output')
+        output_node.location = (current_x + 800, final_center_y)
+        output_node.label = "Generate Mod"
+
+        if len(output_node.inputs) > 0 and len(group_node.outputs) > 0:
+            tree.links.new(group_node.outputs[0], output_node.inputs[0])
+
+        if hasattr(group_node, "update"):
+            group_node.update()
+
+        BlueprintExportHelper.set_runtime_blueprint_tree(tree)
+
+        global_properties = getattr(getattr(context, "scene", None), "global_properties", None)
+        if global_properties:
+            global_properties.selected_blueprint_name = tree.name
+
+        print(f"Blueprint {tree_name} updated with imported objects.")
+    except Exception as e:
+        print(f"Error updating blueprint nodes: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+# =============================================================================
+# 工具函数 — 删除物体
+# =============================================================================
+def _delete_objects(obj_names_to_delete: list[str]):
+    '''删除 Blender 场景中指定名称列表的所有物体。'''
+    for obj_name in obj_names_to_delete:
+        if obj_name in bpy.data.objects:
+            obj = bpy.data.objects[obj_name]
+            # 从所有集合中移除
+            for coll in list(obj.users_collection):
+                coll.objects.unlink(obj)
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+
+def _count_type_folders(submesh_folder_path: str) -> int:
+    '''统计 submesh 文件夹下 TYPE_ 开头的文件夹数量。'''
+    count = 0
+    if not os.path.isdir(submesh_folder_path):
+        return 0
+    for entry in os.scandir(submesh_folder_path):
+        if entry.is_dir() and entry.name.startswith("TYPE_"):
+            count += 1
+    return count
+
+
+def _show_last_type_warning(submesh_folder_name: str):
+    '''弹出警告对话框：该 submesh 只剩下最后一个数据类型，无法删除。'''
+    def draw_popup(self, context):
+        self.layout.label(
+            text=f"Submesh '{submesh_folder_name}' 只剩下最后一个数据类型文件夹，"
+        )
+        self.layout.label(
+            text="无法删除该类型。如果没有正确数据类型，请联系SSMT开发者添加。"
+        )
+    bpy.context.window_manager.popup_menu(draw_popup, title="警告", icon='ERROR')
+
+
+# =============================================================================
+# Operator — 该DrawIB数据类型不正确
+# =============================================================================
+class SSMT4FixDrawIBDataType(bpy.types.Operator):
+    bl_idname = "ssmt4.fix_drawib_datatype"
+    bl_label = "修复DrawIB数据类型"
+    bl_description = "该DrawIB数据类型不正确：删除该DrawIB下所有对应数据类型的文件夹，删除相关Mesh，并重新导入"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        selected_objects = context.selected_objects
+        if not selected_objects:
+            self.report({'ERROR'}, "请先选中一个或多个物体")
+            return {'CANCELLED'}
+
+        from ..workspace.ssmt_workspace import SSMTWorkSpace
+
+        workspace_folder = GlobalConfig.path_workspace_folder()
+        if not workspace_folder or not os.path.exists(workspace_folder):
+            self.report({'ERROR'}, "工作空间文件夹不存在，请先设置工作空间")
+            return {'CANCELLED'}
+
+        # 1. 解析每个选中物体，收集 {lod_name: set_of_drawib}
+        lod_drawib_set: dict[str, set[str]] = {}
+        # 同时记录要删除的物体名称
+        all_obj_info = []  # [(obj_name, lod_name, submesh_folder_name, draw_ib)]
+        for obj in selected_objects:
+            gametypename = obj.get("3DMigoto:GameTypeName", "")
+            if not gametypename:
+                self.report({'WARNING'}, f"物体 '{obj.name}' 没有数据类型属性，已跳过")
+                continue
+
+            lod_name, submesh_folder_name, draw_ib = SSMTWorkSpace.parse_object_name_to_folder_info(obj.name)
+            if not submesh_folder_name or not draw_ib:
+                self.report({'WARNING'}, f"无法解析物体 '{obj.name}' 的名称，已跳过")
+                continue
+
+            all_obj_info.append((obj.name, lod_name, submesh_folder_name, draw_ib, gametypename))
+            if lod_name not in lod_drawib_set:
+                lod_drawib_set[lod_name] = set()
+            lod_drawib_set[lod_name].add(draw_ib)
+
+        if not all_obj_info:
+            self.report({'ERROR'}, "未能从选中物体中解析出任何有效信息")
+            return {'CANCELLED'}
+
+        # 2. 收集需要操作的 DrawIB 范围：每个 LOD 下所有以 draw_ib 开头的 submesh 文件夹
+        submesh_to_reimport: list[tuple[str, str]] = []  # [(lod_name, submesh_folder_path)]
+        all_obj_to_delete: list[str] = []
+
+        for lod_name, draw_ib_set in lod_drawib_set.items():
+            lod_folder_path = os.path.join(workspace_folder, lod_name)
+            if not os.path.isdir(lod_folder_path):
+                self.report({'WARNING'}, f"LOD 目录不存在: {lod_folder_path}")
+                continue
+
+            # 找到该 LOD 下所有以该 DrawIB 开头的文件夹
+            for entry in os.scandir(lod_folder_path):
+                if not entry.is_dir():
+                    continue
+                folder_draw_ib = entry.name.split("-")[0]
+                if folder_draw_ib in draw_ib_set:
+                    # 该文件夹属于要处理的 DrawIB
+                    submesh_folder_path = entry.path
+                    submesh_to_reimport.append((lod_name, submesh_folder_path))
+
+                    # 删除对应的 TYPE_{gametypename} 文件夹
+                    for obj_name, o_lod, o_submesh, o_draw_ib, gametypename in all_obj_info:
+                        if o_lod == lod_name and o_draw_ib == folder_draw_ib:
+                            type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
+                            if os.path.exists(type_folder_path):
+                                # 检查是否只剩最后一个数据类型文件夹
+                                if _count_type_folders(submesh_folder_path) <= 1:
+                                    _show_last_type_warning(submesh_folder_name=entry.name)
+                                    self.report({'WARNING'}, f"Submesh '{entry.name}' 只剩下最后一个数据类型，跳过删除")
+                                    # 从重导入列表中移除该 submesh
+                                    submesh_to_reimport = [
+                                        (ln, fp) for ln, fp in submesh_to_reimport
+                                        if not (ln == lod_name and fp == submesh_folder_path)
+                                    ]
+                                    continue
+                                shutil.rmtree(type_folder_path)
+                                self.report({'INFO'}, f"已删除数据类型文件夹: {type_folder_path}")
+
+        # 3. 收集需要删除的物体名称（当前工作空间集合中所有属于该 DrawIB 的物体）
+        workspace_collection_name = GlobalConfig.get_workspace_name()
+        if workspace_collection_name in bpy.data.collections:
+            ws_coll = bpy.data.collections[workspace_collection_name]
+            for obj in ws_coll.all_objects:
+                if obj.type != 'MESH':
+                    continue
+                _, _, obj_draw_ib = SSMTWorkSpace.parse_object_name_to_folder_info(obj.name)
+                for _, draw_ib_set in lod_drawib_set.items():
+                    if obj_draw_ib in draw_ib_set:
+                        all_obj_to_delete.append(obj.name)
+                        break
+
+        # 去重
+        all_obj_to_delete = list(dict.fromkeys(all_obj_to_delete))
+        submesh_to_reimport = list(dict.fromkeys(submesh_to_reimport))
+
+        # 4. 删除物体
+        if all_obj_to_delete:
+            _delete_objects(all_obj_to_delete)
+            self.report({'INFO'}, f"已删除 {len(all_obj_to_delete)} 个物体")
+
+        # 5. 重新导入（DrawIB 模式：自动统一类型，所有 submesh 使用同一数据类型）
+        if submesh_to_reimport:
+            ImprotFromWorkSpaceSelected(self, context, submesh_to_reimport, force_gametype_name="__AUTO__")
+            self.report({'INFO'}, f"已重新导入 {len(submesh_to_reimport)} 个 submesh（DrawIB 统一类型）")
+        else:
+            self.report({'WARNING'}, "没有找到需要重新导入的 submesh")
+
+        return {'FINISHED'}
+
+
+# =============================================================================
+# Operator — 该Submesh数据类型不正确
+# =============================================================================
+class SSMT4FixSubmeshDataType(bpy.types.Operator):
+    bl_idname = "ssmt4.fix_submesh_datatype"
+    bl_label = "修复Submesh数据类型"
+    bl_description = "该Submesh数据类型不正确：删除对应数据类型的文件夹，删除该Mesh，并重新导入"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        selected_objects = context.selected_objects
+        if not selected_objects:
+            self.report({'ERROR'}, "请先选中一个或多个物体")
+            return {'CANCELLED'}
+
+        from ..workspace.ssmt_workspace import SSMTWorkSpace
+
+        workspace_folder = GlobalConfig.path_workspace_folder()
+        if not workspace_folder or not os.path.exists(workspace_folder):
+            self.report({'ERROR'}, "工作空间文件夹不存在，请先设置工作空间")
+            return {'CANCELLED'}
+
+        # 1. 解析每个选中物体
+        submesh_to_reimport: list[tuple[str, str]] = []
+        obj_names_to_delete: list[str] = []
+
+        for obj in selected_objects:
+            gametypename = obj.get("3DMigoto:GameTypeName", "")
+            if not gametypename:
+                self.report({'WARNING'}, f"物体 '{obj.name}' 没有数据类型属性，已跳过")
+                continue
+
+            lod_name, submesh_folder_name, _ = SSMTWorkSpace.parse_object_name_to_folder_info(obj.name)
+            if not submesh_folder_name:
+                self.report({'WARNING'}, f"无法解析物体 '{obj.name}' 的名称，已跳过")
+                continue
+
+            # 2. 删除对应的 TYPE_{gametypename} 文件夹
+            submesh_folder_path = os.path.join(workspace_folder, lod_name, submesh_folder_name)
+            if os.path.exists(submesh_folder_path):
+                type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
+                if os.path.exists(type_folder_path):
+                    # 检查是否只剩最后一个数据类型文件夹
+                    if _count_type_folders(submesh_folder_path) <= 1:
+                        _show_last_type_warning(submesh_folder_name=submesh_folder_name)
+                        self.report({'WARNING'}, f"Submesh '{submesh_folder_name}' 只剩下最后一个数据类型，跳过删除")
+                        continue
+                    shutil.rmtree(type_folder_path)
+                    self.report({'INFO'}, f"已删除数据类型文件夹: {type_folder_path}")
+
+                submesh_to_reimport.append((lod_name, submesh_folder_path))
+            else:
+                self.report({'WARNING'}, f"submesh 文件夹不存在: {submesh_folder_path}")
+
+            obj_names_to_delete.append(obj.name)
+
+        if not submesh_to_reimport:
+            self.report({'ERROR'}, "没有找到需要处理的 submesh")
+            return {'CANCELLED'}
+
+        # 3. 删除物体
+        if obj_names_to_delete:
+            _delete_objects(obj_names_to_delete)
+            self.report({'INFO'}, f"已删除 {len(obj_names_to_delete)} 个物体")
+
+        # 4. 重新导入
+        ImprotFromWorkSpaceSelected(self, context, submesh_to_reimport)
+        self.report({'INFO'}, f"已重新导入 {len(submesh_to_reimport)} 个 submesh")
+
+        return {'FINISHED'}
+
+
 def register():
     bpy.utils.register_class(SSMT4ImportRaw)
     bpy.utils.register_class(SSMT4ImportAllFromCurrentWorkSpaceBlueprint)
+    bpy.utils.register_class(SSMT4FixDrawIBDataType)
+    bpy.utils.register_class(SSMT4FixSubmeshDataType)
 
 
 def unregister():
     bpy.utils.unregister_class(SSMT4ImportRaw)
     bpy.utils.unregister_class(SSMT4ImportAllFromCurrentWorkSpaceBlueprint)
+    bpy.utils.unregister_class(SSMT4FixDrawIBDataType)
+    bpy.utils.unregister_class(SSMT4FixSubmeshDataType)
