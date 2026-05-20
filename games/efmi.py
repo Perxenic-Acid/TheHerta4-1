@@ -89,8 +89,8 @@ class ExportEFMI:
             
             texture_override_ib_section.append("[TextureOverride_" + drawib_model.get_submesh_texture_override_suffix(submesh_model) + "]")
             texture_override_ib_section.append("hash = " + submesh_model.match_draw_ib)
-            texture_override_ib_section.append("match_first_index = " + submesh_model.match_first_index)
-            texture_override_ib_section.append("match_index_count = " + submesh_model.match_index_count)
+            texture_override_ib_section.append("match_first_index = " + str(submesh_model.match_first_index))
+            texture_override_ib_section.append("match_index_count = " + str(submesh_model.match_index_count))
             texture_override_ib_section.append("handling = skip")
 
             texture_override_ib_section.append("run = CommandList\\EFMIv1\\OverrideTextures")
