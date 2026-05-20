@@ -590,45 +590,46 @@ class SSMT4FixDrawIBDataType(bpy.types.Operator):
             self.report({'ERROR'}, "未能从选中物体中解析出任何有效信息")
             return {'CANCELLED'}
 
-        # 2. 收集需要操作的 DrawIB 范围：每个 LOD 下所有以 draw_ib 开头的 submesh 文件夹
-        submesh_to_reimport: list[tuple[str, str]] = []  # [(lod_name, submesh_folder_path)]
-        all_obj_to_delete: list[str] = []
-
+        # 2. 预检：收集该 DrawIB 下所有 submesh 文件夹
+        all_submesh_entries: list[tuple[str, str, str]] = []  # [(lod_name, submesh_folder_name, submesh_folder_path)]
         for lod_name, draw_ib_set in lod_drawib_set.items():
             lod_folder_path = os.path.join(workspace_folder, lod_name)
             if not os.path.isdir(lod_folder_path):
                 self.report({'WARNING'}, f"LOD 目录不存在: {lod_folder_path}")
                 continue
-
-            # 找到该 LOD 下所有以该 DrawIB 开头的文件夹
             for entry in os.scandir(lod_folder_path):
                 if not entry.is_dir():
                     continue
                 folder_draw_ib = entry.name.split("-")[0]
                 if folder_draw_ib in draw_ib_set:
-                    # 该文件夹属于要处理的 DrawIB
-                    submesh_folder_path = entry.path
-                    submesh_to_reimport.append((lod_name, submesh_folder_path))
+                    all_submesh_entries.append((lod_name, entry.name, entry.path))
 
-                    # 删除对应的 TYPE_{gametypename} 文件夹
-                    for obj_name, o_lod, o_submesh, o_draw_ib, gametypename in all_obj_info:
-                        if o_lod == lod_name and o_draw_ib == folder_draw_ib:
-                            type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
-                            if os.path.exists(type_folder_path):
-                                # 检查是否只剩最后一个数据类型文件夹
-                                if _count_type_folders(submesh_folder_path) <= 1:
-                                    _show_last_type_warning(submesh_folder_name=entry.name)
-                                    self.report({'WARNING'}, f"Submesh '{entry.name}' 只剩下最后一个数据类型，跳过删除")
-                                    # 从重导入列表中移除该 submesh
-                                    submesh_to_reimport = [
-                                        (ln, fp) for ln, fp in submesh_to_reimport
-                                        if not (ln == lod_name and fp == submesh_folder_path)
-                                    ]
-                                    continue
-                                shutil.rmtree(type_folder_path)
-                                self.report({'INFO'}, f"已删除数据类型文件夹: {type_folder_path}")
+        if not all_submesh_entries:
+            self.report({'ERROR'}, "没有找到对应的 submesh 文件夹")
+            return {'CANCELLED'}
 
-        # 3. 收集需要删除的物体名称（当前工作空间集合中所有属于该 DrawIB 的物体）
+        # 3. 预检：检查是否有 submesh 只剩最后一个数据类型
+        for lod_name, submesh_folder_name, submesh_folder_path in all_submesh_entries:
+            for _, o_lod, o_submesh, o_draw_ib, gametypename in all_obj_info:
+                type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
+                if os.path.exists(type_folder_path) and _count_type_folders(submesh_folder_path) <= 1:
+                    _show_last_type_warning(submesh_folder_name=submesh_folder_name)
+                    self.report({'WARNING'}, f"Submesh '{submesh_folder_name}' 只剩下最后一个数据类型，已中止操作")
+                    return {'CANCELLED'}
+
+        # 4. 执行删除：删除 TYPE 文件夹
+        for lod_name, submesh_folder_name, submesh_folder_path in all_submesh_entries:
+            for _, o_lod, o_submesh, o_draw_ib, gametypename in all_obj_info:
+                if o_lod != lod_name:
+                    continue
+                type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
+                if os.path.exists(type_folder_path):
+                    shutil.rmtree(type_folder_path)
+                    self.report({'INFO'}, f"已删除数据类型文件夹: {type_folder_path}")
+
+        # 5. 收集需要删除的物体名称（当前工作空间集合中所有属于该 DrawIB 的物体）
+        submesh_to_reimport = [(ln, fp) for ln, _, fp in all_submesh_entries]
+        all_obj_to_delete: list[str] = []
         workspace_collection_name = GlobalConfig.get_workspace_name()
         if workspace_collection_name in bpy.data.collections:
             ws_coll = bpy.data.collections[workspace_collection_name]
@@ -645,7 +646,7 @@ class SSMT4FixDrawIBDataType(bpy.types.Operator):
         all_obj_to_delete = list(dict.fromkeys(all_obj_to_delete))
         submesh_to_reimport = list(dict.fromkeys(submesh_to_reimport))
 
-        # 4. 删除物体
+        # 6. 删除物体
         if all_obj_to_delete:
             _delete_objects(all_obj_to_delete)
             self.report({'INFO'}, f"已删除 {len(all_obj_to_delete)} 个物体")
@@ -682,9 +683,8 @@ class SSMT4FixSubmeshDataType(bpy.types.Operator):
             self.report({'ERROR'}, "工作空间文件夹不存在，请先设置工作空间")
             return {'CANCELLED'}
 
-        # 1. 解析每个选中物体
-        submesh_to_reimport: list[tuple[str, str]] = []
-        obj_names_to_delete: list[str] = []
+        # 1. 解析每个选中物体，并预检
+        submesh_entries: list[tuple[str, str, str, str]] = []  # [(obj_name, lod_name, submesh_folder_path, gametypename)]
 
         for obj in selected_objects:
             gametypename = obj.get("3DMigoto:GameTypeName", "")
@@ -697,30 +697,40 @@ class SSMT4FixSubmeshDataType(bpy.types.Operator):
                 self.report({'WARNING'}, f"无法解析物体 '{obj.name}' 的名称，已跳过")
                 continue
 
-            # 2. 删除对应的 TYPE_{gametypename} 文件夹
             submesh_folder_path = os.path.join(workspace_folder, lod_name, submesh_folder_name)
-            if os.path.exists(submesh_folder_path):
-                type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
-                if os.path.exists(type_folder_path):
-                    # 检查是否只剩最后一个数据类型文件夹
-                    if _count_type_folders(submesh_folder_path) <= 1:
-                        _show_last_type_warning(submesh_folder_name=submesh_folder_name)
-                        self.report({'WARNING'}, f"Submesh '{submesh_folder_name}' 只剩下最后一个数据类型，跳过删除")
-                        continue
-                    shutil.rmtree(type_folder_path)
-                    self.report({'INFO'}, f"已删除数据类型文件夹: {type_folder_path}")
+            submesh_entries.append((obj.name, lod_name, submesh_folder_path, gametypename))
 
-                submesh_to_reimport.append((lod_name, submesh_folder_path))
-            else:
-                self.report({'WARNING'}, f"submesh 文件夹不存在: {submesh_folder_path}")
+        if not submesh_entries:
+            self.report({'ERROR'}, "未能从选中物体中解析出任何有效信息")
+            return {'CANCELLED'}
 
+        # 2. 预检：检查是否有 submesh 只剩最后一个数据类型
+        for obj_name, lod_name, submesh_folder_path, gametypename in submesh_entries:
+            type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
+            if os.path.exists(type_folder_path) and _count_type_folders(submesh_folder_path) <= 1:
+                submesh_folder_name = os.path.basename(submesh_folder_path)
+                _show_last_type_warning(submesh_folder_name=submesh_folder_name)
+                self.report({'WARNING'}, f"Submesh '{submesh_folder_name}' 只剩下最后一个数据类型，已中止操作")
+                return {'CANCELLED'}
+
+        # 3. 执行删除：删除 TYPE 文件夹
+        submesh_to_reimport: list[tuple[str, str]] = []
+        obj_names_to_delete: list[str] = []
+
+        for obj_name, lod_name, submesh_folder_path, gametypename in submesh_entries:
+            type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
+            if os.path.exists(type_folder_path):
+                shutil.rmtree(type_folder_path)
+                self.report({'INFO'}, f"已删除数据类型文件夹: {type_folder_path}")
+
+            submesh_to_reimport.append((lod_name, submesh_folder_path))
             obj_names_to_delete.append(obj.name)
 
         if not submesh_to_reimport:
             self.report({'ERROR'}, "没有找到需要处理的 submesh")
             return {'CANCELLED'}
 
-        # 3. 删除物体
+        # 4. 删除物体
         if obj_names_to_delete:
             _delete_objects(obj_names_to_delete)
             self.report({'INFO'}, f"已删除 {len(obj_names_to_delete)} 个物体")

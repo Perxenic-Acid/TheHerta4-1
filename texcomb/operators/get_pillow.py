@@ -133,7 +133,7 @@ class InstallPIL(bpy.types.Operator):
             )
 
             process = subprocess.run(
-                [python_executable, get_pip, "--user", "--force-reinstall"],
+                [python_executable, get_pip, "--force-reinstall"],
                 capture_output=True,
                 text=True,
                 shell=True,
@@ -165,13 +165,13 @@ class InstallPIL(bpy.types.Operator):
             from pip import _internal
 
             deps_result = _internal.main(
-                ["install", "pip", "setuptools", "wheel", "-U", "--user"]
+                ["install", "pip", "setuptools", "wheel", "-U"]
             )
             if deps_result != 0:
                 self.report({"ERROR"}, "更新 pip 依赖失败")
                 return False
 
-            pillow_result = _internal.main(["install", "Pillow", "--user"])
+            pillow_result = _internal.main(["install", "Pillow"])
             if pillow_result != 0:
                 self.report({"ERROR"}, "Pillow 安装失败")
                 return False
