@@ -277,6 +277,73 @@ class SplitMeshByCommonVertexGroup(bpy.types.Operator):
     
 
 
+class SplitMeshByEachVertexGroup(bpy.types.Operator):
+    bl_idname = "object.split_mesh_by_each_vertex_group"
+    bl_label = "按顶点组分割模型"
+    bl_description = "把当前选中的obj按每个顶点组分割为独立网格，保留所有属性（UV、权重、颜色、法线、形态键等），结果放入'{obj名}_Split'集合"
+
+    def execute(self, context):
+        if len(bpy.context.selected_objects) == 0:
+            self.report({'ERROR'}, "没有选中的对象！")
+            return {'CANCELLED'}
+        obj = bpy.context.selected_objects[0]
+        if obj.type != 'MESH':
+            self.report({'ERROR'}, "选中的对象不是网格！")
+            return {'CANCELLED'}
+        try:
+            collection = VertexGroupUtils.split_mesh_by_each_vertex_group(obj)
+            self.report({'INFO'}, f"已按顶点组拆分为独立网格，共 {len(collection.objects)} 个物体")
+        except Exception as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+
+class SplitMeshByEachVertexGroupCluster(bpy.types.Operator):
+    bl_idname = "object.split_mesh_by_each_vertex_group_cluster"
+    bl_label = "根据松散块儿分割并聚类"
+    bl_description = "按松散块儿分割后，将 VG 集合近似（Jaccard 相似度）且空间邻接的松散块儿合并为一个部位，结果放入'{obj名}_SplitCluster'集合"
+
+    vg_similarity_threshold: bpy.props.FloatProperty(
+        name="VG 相似度阈值",
+        description="Jaccard 相似度（交集/并集），两个松散块儿的 VG 集合相似度 >= 此值且空间邻接时合并",
+        default=0.7,
+        min=0.1,
+        max=1.0,
+    ) # type: ignore
+
+    bbox_distance_threshold: bpy.props.FloatProperty(
+        name="包围盒距离阈值",
+        description="两个松散块儿的包围盒距离 <= 此值时视为空间邻接",
+        default=0.01,
+        min=0.0001,
+        soft_max=1.0,
+    ) # type: ignore
+
+    def execute(self, context):
+        if len(bpy.context.selected_objects) == 0:
+            self.report({'ERROR'}, "没有选中的对象！")
+            return {'CANCELLED'}
+        obj = bpy.context.selected_objects[0]
+        if obj.type != 'MESH':
+            self.report({'ERROR'}, "选中的对象不是网格！")
+            return {'CANCELLED'}
+        try:
+            collection = VertexGroupUtils.split_by_loose_parts_and_cluster(
+                obj,
+                vg_similarity_threshold=self.vg_similarity_threshold,
+                bbox_distance_threshold=self.bbox_distance_threshold,
+            )
+            self.report({'INFO'}, f"已根据松散块儿分割并聚类，共 {len(collection.objects)} 个物体")
+        except Exception as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+
 class MMTResetRotation(bpy.types.Operator):
     bl_idname = "object.mmt_reset_rotation"
     bl_label = "重置模型x,y,z的旋转角度为0"
@@ -655,7 +722,8 @@ class PanelModelProcess(bpy.types.Panel):
         layout.operator(ModelSplitByLoosePart.bl_idname)
         layout.operator(SplitMeshByCommonVertexGroup.bl_idname)
         layout.operator(ModelSplitByVertexGroup.bl_idname)
-
+        layout.operator(SplitMeshByEachVertexGroup.bl_idname)
+        layout.operator(SplitMeshByEachVertexGroupCluster.bl_idname)
 
 
 
@@ -679,6 +747,8 @@ class CatterRightClickMenu(bpy.types.Menu):
         layout.operator(ModelSplitByLoosePart.bl_idname)
         layout.operator(SplitMeshByCommonVertexGroup.bl_idname)
         layout.operator(ModelSplitByVertexGroup.bl_idname)
+        layout.operator(SplitMeshByEachVertexGroup.bl_idname)
+        layout.operator(SplitMeshByEachVertexGroupCluster.bl_idname)
         layout.separator()
 
         layout.operator(RemoveAllVertexGroupOperator.bl_idname)
@@ -721,6 +791,8 @@ def register():
     bpy.utils.register_class(MMTResetRotation)
     bpy.utils.register_class(CatterRightClickMenu)
     bpy.utils.register_class(SplitMeshByCommonVertexGroup)
+    bpy.utils.register_class(SplitMeshByEachVertexGroup)
+    bpy.utils.register_class(SplitMeshByEachVertexGroupCluster)
     bpy.utils.register_class(RecalculateTANGENTWithVectorNormalizedNormal)
     bpy.utils.register_class(RecalculateCOLORWithVectorNormalizedNormal)
     bpy.utils.register_class(WWMI_ApplyModifierForObjectWithShapeKeysOperator)
@@ -771,6 +843,8 @@ def unregister():
     bpy.utils.unregister_class(WWMI_ApplyModifierForObjectWithShapeKeysOperator)
     bpy.utils.unregister_class(RecalculateCOLORWithVectorNormalizedNormal)
     bpy.utils.unregister_class(RecalculateTANGENTWithVectorNormalizedNormal)
+    bpy.utils.unregister_class(SplitMeshByEachVertexGroup)
+    bpy.utils.unregister_class(SplitMeshByEachVertexGroupCluster)
     bpy.utils.unregister_class(SplitMeshByCommonVertexGroup)
     bpy.utils.unregister_class(CatterRightClickMenu)
     bpy.utils.unregister_class(MMTResetRotation)

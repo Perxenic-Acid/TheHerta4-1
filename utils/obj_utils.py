@@ -562,6 +562,16 @@ class ObjUtils:
         # 清理：取消副本的选择状态，以防影响后续操作
         obj_copy.select_set(False)
 
+        # 分离后清理多出来的 Basis.001（形态键复制时 Blender 可能自动创建重复的 Basis）
+        for coll_obj in new_collection.objects:
+            if coll_obj.type == 'MESH' and coll_obj.data.shape_keys:
+                sk_to_remove = []
+                for sk in coll_obj.data.shape_keys.key_blocks:
+                    if sk.name != 'Basis' and sk.name.startswith('Basis'):
+                        sk_to_remove.append(sk.name)
+                for sk_name in sk_to_remove:
+                    coll_obj.shape_key_remove(coll_obj.data.shape_keys.key_blocks[sk_name])
+
     @classmethod
     def merge_objects(cls,obj_list, target_collection=None):
         """

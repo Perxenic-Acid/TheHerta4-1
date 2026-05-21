@@ -6,6 +6,7 @@ import math
 from mathutils import Vector,Matrix
 
 from .format_utils import Fatal
+from .obj_utils import ObjUtils
 
 
 class VertexGroupUtils:
@@ -317,7 +318,291 @@ class VertexGroupUtils:
         for i in range(1, len(real_keys) + 1):
             bpy.data.objects['{}.{:03d}'.format(origin_name, i)].name = '{}.{}'.format(
                 origin_name, real_keys[i - 1])
-            
+
+    @classmethod
+    def split_mesh_by_each_vertex_group(cls, obj: bpy.types.Object):
+        """
+        将指定物体按每个顶点组拆分为独立的网格。
+        每个顶点组用到的所有顶点组成一个新的mesh，保留所有属性（UV、权重、颜色、法线、形态键等）。
+        结果放入名为 '{obj.name}_Split' 的新集合。
+        """
+        origin_name = obj.name
+        collection_name = f"{origin_name}_Split"
+
+        # 创建目标集合
+        new_collection = bpy.data.collections.new(collection_name)
+        bpy.context.scene.collection.children.link(new_collection)
+
+        # 统计每个顶点组的顶点数，跳过空组
+        vg_vert_count: dict[str, int] = {}
+        for vg in obj.vertex_groups:
+            count = 0
+            for v in obj.data.vertices:
+                for g in v.groups:
+                    if g.group == vg.index and g.weight > 0:
+                        count += 1
+                        break
+            if count > 0:
+                vg_vert_count[vg.name] = count
+
+        if not vg_vert_count:
+            raise Fatal(f"物体 '{origin_name}' 没有非空的顶点组")
+
+        # 保存用户上下文
+        original_active = bpy.context.view_layer.objects.active
+        original_selected = [o for o in bpy.context.selected_objects]
+
+        for vg_name in vg_vert_count:
+            # 复制完整对象（网格数据独立拷贝）
+            new_obj = obj.copy()
+            new_obj.data = obj.data.copy()
+            new_obj.name = f"{origin_name}_{vg_name}"
+            new_collection.objects.link(new_obj)
+
+            # 选中副本并激活
+            bpy.ops.object.select_all(action='DESELECT')
+            new_obj.select_set(True)
+            bpy.context.view_layer.objects.active = new_obj
+
+            # 进入编辑模式
+            bpy.ops.object.mode_set(mode='EDIT')
+
+            # 选择当前顶点组中的顶点
+            bpy.ops.mesh.select_all(action='DESELECT')
+            bpy.ops.object.vertex_group_set_active(group=vg_name)
+            bpy.ops.object.vertex_group_select()
+
+            # 反选 → 删除不属于当前顶点组的顶点
+            bpy.ops.mesh.select_all(action='INVERT')
+            bpy.ops.mesh.delete(type='VERT')
+
+            # 回到对象模式
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+            # 清理无用的顶点组（所有顶点都被删光的组）
+            used_groups = set()
+            for v in new_obj.data.vertices:
+                for g in v.groups:
+                    used_groups.add(g.group)
+            for vg in reversed(new_obj.vertex_groups):
+                if vg.index not in used_groups:
+                    new_obj.vertex_groups.remove(vg)
+
+        # 恢复用户上下文
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in original_selected:
+            try:
+                o.select_set(True)
+            except ReferenceError:
+                pass
+        if original_active:
+            try:
+                bpy.context.view_layer.objects.active = original_active
+            except ReferenceError:
+                pass
+
+        return new_collection
+
+    @classmethod
+    def split_by_loose_parts_and_cluster(cls, obj: bpy.types.Object, vg_similarity_threshold: float = 0.7, bbox_distance_threshold: float = 0.01):
+        """
+        1. 按松散块儿分割物体
+        2. 对松散块儿聚类：VG 集合近似（Jaccard 相似度 >= threshold）
+           且空间邻接（质心距离 <= bbox_distance_threshold）的松散块儿合并为一个部位。
+        结果放入 '{obj.name}_SplitCluster' 集合。
+        """
+        import math
+        from mathutils import Vector
+
+        origin_name = obj.name
+        collection_name = f"{origin_name}_SplitCluster"
+
+        # 预计算：原始物体每个顶点所属的 VG 名称集合（避免后续重复遍历）
+        vert_vg_names: list[set[str]] = [set() for _ in range(len(obj.data.vertices))]
+        for v in obj.data.vertices:
+            names = vert_vg_names[v.index]
+            for g in v.groups:
+                if g.weight > 0:
+                    names.add(obj.vertex_groups[g.group].name)
+
+        # Step 1: 按松散块儿分割
+        ObjUtils.split_obj_by_loose_parts_to_collection(obj=obj, collection_name=collection_name)
+        new_collection = bpy.data.collections.get(collection_name)
+        if not new_collection:
+            return None
+
+        loose_objects = [o for o in new_collection.objects if o.type == 'MESH']
+        if len(loose_objects) <= 1:
+            return new_collection
+
+        # Step 2: 用预计算的 vert_vg_names 快速获取每个松散块儿的 VG 集合（不修改物体）
+        obj_vg_sets: dict[str, set[str]] = {}
+        for lobj in loose_objects:
+            vg_set: set[str] = set()
+            for v in lobj.data.vertices:
+                if v.index < len(vert_vg_names):
+                    vg_set |= vert_vg_names[v.index]
+            obj_vg_sets[lobj.name] = vg_set
+
+        # Step 3: 计算每个松散块儿的质心（顶点平均位置），用质心距离判断邻接
+        def _centroid(obj: bpy.types.Object) -> Vector:
+            c = Vector((0.0, 0.0, 0.0))
+            verts = obj.data.vertices
+            if not verts:
+                return c
+            for v in verts:
+                c += obj.matrix_world @ v.co
+            c /= len(verts)
+            return c
+
+        obj_centroids: dict[str, Vector] = {}
+        for lobj in loose_objects:
+            obj_centroids[lobj.name] = _centroid(lobj)
+
+        def _jaccard(a: set[str], b: set[str]) -> float:
+            if not a and not b:
+                return 1.0
+            union = a | b
+            if not union:
+                return 0.0
+            return len(a & b) / len(union)
+
+        # 空间哈希网格：按质心位置分配格子
+        cell_size = 2.0
+        grid: dict[tuple[int, int, int], list[bpy.types.Object]] = {}
+        for lobj in loose_objects:
+            c = obj_centroids[lobj.name]
+            cell = (int(c.x / cell_size), int(c.y / cell_size), int(c.z / cell_size))
+            grid.setdefault(cell, []).append(lobj)
+
+        epsilon = bbox_distance_threshold
+        adj: dict[str, set[str]] = {o.name: set() for o in loose_objects}
+        checked_pairs: set[tuple[str, str]] = set()
+
+        for (cx, cy, cz), cell_objs in grid.items():
+            neighbors: list[bpy.types.Object] = list(cell_objs)
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for dz in (-1, 0, 1):
+                        if dx == 0 and dy == 0 and dz == 0:
+                            continue
+                        nc = grid.get((cx + dx, cy + dy, cz + dz))
+                        if nc:
+                            neighbors.extend(nc)
+
+            for i in range(len(cell_objs)):
+                for j in range(i + 1, len(neighbors)):
+                    a, b = cell_objs[i], neighbors[j]
+                    key = (a.name, b.name) if a.name < b.name else (b.name, a.name)
+                    if key in checked_pairs:
+                        continue
+                    checked_pairs.add(key)
+                    dist = (obj_centroids[a.name] - obj_centroids[b.name]).length
+                    if dist > epsilon:
+                        continue
+                    sim = _jaccard(obj_vg_sets[a.name], obj_vg_sets[b.name])
+                    if sim >= vg_similarity_threshold:
+                        adj[a.name].add(b.name)
+                        adj[b.name].add(a.name)
+
+        # Step 4: 找连通分量 → 聚类
+        unvisited = set(o.name for o in loose_objects)
+        merge_groups: list[list[bpy.types.Object]] = []
+        name_to_obj = {o.name: o for o in loose_objects}
+
+        while unvisited:
+            cluster_names: list[str] = []
+            stack = [next(iter(unvisited))]
+            while stack:
+                name = stack.pop()
+                if name not in unvisited:
+                    continue
+                unvisited.discard(name)
+                cluster_names.append(name)
+                for neighbor in adj[name]:
+                    if neighbor in unvisited:
+                        stack.append(neighbor)
+            merge_groups.append([name_to_obj[n] for n in cluster_names])
+
+        # Step 5: 合并每个聚类中的物体，空聚类跳过
+        original_active = bpy.context.view_layer.objects.active
+        original_selected = list(bpy.context.selected_objects)
+
+        kept_objs: list[bpy.types.Object] = []
+        for group in merge_groups:
+            if len(group) == 0:
+                continue
+            if len(group) == 1:
+                kept_objs.append(group[0])
+                continue
+
+            target = group[0]
+            others = group[1:]
+            bpy.ops.object.select_all(action='DESELECT')
+            for o in group:
+                o.select_set(True)
+            bpy.context.view_layer.objects.active = target
+            bpy.ops.object.join()
+            target.name = f"{origin_name}_Cluster{len(kept_objs)}"
+            kept_objs.append(target)
+
+        # 清理最终物体的空顶点组（之前推迟了此步骤以加速）
+        for kept_obj in kept_objs:
+            used = set()
+            for v in kept_obj.data.vertices:
+                for g in v.groups:
+                    if g.weight > 0:
+                        used.add(g.group)
+            for vg in reversed(kept_obj.vertex_groups):
+                if vg.index not in used:
+                    kept_obj.vertex_groups.remove(vg)
+
+        # Step 6: 第二次合并 — 顶点组数量和名称完全相同的合并（无视距离）
+        vg_sig_groups: dict[tuple, list[bpy.types.Object]] = {}
+        for kept_obj in kept_objs:
+            sig = tuple(sorted(vg.name for vg in kept_obj.vertex_groups))
+            vg_sig_groups.setdefault(sig, []).append(kept_obj)
+
+        final_objs: list[bpy.types.Object] = []
+        for sig, sig_objs in vg_sig_groups.items():
+            if len(sig_objs) == 1:
+                final_objs.append(sig_objs[0])
+                continue
+            target = sig_objs[0]
+            bpy.ops.object.select_all(action='DESELECT')
+            for o in sig_objs:
+                o.select_set(True)
+            bpy.context.view_layer.objects.active = target
+            bpy.ops.object.join()
+            target.name = f"{origin_name}_MergeVG_{len(final_objs)}"
+            final_objs.append(target)
+
+        kept_objs = final_objs
+
+        # 删除未参与合并的孤立物体（与任何其他物体都无邻接，保留原样）
+        merged_names = set(o.name for o in kept_objs)
+        for o in list(new_collection.objects):
+            if o.name not in merged_names:
+                try:
+                    bpy.data.objects.remove(o, do_unlink=True)
+                except Exception:
+                    pass
+
+        # 恢复上下文
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in original_selected:
+            try:
+                o.select_set(True)
+            except ReferenceError:
+                pass
+        if original_active:
+            try:
+                bpy.context.view_layer.objects.active = original_active
+            except ReferenceError:
+                pass
+
+        return new_collection
+
     @classmethod
     def get_vertex_group_weight(cls,vgroup, vertex):
         '''
