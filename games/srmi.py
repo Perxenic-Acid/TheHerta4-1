@@ -206,6 +206,12 @@ class ExportSRMI:
                 ):
                     texture_override_ib_section.append(draw_line)
 
+                if not d3d11_game_type.GPU_PreSkinning:
+                    if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
+                        texture_override_ib_section.append("$active" + str(active_index) + " = 1")
+                        if GlobalProterties.generate_branch_mod_gui():
+                            texture_override_ib_section.append("$ActiveCharacter = 1")
+
                 texture_override_ib_section.new_line()
 
             ini_builder.append_section(texture_override_ib_section)

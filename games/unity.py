@@ -231,6 +231,12 @@ class ExportUnity:
             ):
                 texture_override_ib_section.append(drawindexed_str)
 
+            if not d3d11_game_type.GPU_PreSkinning:
+                if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
+                    texture_override_ib_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
+                    if GlobalProterties.generate_branch_mod_gui():
+                        texture_override_ib_section.append("$ActiveCharacter = 1")
+
         ini_builder.append_section(texture_override_ib_section)
 
     def add_unity_cs_resource_vb_sections(self, ini_builder: M_IniBuilder, drawib_model):
