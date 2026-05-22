@@ -21,8 +21,8 @@ from .format_utils import Fatal
 # Nico: notice, all print() and output should call these method, so we can make them log to file easily when switch to GUI.
 
 class LOG:
-    @classmethod
-    def info(cls,input):
+    @staticmethod
+    def info(input):
         if type(input) == list:
             for something in input:
                 print(something)
@@ -30,8 +30,8 @@ class LOG:
         else:
             print(input)
 
-    @classmethod
-    def error(cls,input:str):
+    @staticmethod
+    def error(input:str):
         raise Fatal(input)
 
     @classmethod
@@ -39,8 +39,8 @@ class LOG:
         print("\033[33m" + "Warning: " + input + "\033[0m")
         cls.newline()
 
-    @classmethod
-    def newline(cls):
+    @staticmethod
+    def newline():
         print("\033[32m" +"------------------------------------------------------------------------------------------------------------------------------" + "\033[0m")
 
     

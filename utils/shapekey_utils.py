@@ -155,8 +155,8 @@ class ShapeKeyUtils:
         
         return (True, None)
 
-    @classmethod
-    def apply_modifiers_for_object_with_shape_keys(cls,context, selectedModifiers, disable_armatures):
+    @staticmethod
+    def apply_modifiers_for_object_with_shape_keys(context, selectedModifiers, disable_armatures):
         # The MIT License (MIT)
         #
         # Copyright (c) 2015 Przemysław Bągard
@@ -405,8 +405,8 @@ class ShapeKeyUtils:
     
 
 
-    @classmethod
-    def get_shapekey_cache(cls, merged_obj, index_vertex_id_dict):
+    @staticmethod
+    def get_shapekey_cache(merged_obj, index_vertex_id_dict):
         obj = merged_obj
         mesh = obj.data
         mesh_shapekeys = mesh.shape_keys

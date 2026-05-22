@@ -25,20 +25,20 @@ class AlgorithmUtils:
     # 整合 by 失乡のKnight
     # 拆解信息链、重构为工具类 by NicoMico
     '''
-    @classmethod
-    def vector_cross_product(cls,v1,v2):
+    @staticmethod
+    def vector_cross_product(v1,v2):
         '''
         叉乘 (Cross Product): 两个不平行的三维向量的叉乘会生成一个新的向量，这个新向量与原来的两个向量都垂直。
         因此，对于给定的三角形，使用其两边进行叉乘可以得到一个垂直于该三角形平面的向量，这就是所谓的法线向量。
         '''
         return Vector((v1.y*v2.z-v2.y*v1.z,v1.z*v2.x-v2.z*v1.x,v1.x*v2.y-v2.x*v1.y))
     
-    @classmethod
-    def vector_dot_product (cls,a,b):
+    @staticmethod
+    def vector_dot_product (a,b):
         return a.x*b.x+a.y*b.y+a.z*b.z
     
-    @classmethod
-    def vector_calc_length(cls,v):
+    @staticmethod
+    def vector_calc_length(v):
         return math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z)
     
     @classmethod
@@ -53,15 +53,15 @@ class AlgorithmUtils:
             return v/L
         return 0
     
-    @classmethod
-    def vector_to_string(cls,v):
+    @staticmethod
+    def vector_to_string(v):
         '''
         把Vector变为string，方便放入dict
         '''
         return "x=" + str(v.x) + ",y=" + str(v.y) + ",z=" + str(v.z)
     
-    @classmethod
-    def need_outline(cls,vertex):
+    @staticmethod
+    def need_outline(vertex):
         '''
         仅用于测试，实际使用中应永远返回True
         '''

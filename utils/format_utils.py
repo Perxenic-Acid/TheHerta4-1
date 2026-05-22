@@ -151,8 +151,8 @@ class FormatUtils:
     用于各种二进制数据格式转换
     '''
     # 向量归一化
-    @classmethod
-    def vector_normalize(cls,v):
+    @staticmethod
+    def vector_normalize(v):
         """归一化向量"""
         length = math.sqrt(sum(x * x for x in v))
         if length == 0:
@@ -169,13 +169,13 @@ class FormatUtils:
         return normalized_result
     
     # 辅助函数：计算两个向量的点积
-    @classmethod
-    def dot_product(cls,v1, v2):
+    @staticmethod
+    def dot_product(v1, v2):
         return sum(a * b for a, b in zip(v1, v2))
 
 
-    @classmethod
-    def convert_2x_float32_to_r16g16_unorm(cls, input_array):
+    @staticmethod
+    def convert_2x_float32_to_r16g16_unorm(input_array):
         """
         把 shape=(…,2) 的 float32 [0,1] 区间量
         量化成 uint16 [0,65535] 并返回同样 shape 的 uint16 数组。
@@ -195,8 +195,8 @@ class FormatUtils:
     # def convert_4x_float32_to_r8g8b8a8_snorm(cls, input_array):
     #     return numpy.round(input_array * 127).astype(numpy.int8)
 
-    @classmethod
-    def convert_4x_float32_to_r8g8b8a8_snorm(cls, input_array):
+    @staticmethod
+    def convert_4x_float32_to_r8g8b8a8_snorm(input_array):
         '''
         这里听了DeepSeek的建议改成这样了，也许可以避免某些问题
         '''
@@ -209,25 +209,25 @@ class FormatUtils:
         #    其实可省略，因为 -1.0*-127=127, 1.0*127=127，已覆盖不到 -128
         return arr
 
-    @classmethod
-    def convert_4x_float32_to_r8g8b8a8_unorm(cls,input_array):
+    @staticmethod
+    def convert_4x_float32_to_r8g8b8a8_unorm(input_array):
         return numpy.round(input_array * 255).astype(numpy.uint8)
     
-    @classmethod
-    def convert_4x_float32_to_r16g16b16a16_snorm(cls,input_array):
+    @staticmethod
+    def convert_4x_float32_to_r16g16b16a16_snorm(input_array):
         return numpy.round(input_array * 32767).astype(numpy.int16)
     
-    @classmethod
-    def convert_4x_float32_to_r16g16b16a16_unorm(cls, input_array):
+    @staticmethod
+    def convert_4x_float32_to_r16g16b16a16_unorm(input_array):
         return numpy.round(input_array * 65535).astype(numpy.uint16)
     
-    @classmethod
-    def convert_4x_float32_to_r16g16b16a16_snorm(cls, input_array):
+    @staticmethod
+    def convert_4x_float32_to_r16g16b16a16_snorm(input_array):
         return numpy.round(input_array * 32767).astype(numpy.int16)
    
 
-    @classmethod    
-    def convert_4x_float32_to_r8g8b8a8_unorm_blendweights(cls, input_array):
+    @staticmethod    
+    def convert_4x_float32_to_r8g8b8a8_unorm_blendweights(input_array):
         # 确保输入数组是浮点类型
         # input_array_float = input_array.astype(numpy.float32)
     
@@ -315,8 +315,8 @@ class FormatUtils:
         result[valid_mask] = output.astype(numpy.uint8)
         return result
     
-    @classmethod
-    def convert_4x_float32_to_r8g8b8a8_unorm_blendweights_bk2(cls, input_array):
+    @staticmethod
+    def convert_4x_float32_to_r8g8b8a8_unorm_blendweights_bk2(input_array):
 
         result = numpy.zeros_like(input_array, dtype=numpy.uint8)
 

@@ -33,8 +33,8 @@ class CollectionColor:
     
 
 class CollectionUtils:
-    @classmethod
-    def get_collection_by_name(cls,collection_name:str):
+    @staticmethod
+    def get_collection_by_name(collection_name:str):
         """
         根据集合名称获取集合对象。
 
@@ -49,8 +49,8 @@ class CollectionUtils:
             return None
     
     # Recursive select every object in a collection and it's sub collections.
-    @classmethod
-    def select_collection_objects(cls,collection):
+    @staticmethod
+    def select_collection_objects(collection):
         def recurse_collection(col):
             for obj in col.objects:
                 obj.select_set(True)
@@ -59,8 +59,8 @@ class CollectionUtils:
 
         recurse_collection(collection)
 
-    @classmethod
-    def find_layer_collection(cls,view_layer, collection_name):
+    @staticmethod
+    def find_layer_collection(view_layer, collection_name):
         def recursive_search(layer_collections, collection_name):
             for layer_collection in layer_collections:
                 if layer_collection.collection.name == collection_name:
@@ -72,8 +72,8 @@ class CollectionUtils:
 
         return recursive_search(view_layer.layer_collection.children, collection_name)
 
-    @classmethod
-    def get_collection_properties(cls,collection_name:str):
+    @staticmethod
+    def get_collection_properties(collection_name:str):
         # Nico: Blender Gacha: 
         # Can't get collection's property by bpy.context.collection or it's children or any of children's children.
         # Can only get it's property by search it recursively in bpy.context.view_layer  
@@ -105,8 +105,8 @@ class CollectionUtils:
             'exclude': exclude
         }
     
-    @classmethod
-    def is_collection_visible(cls,collection_name:str):
+    @staticmethod
+    def is_collection_visible(collection_name:str):
         '''
         判断collection是否可见，可见的状态是不隐藏且勾选上
         '''
@@ -122,9 +122,9 @@ class CollectionUtils:
         else:
             return False
     
-    @classmethod
+    @staticmethod
     # get_collection_name_without_default_suffix
-    def get_clean_collection_name(cls,collection_name:str):
+    def get_clean_collection_name(collection_name:str):
         if "." in collection_name:
             new_collection_name = collection_name.split(".")[0]
             return new_collection_name
@@ -132,8 +132,8 @@ class CollectionUtils:
             return collection_name
 
     
-    @classmethod
-    def create_new_collection(cls,collection_name:str,color_tag:CollectionColor=CollectionColor.White,link_to_parent_collection_name:str = ""):
+    @staticmethod
+    def create_new_collection(collection_name:str,color_tag:CollectionColor=CollectionColor.White,link_to_parent_collection_name:str = ""):
         '''
         创建一个新的集合，并且可以选择是否链接到父集合
         :param collection_name: 集合名称
@@ -150,8 +150,8 @@ class CollectionUtils:
         
         return new_collection
     
-    @classmethod
-    def is_valid_ssmt_workspace_collection(cls,workspace_collection) -> str:
+    @staticmethod
+    def is_valid_ssmt_workspace_collection(workspace_collection) -> str:
         '''
         按下生成Mod按钮之后，要判断当前选中的集合是否为工作空间集合，并且给出报错信息
         所以在这里进行校验，如果有问题就返回对应的报错信息，如果没有就返回空字符串
@@ -176,8 +176,8 @@ class CollectionUtils:
             
         return ""
     
-    @classmethod
-    def is_valid_ssmt_workspace_collection_v2(cls,workspace_collection) -> str:
+    @staticmethod
+    def is_valid_ssmt_workspace_collection_v2(workspace_collection) -> str:
         '''
         按下生成Mod按钮之后，要判断当前选中的集合是否为工作空间集合，并且给出报错信息
         所以在这里进行校验，如果有问题就返回对应的报错信息，如果没有就返回空字符串
@@ -200,8 +200,8 @@ class CollectionUtils:
             
         return ""
 
-    @classmethod
-    def get_selected_collections(cls) -> list[bpy.types.Collection]:
+    @staticmethod
+    def get_selected_collections() -> list[bpy.types.Collection]:
         """
         返回 Outliner 里当前被选中的所有集合
         """

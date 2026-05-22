@@ -7,8 +7,8 @@ from .migoto_binary_file import MigotoBinaryFile
 
 
 class MeshImportHelper:
-    @classmethod
-    def create_mesh_obj_from_mbf(cls, mbf:MigotoBinaryFile, import_collection:bpy.types.Collection):
+    @staticmethod
+    def create_mesh_obj_from_mbf(mbf:MigotoBinaryFile, import_collection:bpy.types.Collection):
         if not mbf.file_size_check():
             return
 

@@ -7,8 +7,8 @@ from ..common.global_properties import GlobalProterties
 
 class CommandUtils:
 
-    @classmethod
-    def OpenGeneratedModFolder(cls):
+    @staticmethod
+    def OpenGeneratedModFolder():
         '''
         This will be call after generate mod, it will open explorer and shows the result mod files generated.
 

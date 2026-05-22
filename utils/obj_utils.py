@@ -534,8 +534,8 @@ class ObjUtils:
         '''
         return obj.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh()
 
-    @classmethod
-    def split_obj_by_loose_parts_to_collection(cls,obj,collection_name:str):
+    @staticmethod
+    def split_obj_by_loose_parts_to_collection(obj,collection_name:str):
         
         new_collection = bpy.data.collections.new(collection_name)
         bpy.context.scene.collection.children.link(new_collection)
@@ -572,8 +572,8 @@ class ObjUtils:
                 for sk_name in sk_to_remove:
                     coll_obj.shape_key_remove(coll_obj.data.shape_keys.key_blocks[sk_name])
 
-    @classmethod
-    def merge_objects(cls,obj_list, target_collection=None):
+    @staticmethod
+    def merge_objects(obj_list, target_collection=None):
         """
         合并给定的对象列表。
         
@@ -642,8 +642,8 @@ class ObjUtils:
         else:
             print("没有找到合适的网格对象来执行规范化操作。")
 
-    @classmethod
-    def mesh_triangulate(cls,me:bpy.types.Mesh):
+    @staticmethod
+    def mesh_triangulate(me:bpy.types.Mesh):
         '''
         三角化一个mesh
         注意这个三角化之后就变成新的mesh了
@@ -654,8 +654,8 @@ class ObjUtils:
         bm.to_mesh(me)
         bm.free()
 
-    @classmethod
-    def get_bpy_context_object(cls):
+    @staticmethod
+    def get_bpy_context_object():
         '''
         获取当前场景中的obj对象,如果为None则抛出Fatal异常
         '''
@@ -666,8 +666,8 @@ class ObjUtils:
         
         return obj
 
-    @classmethod
-    def selected_obj_delete_loose(cls):
+    @staticmethod
+    def selected_obj_delete_loose():
         
         # 获取当前选中的对象
         selected_objects = bpy.context.selected_objects
@@ -685,8 +685,8 @@ class ObjUtils:
                 # 切换回对象模式
                 bpy.ops.object.mode_set(mode='OBJECT')
 
-    @classmethod
-    def is_contains_locked_weights(cls,obj):
+    @staticmethod
+    def is_contains_locked_weights(obj):
         locked_groups = []
         # 确保对象类型为MESH，因为只有这种类型的对象才有顶点组
         if obj.type == 'MESH':
@@ -700,8 +700,8 @@ class ObjUtils:
         else:
             return False
         
-    @classmethod
-    def is_all_vertex_groups_locked(cls,obj):
+    @staticmethod
+    def is_all_vertex_groups_locked(obj):
         '''
         判断是否所有的顶点组都被锁定了，因为所有的顶点组都被锁定的话就无法对权重执行Normalize All了
         '''
@@ -735,24 +735,24 @@ class ObjUtils:
             return new_obj
     
     
-    @classmethod
-    def reset_obj_rotation(cls,obj):
+    @staticmethod
+    def reset_obj_rotation(obj):
         if obj.type == "MESH":
             # 将旋转角度归零
             obj.rotation_euler[0] = 0.0  # X轴
             obj.rotation_euler[1] = 0.0  # Y轴
             obj.rotation_euler[2] = 0.0  # Z轴
 
-    @classmethod
-    def reset_obj_location(cls, obj):
+    @staticmethod
+    def reset_obj_location(obj):
         if obj.type == "MESH":
             # 将位置归零
             obj.location[0] = 0.0  # X轴
             obj.location[1] = 0.0  # Y轴
             obj.location[2] = 0.0  # Z轴
 
-    @classmethod
-    def apply_mirror_transform(cls, obj):
+    @staticmethod
+    def apply_mirror_transform(obj):
         '''
         应用镜像变换：将 Scale X 设为 -1 并应用缩放变换
         使用 Blender 内置的变换应用功能
@@ -799,8 +799,8 @@ class ObjUtils:
                 except:
                     pass
 
-    @classmethod
-    def flip_face_normals(cls, obj):
+    @staticmethod
+    def flip_face_normals(obj):
         '''
         翻转面朝向：使用 Blender 内置的翻转法线功能
         '''
@@ -886,8 +886,8 @@ class ObjUtils:
             print(f"物体 {copy_obj.name} 有启用的骨骼绑定无形态键，应用修改器")
             cls._apply_all_modifiers(copy_obj)
     
-    @classmethod
-    def _prepare_with_shape_keys(cls, obj):
+    @staticmethod
+    def _prepare_with_shape_keys(obj):
         '''
         处理有形态键的绑定物体
         1. 删除禁用的修改器（优化：不应用不需要的修改器）
@@ -948,8 +948,8 @@ class ObjUtils:
         cls.apply_mirror_transform(obj)
         cls.flip_face_normals(obj)
     
-    @classmethod
-    def _apply_all_modifiers(cls, obj):
+    @staticmethod
+    def _apply_all_modifiers(obj):
         '''
         应用物体上的所有修改器
         将修改器效果烘焙到网格数据中
@@ -1038,8 +1038,8 @@ class ObjUtils:
             if obj and obj.type == 'MESH':
                 cls.apply_mirror_workflow(obj)
 
-    @classmethod
-    def create_backup_object(cls, obj):
+    @staticmethod
+    def create_backup_object(obj):
         '''
         创建物体的完整备份（包括网格数据）
         返回备份物体
@@ -1060,8 +1060,8 @@ class ObjUtils:
         
         return backup_obj
 
-    @classmethod
-    def restore_from_backup(cls, original_obj, backup_obj):
+    @staticmethod
+    def restore_from_backup(original_obj, backup_obj):
         '''
         从备份物体恢复原始物体的网格数据
         '''
@@ -1073,8 +1073,8 @@ class ObjUtils:
         
         original_obj.data = backup_obj.data.copy()
 
-    @classmethod
-    def delete_backup_object(cls, backup_obj):
+    @staticmethod
+    def delete_backup_object(backup_obj):
         '''
         删除备份物体
         '''

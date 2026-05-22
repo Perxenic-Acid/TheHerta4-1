@@ -6,8 +6,8 @@ from ..common.global_config import LogicName
 
 class MeshUtils:
 
-    @classmethod
-    def set_import_normals(cls,mesh,normals):
+    @staticmethod
+    def set_import_normals(mesh,normals):
         # Blender4.2 移除了mesh.create_normal_splits()
         if bpy.app.version <= (4, 0, 0):
             # mesh.use_auto_smooth = True
@@ -37,8 +37,8 @@ class MeshUtils:
     
     # Nico: 使用下面的代码，可以确保在Blender3.6中导入的内容看起来和Blender 4.2或以上版本中一致，并且边缘不再锐利
     # 这玩意太坑了，花了很久才搞明白，Blender不同版本的法线处理差异
-    @classmethod
-    def set_import_normals_v2(cls, mesh, normals):
+    @staticmethod
+    def set_import_normals_v2(mesh, normals):
         import bpy
         import numpy as np
 

@@ -539,9 +539,8 @@ class ObjBufferHelper:
         return original_elementname_data_dict
 
 
-    @classmethod
+    @staticmethod
     def convert_to_element_vertex_ndarray(
-        cls,
         d3d11_game_type:D3D11GameType, 
         mesh:bpy.types.Mesh,
         original_elementname_data_dict:dict,

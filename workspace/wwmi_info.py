@@ -33,8 +33,8 @@ class WWMIInfoObject:
 
 
 class WWMIInfoHelper:
-    @classmethod
-    def build_from_json_list(cls, ordered_submesh_json_list: list) -> WWMIInfoObject:
+    @staticmethod
+    def build_from_json_list(ordered_submesh_json_list: list) -> WWMIInfoObject:
         if not ordered_submesh_json_list:
             raise ValueError("No SubmeshJson provided to build WWMIInfoObject.")
 

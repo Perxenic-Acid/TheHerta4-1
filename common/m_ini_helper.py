@@ -14,8 +14,8 @@ from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from ..workspace.texture_metadata_helper import TextureMetadataResolver, TextureMarkUpInfo
 
 class M_IniHelper:
-    @classmethod
-    def _get_aliased_texture_output_filename(cls, mark_filename: str, submesh_model) -> str:
+    @staticmethod
+    def _get_aliased_texture_output_filename(mark_filename: str, submesh_model) -> str:
         '''
         若 submesh_model 已应用别名（display_str != submesh_name），则将 mark_filename 的
         bare_submesh_name 前缀替换为 display_str，以便输出文件名使用别名。
@@ -33,8 +33,8 @@ class M_IniHelper:
             return display_str + "-" + mark_filename[len(old_prefix):]
         return mark_filename
 
-    @classmethod
-    def _count_marked_textures(cls, draw_ib_model: DrawIBModel, mark_type: str | None = None) -> int:
+    @staticmethod
+    def _count_marked_textures(draw_ib_model: DrawIBModel, mark_type: str | None = None) -> int:
         count = 0
         for submesh_model in getattr(draw_ib_model, "submesh_model_list", []):
             texture_info_list = draw_ib_model.get_submesh_texture_markup_info_list(submesh_model)
@@ -44,8 +44,8 @@ class M_IniHelper:
                 count += 1
         return count
 
-    @classmethod
-    def _get_extract_gametype_folder_path(cls, draw_ib_model: DrawIBModel) -> str:
+    @staticmethod
+    def _get_extract_gametype_folder_path(draw_ib_model: DrawIBModel) -> str:
         primary_submesh_metadata = getattr(draw_ib_model, "primary_submesh_metadata", None)
         if primary_submesh_metadata is not None:
             extract_gametype_folder_path = getattr(primary_submesh_metadata, "extract_gametype_folder_path", "")
@@ -73,8 +73,8 @@ class M_IniHelper:
             gametype_name=d3d11_game_type.GameTypeName,
         )
 
-    @classmethod
-    def _get_part_extract_gametype_folder_path(cls, draw_ib_model: DrawIBModel, part_name: str) -> str:
+    @staticmethod
+    def _get_part_extract_gametype_folder_path(draw_ib_model: DrawIBModel, part_name: str) -> str:
         part_name_submesh_dict = getattr(draw_ib_model, "part_name_submesh_dict", {})
         submesh_model = part_name_submesh_dict.get(part_name)
         if submesh_model is None:
@@ -90,7 +90,6 @@ class M_IniHelper:
         submesh_folder = SSMTWorkSpace.get_submesh_folder_path(submesh_name)
         return os.path.join(submesh_folder, "TYPE_" + d3d11_game_type.GameTypeName, "")
 
-    @classmethod
     @classmethod
     def _get_slot_texture_source_path(cls, draw_ib_model: DrawIBModel, part_name: str, texture_markup_info) -> str:
         # 策略1: 通过 part_name 精确定位
@@ -119,8 +118,8 @@ class M_IniHelper:
 
         return ""
 
-    @classmethod
-    def _get_part_submesh_folder_name(cls, draw_ib_model: DrawIBModel, part_name: str) -> str:
+    @staticmethod
+    def _get_part_submesh_folder_name(draw_ib_model: DrawIBModel, part_name: str) -> str:
         part_name_submesh_dict = getattr(draw_ib_model, "part_name_submesh_dict", {})
         submesh_model = part_name_submesh_dict.get(part_name)
         if submesh_model is None:
@@ -131,8 +130,8 @@ class M_IniHelper:
         print("M_IniHelper: Part " + str(part_name) + " 对应 submesh_name: " + submesh_folder_name)
         return submesh_folder_name
 
-    @classmethod
-    def _get_hash_deduped_texture_info(cls, draw_ib_model: DrawIBModel, mark_hash: str):
+    @staticmethod
+    def _get_hash_deduped_texture_info(draw_ib_model: DrawIBModel, mark_hash: str):
         for submesh_model in getattr(draw_ib_model, "submesh_model_list", []):
             submesh_folder_name = getattr(submesh_model, "submesh_name", "")
             if not submesh_folder_name:
@@ -152,9 +151,8 @@ class M_IniHelper:
         print("M_IniHelper: 当前 DrawIB 的所有 submesh_name 中都未找到 Hash 去重信息，Hash: " + mark_hash)
         return None
 
-    @classmethod
+    @staticmethod
     def get_drawindexed_str_list(
-        cls,
         ordered_draw_obj_model_list: list[DrawCallModel],
         obj_name_draw_offset_dict: dict[str, int] | None = None,
     ) -> list[str]:
@@ -187,9 +185,8 @@ class M_IniHelper:
 
         return drawindexed_str_list
     
-    @classmethod
+    @staticmethod
     def get_drawindexed_instanced_str_list(
-        cls,
         ordered_draw_obj_model_list: list[DrawCallModel],
         obj_name_draw_offset_dict: dict[str, int] | None = None,
     ) -> list[str]:
@@ -562,8 +559,8 @@ class M_IniHelper:
         print("[TRACE]   Slot 跳过(非Slot类型): " + str(slot_skipped_non_slot))
         print("=" * 60)
     
-    @classmethod
-    def add_shapekey_ini_sections(cls, ini_builder:M_IniBuilder,drawib_drawibmodel_dict:dict[str,DrawIBModel]):
+    @staticmethod
+    def add_shapekey_ini_sections(ini_builder:M_IniBuilder,drawib_drawibmodel_dict:dict[str,DrawIBModel]):
         shapekeyname_mkey_dict = BlueprintExportHelper.get_current_shapekeyname_mkey_dict()
         if len(shapekeyname_mkey_dict.keys()) == 0:
             return
@@ -717,8 +714,8 @@ class M_IniHelper:
 
 
 
-    @classmethod
-    def add_branch_key_sections(cls,ini_builder:M_IniBuilder,key_name_mkey_dict:dict[str,M_Key]):
+    @staticmethod
+    def add_branch_key_sections(ini_builder:M_IniBuilder,key_name_mkey_dict:dict[str,M_Key]):
 
         if len(key_name_mkey_dict.keys()) != 0:
             constants_section = M_IniSection(M_SectionType.Constants)

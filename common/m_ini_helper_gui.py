@@ -9,8 +9,8 @@ from .global_config import GlobalConfig
 from .global_properties import GlobalProterties
 
 class M_IniHelperGUI:
-    @classmethod
-    def copy_files(cls,src_dir, dst_dir):
+    @staticmethod
+    def copy_files(src_dir, dst_dir):
         """
         复制 src_dir 目录下的所有文件（不包括子目录）到 dst_dir 目录
         :param src_dir: 源目录路径
@@ -51,8 +51,8 @@ class M_IniHelperGUI:
 
         print("[TRACE] M_IniHelperGUI.copy_files() 汇总: 复制=" + str(copied_count) + ", 跳过非文件=" + str(skipped_not_file))
                 
-    @classmethod
-    def add_branch_mod_gui_section(cls,ini_builder:M_IniBuilder,key_name_mkey_dict:dict[str,M_Key]):
+    @staticmethod
+    def add_branch_mod_gui_section(ini_builder:M_IniBuilder,key_name_mkey_dict:dict[str,M_Key]):
         '''
         声明模板化GUI面板
 

@@ -10,8 +10,8 @@ from .obj_utils import ObjUtils
 
 
 class VertexGroupUtils:
-    @classmethod
-    def remove_unused_vertex_groups(cls,obj):
+    @staticmethod
+    def remove_unused_vertex_groups(obj):
         '''
         移除给定obj的未使用的顶点组
         '''
@@ -29,8 +29,8 @@ class VertexGroupUtils:
                 if not used:
                     obj.vertex_groups.remove(obj.vertex_groups[i])
 
-    @classmethod
-    def remove_all_vertex_groups(cls,obj):
+    @staticmethod
+    def remove_all_vertex_groups(obj):
         '''
         移除给定obj的未使用的顶点组
         '''
@@ -107,8 +107,8 @@ class VertexGroupUtils:
     #         bpy.context.view_layer.objects.active = cur_obj
     #         bpy.ops.object.vertex_group_sort()
 
-    @classmethod
-    def merge_vertex_groups_with_same_number_v2(cls):
+    @staticmethod
+    def merge_vertex_groups_with_same_number_v2():
         '''
         merge_vertex_groups_with_same_number 的 Mode 3 优化版本
         大幅提升执行速度 (Differential Update Strategy)
@@ -204,8 +204,8 @@ class VertexGroupUtils:
             bpy.ops.object.vertex_group_sort()
 
 
-    @classmethod
-    def fill_vertex_group_gaps(cls):
+    @staticmethod
+    def fill_vertex_group_gaps():
         # Author: SilentNightSound#7430
         # Fills in missing vertex groups for a model so there are no gaps, and sorts to make sure everything is in order
         # Works on the currently selected object
@@ -235,8 +235,8 @@ class VertexGroupUtils:
 
 
     # 由虹汐哥改进的版本，骨骼位置放到了几何中心
-    @classmethod
-    def create_armature_from_vertex_groups(cls,bone_length=0.1):
+    @staticmethod
+    def create_armature_from_vertex_groups(bone_length=0.1):
         # 验证选择对象
         obj = bpy.context.active_object
         if not obj or obj.type != 'MESH':
@@ -284,16 +284,16 @@ class VertexGroupUtils:
         finally:
             bpy.ops.object.mode_set(mode='OBJECT')
 
-    @classmethod
-    def remove_not_number_vertex_groups(cls,obj):
+    @staticmethod
+    def remove_not_number_vertex_groups(obj):
         for vg in reversed(obj.vertex_groups):
             if vg.name.isdecimal():
                 continue
             # print('Removing vertex group', vg.name)
             obj.vertex_groups.remove(vg)
 
-    @classmethod
-    def split_mesh_by_vertex_group(cls,obj):
+    @staticmethod
+    def split_mesh_by_vertex_group(obj):
         '''
         Code copied and modified from @Kail_Nethunter, very useful in some special meets.
         https://blenderartists.org/t/split-a-mesh-by-vertex-groups/438990/11
@@ -319,8 +319,8 @@ class VertexGroupUtils:
             bpy.data.objects['{}.{:03d}'.format(origin_name, i)].name = '{}.{}'.format(
                 origin_name, real_keys[i - 1])
 
-    @classmethod
-    def split_mesh_by_each_vertex_group(cls, obj: bpy.types.Object):
+    @staticmethod
+    def split_mesh_by_each_vertex_group(obj: bpy.types.Object):
         """
         将指定物体按每个顶点组拆分为独立的网格。
         每个顶点组用到的所有顶点组成一个新的mesh，保留所有属性（UV、权重、颜色、法线、形态键等）。
@@ -403,8 +403,8 @@ class VertexGroupUtils:
 
         return new_collection
 
-    @classmethod
-    def split_by_loose_parts_and_cluster(cls, obj: bpy.types.Object, vg_similarity_threshold: float = 0.7, bbox_distance_threshold: float = 0.01):
+    @staticmethod
+    def split_by_loose_parts_and_cluster(obj: bpy.types.Object, vg_similarity_threshold: float = 0.7, bbox_distance_threshold: float = 0.01):
         """
         1. 按松散块儿分割物体
         2. 对松散块儿聚类：VG 集合近似（Jaccard 相似度 >= threshold）
@@ -603,8 +603,8 @@ class VertexGroupUtils:
 
         return new_collection
 
-    @classmethod
-    def get_vertex_group_weight(cls,vgroup, vertex):
+    @staticmethod
+    def get_vertex_group_weight(vgroup, vertex):
         '''
         Credit to @Comilarex
         https://gamebanana.com/tools/19057
@@ -614,8 +614,8 @@ class VertexGroupUtils:
                 return group.weight
         return 0.0
 
-    @classmethod
-    def calculate_vertex_influence_area(cls,obj):
+    @staticmethod
+    def calculate_vertex_influence_area(obj):
         '''
         Credit to @Comilarex
         https://gamebanana.com/tools/19057
@@ -693,8 +693,8 @@ class VertexGroupUtils:
                 base_group.name = best_match
 
 
-    @classmethod
-    def get_blendweights_blendindices_v1(cls,mesh,normalize_weights:bool = False):
+    @staticmethod
+    def get_blendweights_blendindices_v1(mesh,normalize_weights:bool = False):
         mesh_loops = mesh.loops
         mesh_loops_length = len(mesh_loops)
         mesh_vertices = mesh.vertices
@@ -743,8 +743,8 @@ class VertexGroupUtils:
         blendindices_dict[0] = blendindices
         return blendweights_dict, blendindices_dict
     
-    @classmethod
-    def get_blendweights_blendindices_v3(cls,mesh, normalize_weights: bool = False):
+    @staticmethod
+    def get_blendweights_blendindices_v3(mesh, normalize_weights: bool = False):
         print("get_blendweights_blendindices_v3")
         print(normalize_weights)
 
@@ -847,8 +847,8 @@ class VertexGroupUtils:
 
 
 
-    @classmethod
-    def get_blendweights_blendindices_v4_fast(cls, mesh, normalize_weights: bool = False, blend_size=4):
+    @staticmethod
+    def get_blendweights_blendindices_v4_fast(mesh, normalize_weights: bool = False, blend_size=4):
         '''
         Collects flat triplets (vertex_idx, group_id, weight) once, then uses numpy to
         compute per-vertex top-K (K = aligned_max_groups) and maps to per-loop arrays.
@@ -951,8 +951,8 @@ class VertexGroupUtils:
         # return in old interface: semantic index 0 only (v4 implementation style)
         return {0: blendweights}, {0: blendindices}
 
-    @classmethod
-    def get_blendweights_blendindices_v4(cls, mesh, normalize_weights: bool = False,blend_size = 4):
+    @staticmethod
+    def get_blendweights_blendindices_v4(mesh, normalize_weights: bool = False,blend_size = 4):
         """
         注意这个先别删留着备用防止新的出问题，新的fast是这个的好几倍速度，所以这个弃用了。
         """
