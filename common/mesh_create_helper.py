@@ -9,7 +9,7 @@ from bpy_extras.io_utils import unpack_list, axis_conversion
 from ..utils.format_utils import Fatal, FormatUtils
 from ..utils.mesh_utils import MeshUtils
 from ..utils.obj_utils import ObjUtils
-from ..utils.texture_utils import TextureUtils
+from ..workspace.texture_metadata_helper import find_texture
 from ..utils.timer_utils import TimerUtils
 from ..utils.vertexgroup_utils import VertexGroupUtils
 
@@ -523,13 +523,13 @@ class MeshCreateHelper:
 
         texture_prefix = mesh_name_split[0] + "-" + mesh_name_split[1] + "-"
 
-        texture_path = TextureUtils.find_texture(texture_prefix, "-DiffuseMap.jpg", directory)
+        texture_path = find_texture(texture_prefix, "-DiffuseMap.jpg", directory)
         if texture_path is None:
-            texture_path = TextureUtils.find_texture(texture_prefix, "-DiffuseMap.dds", directory)
+            texture_path = find_texture(texture_prefix, "-DiffuseMap.dds", directory)
 
-        normal_path = TextureUtils.find_texture(texture_prefix, "-NormalMap.jpg", directory)
+        normal_path = find_texture(texture_prefix, "-NormalMap.jpg", directory)
         if normal_path is None:
-            normal_path = TextureUtils.find_texture(texture_prefix, "-NormalMap.dds", directory)
+            normal_path = find_texture(texture_prefix, "-NormalMap.dds", directory)
 
         return texture_path, normal_path
 
