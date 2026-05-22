@@ -53,8 +53,8 @@ class SSMTNodeBase(Node):
             else:
                 char_count += 1
         
-        # 每个字符约占用8像素宽度（估算值）
-        width = char_count * 8 + padding
+        # 每个字符约占用12像素宽度（Blender 节点 UI 字体较宽）
+        width = char_count * 12 + padding
         
         # 确保最小宽度为200
         return max(200, width)
@@ -70,7 +70,8 @@ class SSMTNodeBase(Node):
             if width > max_width:
                 max_width = width
         
-        self.width = max_width
+        # 给下拉列表预留额外宽度（右侧箭头和边距约50px）
+        self.width = max_width + 50
     
 
 class THEHERTA3_OT_OpenPersistentBlueprint(bpy.types.Operator):

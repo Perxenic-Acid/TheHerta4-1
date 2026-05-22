@@ -350,7 +350,7 @@ class SSMTNode_Object_Info(SSMTNodeBase):
     bl_idname = 'SSMTNode_Object_Info'
     bl_label = '物体信息'
     bl_icon = 'OBJECT_DATAMODE'
-    bl_width_min = 300
+    bl_width_min = 400
 
     def _get_effective_parse_name(self):
         normalized_submesh_name = str(self.submesh_name or "").strip()
@@ -365,7 +365,19 @@ class SSMTNode_Object_Info(SSMTNodeBase):
         else:
             self.label = "物体信息"
 
-        self.update_node_width([self.object_name, self.submesh_name])
+        # 收集所有需要参与宽度计算的文本
+        width_texts = [self.object_name, self.submesh_name]
+
+        # 将下拉列表中所有 Submesh 名称也纳入宽度计算，
+        # 避免当前未选中的长名称被截断
+        tree = self.id_data if hasattr(self, "id_data") and getattr(self.id_data, "bl_idname", "") == 'SSMTBlueprintTreeType' else None
+        if tree is not None:
+            for item in getattr(tree, "ssmt_submesh_items", []):
+                name = str(getattr(item, "name", "") or "")
+                if name:
+                    width_texts.append(name)
+
+        self.update_node_width(width_texts)
 
     def update_object_name(self, context):
         self._refresh_display_fields()
