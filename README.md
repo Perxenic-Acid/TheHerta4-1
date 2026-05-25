@@ -12,17 +12,11 @@
 [![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?style=flat&logo=github&color=blue&label=最新版下载量)](https://github.com/StarBobis/TheHerta4/releases/latest)
 [![Blender](https://img.shields.io/badge/Blender-4.5+-e67e22?style=flat&logo=blender&logoColor=white)](https://www.blender.org/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-
+[![GitHub release](https://img.shields.io/github/v/release/StarBobis/TheHerta4?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4/releases)
 [![VibeCoding With DeepSeek V4 Pro](https://img.shields.io/badge/VibeCoding_With-DeepSeek_V4_Pro-4D6BFE?style=flat&logo=deepseek&logoColor=white)](https://deepseek.com/)
 
 </div>
 
-<div align="center">
-
-[![GitHub release](https://img.shields.io/github/v/release/StarBobis/TheHerta4?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4/releases)
-
-
-</div>
 
 📦 **A Blender addon for SSMT4** — Import and export SSMT4 model format directly in Blender. Built for 3Dmigoto-based game modding.
 
