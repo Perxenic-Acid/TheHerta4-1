@@ -4,25 +4,23 @@
 <div align="center">
 
 
-[![GitHub stars](https://img.shields.io/github/stars/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=gold)](https://github.com/StarBobis/TheHerta4/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=blue)](https://github.com/StarBobis/TheHerta4/forks)
-[![GitHub issues](https://img.shields.io/github/issues/StarBobis/TheHerta4?style=for-the-badge&logo=github&color=red)](https://github.com/StarBobis/TheHerta4/issues)
-[![GitHub license](https://img.shields.io/github/license/StarBobis/TheHerta4?style=for-the-badge&color=brightgreen)](https://github.com/StarBobis/TheHerta4/blob/main/LICENSE.txt)
-[![GitHub last commit](https://img.shields.io/github/last-commit/StarBobis/TheHerta4?style=for-the-badge&logo=git&color=orange)](https://github.com/StarBobis/TheHerta4/commits/main)
-[![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?style=for-the-badge&logo=github&color=blue&label=最新版下载量)](https://github.com/StarBobis/TheHerta4/releases/latest)
-[![Blender](https://img.shields.io/badge/Blender-4.5+-e67e22?style=for-the-badge&logo=blender&logoColor=white)](https://www.blender.org/)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![GitHub stars](https://img.shields.io/github/stars/StarBobis/TheHerta4?style=flat&logo=github&color=gold)](https://github.com/StarBobis/TheHerta4/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/StarBobis/TheHerta4?style=flat&logo=github&color=blue)](https://github.com/StarBobis/TheHerta4/forks)
+[![GitHub issues](https://img.shields.io/github/issues/StarBobis/TheHerta4?style=flat&logo=github&color=red)](https://github.com/StarBobis/TheHerta4/issues)
+[![GitHub license](https://img.shields.io/github/license/StarBobis/TheHerta4?style=flat&color=brightgreen)](https://github.com/StarBobis/TheHerta4/blob/main/LICENSE.txt)
+[![GitHub last commit](https://img.shields.io/github/last-commit/StarBobis/TheHerta4?style=flat&logo=git&color=orange)](https://github.com/StarBobis/TheHerta4/commits/main)
+[![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?style=flat&logo=github&color=blue&label=最新版下载量)](https://github.com/StarBobis/TheHerta4/releases/latest)
+[![Blender](https://img.shields.io/badge/Blender-4.5+-e67e22?style=flat&logo=blender&logoColor=white)](https://www.blender.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 
-[![VibeCoding With DeepSeek V4 Pro](https://img.shields.io/badge/VibeCoding_With-DeepSeek_V4_Pro-4D6BFE?style=for-the-badge&logo=deepseek&logoColor=white)](https://deepseek.com/)
+[![VibeCoding With DeepSeek V4 Pro](https://img.shields.io/badge/VibeCoding_With-DeepSeek_V4_Pro-4D6BFE?style=flat&logo=deepseek&logoColor=white)](https://deepseek.com/)
 
 </div>
 
 <div align="center">
 
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4/pulls)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/StarBobis/TheHerta4?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4/commits/main)
 [![GitHub release](https://img.shields.io/github/v/release/StarBobis/TheHerta4?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4/releases)
-[![GitHub repo size](https://img.shields.io/github/repo-size/StarBobis/TheHerta4?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4)
+
 
 </div>
 
@@ -130,63 +128,7 @@ To work on the plugin itself:
 
 ---
 
-## 🏗️ Project Structure
 
-```
-TheHerta4/
-├── __init__.py                 # Addon entry point
-├── common/                     # Shared utilities & configuration
-│   ├── global_config.py        # Global config & LogicName definitions
-│   ├── global_properties.py    # Blender properties
-│   ├── m_ini_builder.py        # INI file builder
-│   ├── m_ini_helper.py         # INI parsing helpers
-│   ├── buffer_export_helper.py # Buffer export utilities
-│   └── mesh_create_helper.py   # Mesh creation helpers
-├── games/                      # Game-specific exporters
-│   ├── gimi.py                 # Genshin Impact
-│   ├── srmi.py                 # Honkai: Star Rail
-│   ├── zzmi.py                 # Zenless Zone Zero
-│   ├── wwmi.py                 # Wuthering Waves
-│   ├── efmi.py                 # Arknights: Endfield
-│   ├── himi.py                 # Honkai Impact 3rd
-│   ├── identityv.py            # Identity V
-│   ├── snowbreak.py            # Snowbreak
-│   ├── yysls.py                # Where Winds Meet
-│   ├── ntemi.py                # Neverness to Everness
-│   └── unity.py                # Unity base exporter
-├── model/                      # Data models
-│   ├── blueprint_model.py      # Blueprint tree model
-│   ├── drawib_model.py         # Draw IB model
-│   ├── draw_call_model.py      # Draw call model
-│   └── submesh_model.py        # Submesh model
-├── ui/                         # Blender UI panels
-│   ├── ui_panel_basic.py       # Basic info panel
-│   ├── ui_panel_model.py       # Model editing panel
-│   ├── ui_panel_fast_texture.py# Fast texture panel
-│   ├── ui_func_export.py       # Export logic
-│   └── ui_func_import_ssmt.py  # Import logic
-├── blueprint/                  # Blueprint node definitions
-│   ├── blueprint_node_base.py  # Base node classes
-│   ├── blueprint_node_obj.py   # Object info nodes
-│   └── blueprint_node_menu.py  # Node menu
-├── utils/                      # Utility functions
-│   ├── mesh_utils.py           # Mesh operations
-│   ├── obj_utils.py            # Object operations
-│   ├── shapekey_utils.py       # Shape key operations
-│   ├── vertexgroup_utils.py    # Vertex group utilities
-│   ├── texture_utils.py        # Texture utilities
-│   ├── file_utils.py           # File I/O
-│   └── algorithm_utils.py      # Algorithms (e.g. TBN codec)
-├── resources/                  # HLSL shader resources
-│   ├── draw_2d.hlsl
-│   ├── extract_cb1_ps.hlsl
-│   └── ...
-└── workspace/                  # Workspace management
-    ├── ssmt_workspace.py       # SSMT workspace
-    └── texture_metadata_helper.py
-```
-
----
 
 ## ⭐ Star History
 
@@ -212,5 +154,6 @@ Great thanks to:
 - [SpectrumQT / WWMI-Tools](https://github.com/SpectrumQT/WWMI-Tools)
 - [SpectrumQT / EFMI-Tools](https://github.com/SpectrumQT/EFMI-Tools)
 - [ssice-a / mod_importer](https://github.com/ssice-a/mod_importer)
+- [Grim-es / material-combiner-addon](https://github.com/Grim-es/material-combiner-addon)
 
 
