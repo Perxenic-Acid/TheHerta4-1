@@ -355,7 +355,8 @@ class SSMTNode_Object_Info(SSMTNodeBase):
     def _get_effective_parse_name(self):
         normalized_submesh_name = str(self.submesh_name or "").strip()
         prefix_name = normalized_submesh_name.partition(".")[0]
-        if normalized_submesh_name and len(prefix_name.split("-")) >= 3:
+        # 新格式（2段）或旧格式（>=3段）都是有效的 submesh_name
+        if normalized_submesh_name and len(prefix_name.split("-")) >= 2:
             return normalized_submesh_name
         return self.object_name
 

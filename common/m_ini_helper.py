@@ -22,6 +22,9 @@ class M_IniHelper:
         例：mark_filename="5a4c1ef3-318-46683-DiffuseMap.dds", display_str="LOD0.身体"
         → 返回 "LOD0.身体-DiffuseMap.dds"
         若无别名（display_str == submesh_name），原样返回。
+
+        新格式兼容: submesh_name 可能是 "LOD0.5a4c1ef3-0"（新格式），
+        此时通过 WorkSpaceModel 查找对应的旧文件夹名来做前缀匹配。
         '''
         display_str = getattr(submesh_model, "display_str", "")
         submesh_name = getattr(submesh_model, "submesh_name", "")
@@ -29,8 +32,22 @@ class M_IniHelper:
             return mark_filename
         _, bare_submesh_name = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
         old_prefix = bare_submesh_name + "-"
+
+        # 先尝试直接匹配（适用于旧格式）
         if mark_filename.startswith(old_prefix):
             return display_str + "-" + mark_filename[len(old_prefix):]
+
+        # 新格式兼容：通过 WorkSpaceModel 找到旧文件夹名再试
+        from ..workspace.ssmt_workspace import WorkSpaceModel
+        ws_model = WorkSpaceModel()
+        parsed = ws_model.parse_new_format_name(submesh_name)
+        if parsed is not None:
+            old_folder = ws_model.get_old_folder_name(parsed["lod"], parsed["draw_ib"], parsed["component"])
+            if old_folder:
+                old_prefix2 = old_folder + "-"
+                if mark_filename.startswith(old_prefix2):
+                    return display_str + "-" + mark_filename[len(old_prefix2):]
+
         return mark_filename
 
     @staticmethod

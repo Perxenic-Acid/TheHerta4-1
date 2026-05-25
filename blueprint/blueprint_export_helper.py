@@ -177,29 +177,9 @@ class BlueprintExportHelper:
         if not BlueprintExportHelper._is_valid_blueprint_tree(current_tree):
             return []
 
-        all_display_names = []
-        lod_submesh_dict = SSMTWorkSpace.get_lod_submesh_folderpath_dict()
-        if lod_submesh_dict:
-            for lod_name, submesh_folder_paths in lod_submesh_dict.items():
-                lod_folder_path = os.path.join(GlobalConfig.path_workspace_folder(), lod_name)
-                drawib_aliasname_dict = SSMTWorkSpace.get_drawib_aliasname_dict_for_path(lod_folder_path)
-                for folder_path in submesh_folder_paths:
-                    bare_name = os.path.basename(folder_path)
-                    display_name = lod_name + "." + SSMTWorkSpace.get_display_submesh_name(
-                        bare_name,
-                        drawib_aliasname_dict=drawib_aliasname_dict,
-                    )
-                    all_display_names.append(display_name)
-        else:
-            # 兼容旧版无LOD结构
-            drawib_aliasname_dict = SSMTWorkSpace.get_drawib_aliasname_dict()
-            all_display_names = [
-                SSMTWorkSpace.get_display_submesh_name(
-                    os.path.basename(folder_path),
-                    drawib_aliasname_dict=drawib_aliasname_dict,
-                )
-                for folder_path in SSMTWorkSpace.get_submesh_folderpath_list()
-            ]
+        from ..workspace.ssmt_workspace import WorkSpaceModel
+        ws_model = WorkSpaceModel()
+        all_display_names = ws_model.get_all_display_names()
 
         return BlueprintExportHelper.set_tree_submesh_names(all_display_names, tree=current_tree)
 

@@ -159,6 +159,8 @@ class BluePrintModel:
         从当前 BluePrintModel 解析出 SubMeshModel 列表。
         将相同 submesh_name 的 DrawCallModel 分在一起，每个组创建一个 SubMeshModel。
         """
+        from ..workspace.ssmt_workspace import WorkSpaceModel
+
         submesh_model_list: list[SubMeshModel] = []
         draw_call_model_dict: dict[str, list[DrawCallModel]] = {}
 
@@ -168,8 +170,13 @@ class BluePrintModel:
             draw_call_model_list.append(draw_call_model)
             draw_call_model_dict[submesh_name] = draw_call_model_list
 
+        # 创建 WorkSpaceModel 用于修正新格式的 IndexCount/FirstIndex
+        workspace_model = WorkSpaceModel()
+
         for submesh_name, draw_call_model_list in draw_call_model_dict.items():
             submesh_model = SubMeshModel(drawcall_model_list=draw_call_model_list)
+            # 新格式下 match_index_count/match_first_index 初始为 -1，用 WorkSpaceModel 修正
+            submesh_model.fix_indices_from_workspace(workspace_model)
             submesh_model_list.append(submesh_model)
 
         return submesh_model_list

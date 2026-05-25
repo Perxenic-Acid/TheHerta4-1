@@ -26,7 +26,12 @@ class DrawCallModel:
 
 
     def __post_init__(self) -> None:
-        objname_parse_error_tips = "Obj名称规则为: DrawIB-IndexCount-FirstIndex.AliasName,例如[67f829fc-2653-0.头发]第一个.前面的内容要符合规则,后面出现的内容是可以自定义的"
+        objname_parse_error_tips = (
+            "Obj名称规则（新格式）: DrawIB-ComponentIndex.AliasName, "
+            "例如[94517393-0.头发]第一个.前面的内容要符合规则,后面出现的内容是可以自定义的\n"
+            "Obj名称规则（旧格式）: DrawIB-IndexCount-FirstIndex.AliasName, "
+            "例如[67f829fc-2653-0.头发]"
+        )
 
         submesh_parse_result = self._try_parse_name(self.submesh_name)
         if submesh_parse_result is not None:
@@ -34,7 +39,6 @@ class DrawCallModel:
             return
 
         # submesh_name 解析失败，退而解析 obj_name
-        # 先尝试通过 _try_parse_name 解析 obj_name（支持 LOD 前缀）
         obj_name_parse_result = self._try_parse_name(self.obj_name)
         if obj_name_parse_result is not None:
             self.match_draw_ib, self.match_index_count, self.match_first_index, self.match_submesh_name, self.comment_alias_name = obj_name_parse_result
@@ -51,13 +55,25 @@ class DrawCallModel:
 
         if len(obj_name_total_split) < 2:
             SSMTErrorUtils.raise_fatal("Obj名称解析错误: " + self.obj_name + "  不包含'.'分隔符\n" + objname_parse_error_tips)
-        if len(obj_name_split) < 3:
-            SSMTErrorUtils.raise_fatal("Obj名称解析错误: " + self.obj_name + "  '-'分隔符数量不足，至少需要2个\n" + objname_parse_error_tips)
+        if len(obj_name_split) < 2:
+            SSMTErrorUtils.raise_fatal(
+                "Obj名称解析错误: " + self.obj_name + "  '-'分隔符数量不足，至少需要1个\n" + objname_parse_error_tips
+            )
 
         self.match_draw_ib = obj_name_split[0]
-        self.match_index_count = obj_name_split[1]
-        self.match_first_index = obj_name_split[2]
-        self.match_submesh_name = self.match_draw_ib + "-" + self.match_index_count + "-" + self.match_first_index
+
+        if len(obj_name_split) == 2:
+            # 新格式: DrawIB-ComponentIndex（2 段）
+            # match_index_count 为空，match_first_index 暂存 Component 序号
+            # 后续由 WorkSpaceModel 修正 match_index_count / match_first_index
+            self.match_index_count = ""
+            self.match_first_index = obj_name_split[1]
+        else:
+            # 旧格式: DrawIB-IndexCount-FirstIndex（>=3 段）
+            self.match_index_count = obj_name_split[1]
+            self.match_first_index = obj_name_split[2]
+
+        self.match_submesh_name = self.match_draw_ib + "-" + self.match_first_index
 
     def _try_parse_name(self, name: str):
         normalized_name = str(name or "").strip()
@@ -76,12 +92,21 @@ class DrawCallModel:
 
         name_prefix, _, alias_suffix = temp.partition(".")
         name_split = name_prefix.split("-")
-        if len(name_split) < 3:
+
+        if len(name_split) < 2:
             return None
 
-        # match_submesh_name 保留 LOD 前缀，以便路径解析时能定位到正确目录
         lod_submesh_name = lod_prefix + name_prefix if lod_prefix else name_prefix
-        return name_split[0], name_split[1], name_split[2], lod_submesh_name, alias_suffix
+
+        if len(name_split) == 2:
+            # 新格式: DrawIB-ComponentIndex（2 段）
+            # match_index_count 为空，match_first_index 暂存 Component 序号
+            return name_split[0], "", name_split[1], lod_submesh_name, alias_suffix
+        elif len(name_split) >= 3:
+            # 旧格式: DrawIB-IndexCount-FirstIndex（>=3 段）
+            return name_split[0], name_split[1], name_split[2], lod_submesh_name, alias_suffix
+
+        return None
     
     def get_submesh_name(self) -> str:
         # 返回这个 DrawCall 所属 submesh 的名称

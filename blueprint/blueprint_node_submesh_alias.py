@@ -47,18 +47,10 @@ class SSMT_OT_RefreshSubmeshAlias(bpy.types.Operator):
             self.report({'WARNING'}, rpt_("未找到目标节点"))
             return {'CANCELLED'}
 
-        # 从工作空间扫描所有 LOD 下的 submesh submesh_name
-        all_submesh_names = []
-        lod_submesh_dict = SSMTWorkSpace.get_lod_submesh_folderpath_dict()
-        if lod_submesh_dict:
-            for lod_name, submesh_folder_paths in lod_submesh_dict.items():
-                for folder_path in submesh_folder_paths:
-                    bare_name = os.path.basename(folder_path)
-                    all_submesh_names.append(lod_name + "." + bare_name)
-        else:
-            # 兼容旧版无 LOD 结构
-            for folder_path in SSMTWorkSpace.get_submesh_folderpath_list():
-                all_submesh_names.append(os.path.basename(folder_path))
+        # 使用 WorkSpaceModel 获取所有新格式 submesh 名称
+        from ..workspace.ssmt_workspace import WorkSpaceModel
+        ws_model = WorkSpaceModel()
+        all_submesh_names = ws_model.get_all_new_format_names()
 
         # 保留已有别名，只增量合并新的 submesh_name
         existing = {item.submesh_name: item.alias_name for item in node.alias_items}

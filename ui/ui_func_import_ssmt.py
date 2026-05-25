@@ -16,32 +16,30 @@ from ..utils.translate_utils import rpt_
 
 from ..common.global_config import GlobalConfig
 from ..common.ssmt_import_helper import SSMTImportHelper
-from ..workspace.ssmt_workspace import SSMTWorkSpace
+from ..workspace.ssmt_workspace import SSMTWorkSpace, WorkSpaceModel
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
 
 # 全量导入逻辑
 def ImprotFromWorkSpaceFull(self, context):
     
+    # 创建 WorkSpaceModel 统一管理所有映射
+    ws_model = WorkSpaceModel()
+
     # 这里先创建以当前工作空间为名称的集合，并且链接到scene，确保它存在
     workspace_collection = SSMTWorkSpace.create_and_get_workspace_collection()
 
-    # 获取当前工作空间下的所有 LOD 目录及其 submesh 子目录
-    lod_submesh_dict = SSMTWorkSpace.get_lod_submesh_folderpath_dict()
-
-    if not lod_submesh_dict:
+    if not ws_model.lod_components:
         self.report({'ERROR'}, "当前工作空间未找到任何 LOD 目录（LOD0、LOD1…），请检查工作空间结构。")
         return
 
-    # 读取时保存每个导入文件夹里导入的 GameType 名称到工作空间根目录的 Import.json
-    # 生成 Mod 时会用它来确定应该进入哪个 TYPE_xxx 目录读取 SubmeshJson
-    # key: LOD 前缀的 submesh_name（如 "LOD0.67f829fc-2653-0"）, value: gametype_name
+    # key: 新格式 submesh_name（如 "LOD0.94517393-0"）, value: gametype_name
     foldername_gametypename_dict = {}
     foldername_imported_obj_dict = {}
     all_submesh_display_names = []
     successful_import_count = 0
 
-    for lod_name, submesh_folder_paths in lod_submesh_dict.items():
+    for lod_name in sorted(ws_model.lod_components.keys()):
         # 为每个 LOD 创建蓝色子集合，挂在工作空间集合下面
         lod_collection = CollectionUtils.create_new_collection(
             collection_name=lod_name,
@@ -49,58 +47,58 @@ def ImprotFromWorkSpaceFull(self, context):
         )
         workspace_collection.children.link(lod_collection)
 
-        # 读取该 LOD 目录下的 Config.json 里的 DrawIB -> 别名映射
-        lod_folder_path = os.path.join(GlobalConfig.path_workspace_folder(), lod_name)
-        drawib_aliasname_dict = SSMTWorkSpace.get_drawib_aliasname_dict_for_path(lod_folder_path)
+        drawib_components = ws_model.lod_components[lod_name]
 
-        for submesh_folder_path in submesh_folder_paths:
-            submesh_folder_name = os.path.basename(submesh_folder_path)
-            # 带 LOD 前缀的唯一标识，如 "LOD0.67f829fc-2653-0"
-            lod_prefixed_name = lod_name + "." + submesh_folder_name
-            print("Import FolderName: " + lod_prefixed_name)
+        for draw_ib in sorted(drawib_components.keys()):
+            comp_map = drawib_components[draw_ib]
 
-            # 获取导入的数据类型文件夹路径列表
-            final_import_folder_path_list = SSMTWorkSpace.get_ordered_gpu_cpu_import_folderpath_list(submesh_folder_path)
-            print("Final Import Folder Path List: " + str(final_import_folder_path_list))
+            for comp_index in sorted(comp_map.keys()):
+                old_folder_name = comp_map[comp_index]
+                new_submesh_name = ws_model.get_new_submesh_name(lod_name, draw_ib, comp_index)
+                display_name = ws_model.get_display_name(lod_name, draw_ib, comp_index)
+                folder_path = ws_model.get_folder_path(lod_name, draw_ib, comp_index)
 
-            # 接下来开始导入，尝试对当前DrawIB的每个数据类型都进行导入
-            for import_folder_path in final_import_folder_path_list:
-                gametype_name = import_folder_path.split("TYPE_")[1]
-
-                try:
-                    print("尝试导入路径: " + import_folder_path)
-                    # 构造显示名称，带 LOD 前缀
-                    bare_display_name = SSMTWorkSpace.get_display_submesh_name(
-                        submesh_folder_name,
-                        drawib_aliasname_dict=drawib_aliasname_dict,
-                    )
-                    object_display_name = lod_name + "." + bare_display_name
-
-                    json_file_path = os.path.join(import_folder_path, submesh_folder_name + ".json")
-                    imported_obj = SSMTImportHelper.create_mesh_from_json(
-                        json_file_path=json_file_path,
-                        import_collection=lod_collection,
-                    )
-                    if imported_obj is not None:
-                        imported_obj.name = object_display_name
-                        imported_obj.data.name = imported_obj.name
-                        foldername_imported_obj_dict[lod_prefixed_name] = imported_obj
-                        all_submesh_display_names.append(object_display_name)
-                        successful_import_count += 1
-
-                    foldername_gametypename_dict[lod_prefixed_name] = gametype_name
-                    self.report({'INFO'}, "成功导入 " + lod_prefixed_name + " 的数据类型: " + gametype_name)
-                except Exception as e:
-                    print(f"Failed to import from {import_folder_path}: {e}")
+                if not folder_path or not os.path.isdir(folder_path):
                     continue
-                # 直到第一个导入成功就 Break
-                break
+
+                print("Import FolderName: " + folder_path)
+
+                # 获取导入的数据类型文件夹路径列表
+                final_import_folder_path_list = SSMTWorkSpace.get_ordered_gpu_cpu_import_folderpath_list(folder_path)
+                print("Final Import Folder Path List: " + str(final_import_folder_path_list))
+
+                # 接下来开始导入，尝试对当前DrawIB的每个数据类型都进行导入
+                for import_folder_path in final_import_folder_path_list:
+                    gametype_name = import_folder_path.split("TYPE_")[1]
+
+                    try:
+                        print("尝试导入路径: " + import_folder_path)
+
+                        json_file_path = os.path.join(import_folder_path, old_folder_name + ".json")
+                        imported_obj = SSMTImportHelper.create_mesh_from_json(
+                            json_file_path=json_file_path,
+                            import_collection=lod_collection,
+                        )
+                        if imported_obj is not None:
+                            imported_obj.name = display_name
+                            imported_obj.data.name = imported_obj.name
+                            foldername_imported_obj_dict[new_submesh_name] = imported_obj
+                            all_submesh_display_names.append(display_name)
+                            successful_import_count += 1
+
+                        foldername_gametypename_dict[new_submesh_name] = gametype_name
+                        self.report({'INFO'}, "成功导入 " + new_submesh_name + " 的数据类型: " + gametype_name)
+                    except Exception as e:
+                        print(f"Failed to import from {import_folder_path}: {e}")
+                        continue
+                    # 直到第一个导入成功就 Break
+                    break
 
     if successful_import_count == 0:
         self.report({'ERROR'}, "当前工作空间没有成功导入任何模型，已跳过蓝图生成。")
         return
 
-    # 保存工作空间级 Import.json 选择记录（key 带 LOD 前缀）
+    # 保存工作空间级 Import.json 选择记录（使用新格式 key）
     save_import_json_path = os.path.join(GlobalConfig.path_workspace_folder(), "Import.json")
     JsonUtils.SaveToFile(json_dict=foldername_gametypename_dict, filepath=save_import_json_path)
     
@@ -135,13 +133,13 @@ def ImprotFromWorkSpaceFull(self, context):
         count = 0
         min_y = 0
 
-        for lod_prefixed_name, imported_obj in foldername_imported_obj_dict.items():
+        for new_submesh_name, imported_obj in foldername_imported_obj_dict.items():
             if imported_obj.type != 'MESH':
                 continue
 
-            # 解析裸 submesh_name 用于获取 component 编号
-            _, bare_submesh_name = SSMTWorkSpace.parse_lod_submesh_name(lod_prefixed_name)
-            namesplits = bare_submesh_name.split('-')
+            # 通过 WorkSpaceModel 解析新格式名称获取 component 编号
+            parsed = ws_model.parse_new_format_name(new_submesh_name)
+            component_str = str(parsed["component"]) if parsed else "0"
 
             # 创建节点
             node = tree.nodes.new('SSMTNode_Object_Info')
@@ -150,13 +148,8 @@ def ImprotFromWorkSpaceFull(self, context):
             # 填充属性
             node.object_name = imported_obj.name
             node.original_object_name = imported_obj.name
-
-            if len(namesplits) >= 2:
-                node.component = namesplits[1]
-            else:
-                node.component = "1"
-
-            node.submesh_name = imported_obj.name  # 已带 LOD 前缀
+            node.component = component_str
+            node.submesh_name = imported_obj.name  # 已带 LOD 前缀（新格式）
 
             node.label = imported_obj.name
 
@@ -318,6 +311,7 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
       传入 "__AUTO__" 表示：第一个 submesh 正常尝试所有类型，
       确定哪个类型可用，后续 submesh 全部使用同一类型。
     '''
+    ws_model = WorkSpaceModel()
     workspace_collection = _get_or_create_workspace_collection()
 
     foldername_gametypename_dict = {}
@@ -339,17 +333,21 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
         # 查找或创建 LOD 子集合（复用已有的）
         lod_collection = _get_or_create_lod_collection(workspace_collection, lod_name)
 
-        lod_folder_path = os.path.join(GlobalConfig.path_workspace_folder(), lod_name)
-        drawib_aliasname_dict = SSMTWorkSpace.get_drawib_aliasname_dict_for_path(lod_folder_path)
-
         for submesh_folder_path in submesh_folder_paths:
             submesh_folder_name = os.path.basename(submesh_folder_path)
-            lod_prefixed_name = lod_name + "." + submesh_folder_name
-            print("Re-Import FolderName: " + lod_prefixed_name)
+            print("Re-Import FolderName: " + submesh_folder_name)
+
+            # 通过 WorkSpaceModel 获取 Component 序号和新格式名称
+            old_folder_draw_ib = submesh_folder_name.split("-")[0]
+            comp_index = ws_model.get_component_index(lod_name, old_folder_draw_ib, submesh_folder_name)
+            if comp_index < 0:
+                comp_index = 0
+
+            new_submesh_name = ws_model.get_new_submesh_name(lod_name, old_folder_draw_ib, comp_index)
+            display_name = ws_model.get_display_name(lod_name, old_folder_draw_ib, comp_index)
 
             # 确定要尝试的数据类型文件夹列表
             if locked_gametype is not None:
-                # 已有锁定类型，只尝试该类型
                 final_import_folder_path_list = [
                     os.path.join(submesh_folder_path, "TYPE_" + locked_gametype)
                 ]
@@ -369,11 +367,6 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
 
                 try:
                     print("尝试导入路径: " + import_folder_path)
-                    bare_display_name = SSMTWorkSpace.get_display_submesh_name(
-                        submesh_folder_name,
-                        drawib_aliasname_dict=drawib_aliasname_dict,
-                    )
-                    object_display_name = lod_name + "." + bare_display_name
 
                     json_file_path = os.path.join(import_folder_path, submesh_folder_name + ".json")
                     imported_obj = SSMTImportHelper.create_mesh_from_json(
@@ -381,14 +374,14 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
                         import_collection=lod_collection,
                     )
                     if imported_obj is not None:
-                        imported_obj.name = object_display_name
+                        imported_obj.name = display_name
                         imported_obj.data.name = imported_obj.name
-                        foldername_imported_obj_dict[lod_prefixed_name] = imported_obj
-                        all_submesh_display_names.append(object_display_name)
+                        foldername_imported_obj_dict[new_submesh_name] = imported_obj
+                        all_submesh_display_names.append(display_name)
                         successful_import_count += 1
 
-                    foldername_gametypename_dict[lod_prefixed_name] = gametype_name
-                    self.report({'INFO'}, "成功导入 " + lod_prefixed_name + " 的数据类型: " + gametype_name)
+                    foldername_gametypename_dict[new_submesh_name] = gametype_name
+                    self.report({'INFO'}, "成功导入 " + new_submesh_name + " 的数据类型: " + gametype_name)
 
                     # 如果是 __AUTO__ 模式且第一次成功，锁定该类型供后续使用
                     if locked_gametype is None and force_gametype_name == "__AUTO__":
@@ -451,25 +444,24 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
         count = 0
         min_y = 0
 
-        for lod_prefixed_name, imported_obj in foldername_imported_obj_dict.items():
+        ws_model = WorkSpaceModel()
+
+        for new_submesh_name, imported_obj in foldername_imported_obj_dict.items():
             if imported_obj.type != 'MESH':
                 continue
 
-            _, bare_submesh_name = SSMTWorkSpace.parse_lod_submesh_name(lod_prefixed_name)
-            namesplits = bare_submesh_name.split('-')
+            # 通过 WorkSpaceModel 解析新格式名称获取 component 编号
+            parsed = ws_model.parse_new_format_name(new_submesh_name)
+            component_str = str(parsed["component"]) if parsed else "0"
 
             node = tree.nodes.new('SSMTNode_Object_Info')
             node.location = (current_x, current_y)
 
             node.object_name = imported_obj.name
             node.original_object_name = imported_obj.name
+            node.component = component_str
+            node.submesh_name = imported_obj.name  # 已带 LOD 前缀（新格式）
 
-            if len(namesplits) >= 2:
-                node.component = namesplits[1]
-            else:
-                node.component = "1"
-
-            node.submesh_name = imported_obj.name
             node.label = imported_obj.name
 
             if group_node.inputs[-1].is_linked:

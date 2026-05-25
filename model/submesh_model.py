@@ -51,16 +51,52 @@ class SubMeshModel:
 
         # 因为列表里的每个DrawCallModel的draw_ib,first_index,index_count都是一样的，所以直接取第一个就行了
         if len(self.drawcall_model_list) > 0:
-            self.match_draw_ib = self.drawcall_model_list[0].match_draw_ib
-            self.match_first_index = int(self.drawcall_model_list[0].match_first_index)
-            self.match_index_count = int(self.drawcall_model_list[0].match_index_count)
-            self.submesh_name = self.drawcall_model_list[0].get_submesh_name()
+            first_model = self.drawcall_model_list[0]
+            self.match_draw_ib = first_model.match_draw_ib
+            # 新格式下 match_index_count 可能为空字符串 → 先设 0，后续由 WorkSpaceModel 修正
+            try:
+                self.match_first_index = int(first_model.match_first_index) if first_model.match_first_index else -1
+            except (ValueError, TypeError):
+                self.match_first_index = -1
+            try:
+                self.match_index_count = int(first_model.match_index_count) if first_model.match_index_count else -1
+            except (ValueError, TypeError):
+                self.match_index_count = -1
+            self.submesh_name = first_model.get_submesh_name()
         
         # display_str 默认等于 submesh_name，导出前可被 apply_alias_dict 覆盖
         self.display_str = self.submesh_name
         
         self.calc_buffer()
-    
+
+    def fix_indices_from_workspace(self, workspace_model):
+        '''
+        使用 WorkSpaceModel 修正 match_index_count 和 match_first_index。
+        适用于新格式名称（submesh_name 为 "LOD0.94517393-0" 之类）的场景，
+        此时 match_index_count 初始为 -1，需要从 WorkSpaceModel 的旧文件夹名解析真实值。
+        旧格式名称已自带正确值，此方法不会覆盖。
+        '''
+        from ..workspace.ssmt_workspace import WorkSpaceModel
+
+        # 如果 match_index_count 已经 >= 0，说明是旧格式，无需修正
+        if self.match_index_count >= 0 and self.match_first_index >= 0:
+            return
+
+        if not self.submesh_name or not self.match_draw_ib:
+            return
+
+        # 尝试解析 submesh_name
+        parsed = workspace_model.parse_new_format_name(self.submesh_name)
+        if parsed is None:
+            return
+
+        # 从 WorkSpaceModel 获取真实值
+        _, ic, fi = workspace_model.resolve_component_info(
+            parsed["lod"], parsed["draw_ib"], parsed["component"]
+        )
+        if ic > 0 or fi >= 0:
+            self.match_index_count = ic
+            self.match_first_index = fi
 
     def calc_buffer(self):
         # 对每个obj都创建一个临时对象进行处理，这样不影响原本的对象
