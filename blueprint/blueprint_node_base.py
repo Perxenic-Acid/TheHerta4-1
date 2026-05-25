@@ -328,6 +328,118 @@ class THEHERTA3_OT_RenamePersistentBlueprint(bpy.types.Operator):
         self.report({'INFO'}, "已将蓝图重命名为: " + target_tree.name)
         return {'FINISHED'}
     
+class SSMT_PT_FrameProperties(bpy.types.Panel):
+    '''Frame 框属性面板：选中 Frame 节点后可在侧边栏调节颜色、透明度、标签等属性'''
+    bl_idname = "SSMT_PT_FrameProperties"
+    bl_label = "Frame 框属性"
+    bl_space_type = 'NODE_EDITOR'
+    bl_region_type = 'UI'
+    bl_category = "SSMT"
+
+    @classmethod
+    def poll(cls, context):
+        # 仅在 SSMT 蓝图树中显示
+        space = context.space_data
+        if space.type != 'NODE_EDITOR':
+            return False
+        tree = getattr(space, "edit_tree", None) or getattr(space, "node_tree", None)
+        if not tree or getattr(tree, "bl_idname", "") != 'SSMTBlueprintTreeType':
+            return False
+        # 检查是否有 Frame 节点被选中
+        if not context.selected_nodes:
+            return False
+        for node in context.selected_nodes:
+            if node.bl_idname == 'NodeFrame':
+                return True
+        return False
+
+    def draw(self, context):
+        layout = self.layout
+        # 收集所有选中的 Frame 节点
+        frames = [n for n in context.selected_nodes if n.bl_idname == 'NodeFrame']
+        if not frames:
+            return
+
+        # 全部用第一个 frame 的属性来设置，多选时统一应用
+        frame = frames[0]
+
+        # === 标签 ===
+        box = layout.box()
+        box.label(text="标签", icon='FONT_DATA')
+        col = box.column(align=True)
+        col.prop(frame, "label", text="名称")
+        col.prop(frame, "label_size", text="字体大小")
+
+        # === 外观 ===
+        box = layout.box()
+        box.label(text="外观", icon='MATERIAL')
+        col = box.column(align=True)
+        col.prop(frame, "use_custom_color", text="自定义颜色")
+        if frame.use_custom_color:
+            col.prop(frame, "color", text="")
+        col.prop(frame, "shrink", text="自动收缩大小")
+
+        # === 尺寸 ===
+        box = layout.box()
+        box.label(text="尺寸", icon='MESH_PLANE')
+        col = box.column(align=True)
+        col.prop(frame, "width", text="宽度")
+        col.prop(frame, "height", text="高度")
+
+        # === 扩展文本 ===
+        box = layout.box()
+        box.label(text="描述文本", icon='TEXT')
+        col = box.column()
+        col.prop(frame, "text", text="")
+
+        # === 可见性 ===
+        box = layout.box()
+        box.label(text="可见性", icon='HIDE_OFF')
+        col = box.column(align=True)
+        col.prop(frame, "hide", text="隐藏")
+        col.prop(frame, "mute", text="静音（禁用）")
+
+        # === 多选统一应用按钮 ===
+        if len(frames) > 1:
+            layout.separator()
+            layout.label(text=f"已选中 {len(frames)} 个 Frame", icon='INFO')
+            layout.label(text="修改上方属性后，点击按钮应用到全部", icon='LOOP_BACK')
+            op = layout.operator("ssmt.apply_frame_properties_to_all", text="应用到所有选中 Frame", icon='CHECKMARK')
+            op.source_frame_name = frame.name
+            op.tree_name = frame.id_data.name if frame.id_data else ""
+
+
+class SSMT_OT_ApplyFramePropertiesToAll(bpy.types.Operator):
+    '''将第一个选中 Frame 的所有属性复制到其余选中的 Frame'''
+    bl_idname = "ssmt.apply_frame_properties_to_all"
+    bl_label = "应用到所有选中 Frame"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    source_frame_name: bpy.props.StringProperty()  # type: ignore
+    tree_name: bpy.props.StringProperty()          # type: ignore
+
+    def execute(self, context):
+        tree = bpy.data.node_groups.get(self.tree_name)
+        if not tree:
+            return {'CANCELLED'}
+
+        source = tree.nodes.get(self.source_frame_name)
+        if not source or source.bl_idname != 'NodeFrame':
+            return {'CANCELLED'}
+
+        frames = [n for n in context.selected_nodes if n.bl_idname == 'NodeFrame' and n != source]
+        props = [
+            'label', 'label_size', 'use_custom_color', 'color',
+            'shrink', 'width', 'height', 'text', 'hide', 'mute'
+        ]
+        for frame in frames:
+            for prop in props:
+                setattr(frame, prop, getattr(source, prop))
+
+        self.report({'INFO'}, f"已将 {source.label or source.name} 的属性应用到 {len(frames)} 个 Frame")
+        return {'FINISHED'}
+
+
 def register():
     bpy.utils.register_class(SSMTSubmeshListItem)
     bpy.utils.register_class(SSMTBlueprintTree)
@@ -335,11 +447,15 @@ def register():
     bpy.utils.register_class(THEHERTA3_OT_OpenPersistentBlueprint)
     bpy.utils.register_class(THEHERTA3_OT_DeletePersistentBlueprint)
     bpy.utils.register_class(THEHERTA3_OT_RenamePersistentBlueprint)
+    bpy.utils.register_class(SSMT_PT_FrameProperties)
+    bpy.utils.register_class(SSMT_OT_ApplyFramePropertiesToAll)
     SSMTBlueprintTree.ssmt_submesh_items = bpy.props.CollectionProperty(type=SSMTSubmeshListItem) # type: ignore[attr-defined]
 
 
 def unregister():
     del SSMTBlueprintTree.ssmt_submesh_items
+    bpy.utils.unregister_class(SSMT_OT_ApplyFramePropertiesToAll)
+    bpy.utils.unregister_class(SSMT_PT_FrameProperties)
     bpy.utils.unregister_class(THEHERTA3_OT_RenamePersistentBlueprint)
     bpy.utils.unregister_class(THEHERTA3_OT_DeletePersistentBlueprint)
     bpy.utils.unregister_class(SSMTSocketObject)
