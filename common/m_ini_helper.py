@@ -81,7 +81,7 @@ class M_IniHelper:
                     "",
                 )
 
-        d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
+        d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", None)
         if d3d11_game_type is None:
             return ""
 
@@ -99,7 +99,7 @@ class M_IniHelper:
 
         d3d11_game_type = getattr(submesh_model, "d3d11_game_type", None)
         if d3d11_game_type is None:
-            d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
+            d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", None)
         submesh_name = getattr(submesh_model, "submesh_name", "")
         if d3d11_game_type is None or submesh_name == "":
             return ""
@@ -120,7 +120,7 @@ class M_IniHelper:
         for submesh_model in getattr(draw_ib_model, "submesh_model_list", []):
             d3d11_game_type = getattr(submesh_model, "d3d11_game_type", None)
             if d3d11_game_type is None:
-                d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", getattr(draw_ib_model, "d3d11GameType", None))
+                d3d11_game_type = getattr(draw_ib_model, "d3d11_game_type", None)
             submesh_name = getattr(submesh_model, "submesh_name", "")
             if d3d11_game_type is None or submesh_name == "":
                 continue
@@ -637,7 +637,7 @@ class M_IniHelper:
         ib_number = 1
         for drawib, drawib_model in drawib_drawibmodel_dict.items():
             shapekey_buffer_dict = getattr(drawib_model, "shapekey_name_bytelist_dict", {})
-            d3d11_game_type = getattr(drawib_model, "d3d11_game_type", getattr(drawib_model, "d3d11GameType", None))
+            d3d11_game_type = getattr(drawib_model, "d3d11_game_type", None)
             draw_number = getattr(drawib_model, "draw_number", getattr(drawib_model, "vertex_count", 0))
 
             # 如果当前DrawIB没有生成形态键数据，则跳过不处理
@@ -679,7 +679,7 @@ class M_IniHelper:
         ib_number = 1
         for drawib, drawib_model in drawib_drawibmodel_dict.items():
             shapekey_buffer_dict = getattr(drawib_model, "shapekey_name_bytelist_dict", {})
-            d3d11_game_type = getattr(drawib_model, "d3d11_game_type", getattr(drawib_model, "d3d11GameType", None))
+            d3d11_game_type = getattr(drawib_model, "d3d11_game_type", None)
 
             # 如果当前DrawIB没有生成形态键数据，则跳过不处理
             if not shapekey_buffer_dict or d3d11_game_type is None:

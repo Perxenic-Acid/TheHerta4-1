@@ -8,6 +8,7 @@ from ..model.blueprint_model import BluePrintModel
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from ..common.m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
 from ..common.global_config import GlobalConfig
+from ..common.d3d11_semantics import D3D11Category
 from ..common.m_ini_helper import M_IniHelper
 from ..common.m_ini_helper_gui import M_IniHelperGUI
 
@@ -144,7 +145,7 @@ class ExportWWMI:
                 blend_remap_section.append("  ResourceExtraRemappedSkeletonRW = copy ResourceExtraMergedSkeletonRW")
                 blend_remap_section.new_line()
                 blend_remap_section.append("  $\\WWMIv1\\custom_vertex_count = $mesh_vertex_count")
-                weights_per_vertex_count = draw_ib_model.d3d11GameType.get_blendindices_count_wwmi()
+                weights_per_vertex_count = draw_ib_model.d3d11_game_type.get_blendindices_count_wwmi()
                 blend_remap_section.append("  $\\WWMIv1\\weights_per_vertex_count = " + str(weights_per_vertex_count))
                 blend_remap_section.append("  cs-t34 = ref ResourceBlendRemapReverseBuffer")
                 blend_remap_section.append("  cs-t35 = ref ResourceBlendRemapVertexVGBuffer")
@@ -512,24 +513,24 @@ class ExportWWMI:
         resource_buffer_section.append("filename = " + buffer_folder_name + "/" + draw_ib_model.draw_ib + "-Component1.buf")
         resource_buffer_section.new_line()
 
-        for category_name, category_stride in draw_ib_model.d3d11GameType.CategoryStrideDict.items():
+        for category_name, category_stride in draw_ib_model.d3d11_game_type.CategoryStrideDict.items():
             resource_buffer_section.append("[Resource" + category_name + "Buffer]")
             resource_buffer_section.append("type = Buffer")
-            if category_name == "Position":
+            if category_name == D3D11Category.POSITION:
                 resource_buffer_section.append("format = DXGI_FORMAT_R32G32B32_FLOAT")
-            elif category_name == "Blend":
+            elif category_name == D3D11Category.BLEND:
                 resource_buffer_section.append("format = DXGI_FORMAT_R8_UINT")
             elif category_name == "Vector":
                 resource_buffer_section.append("format = DXGI_FORMAT_R8G8B8A8_SNORM")
-            elif category_name == "Color":
+            elif category_name == D3D11Category.COLOR:
                 resource_buffer_section.append("format = DXGI_FORMAT_R8G8B8A8_UNORM")
-            elif category_name == "Texcoord":
+            elif category_name == D3D11Category.TEXCOORD:
                 resource_buffer_section.append("format = DXGI_FORMAT_R16G16_FLOAT")
             resource_buffer_section.append("stride = " + str(category_stride))
             resource_buffer_section.append("filename = " + buffer_folder_name + "/" + draw_ib_model.draw_ib + "-" + category_name + ".buf")
             resource_buffer_section.new_line()
 
-            if category_name == "Blend" and draw_ib_model.blend_remap:
+            if category_name == D3D11Category.BLEND and draw_ib_model.blend_remap:
                 resource_buffer_section.append("[ResourceBlendBufferNoStride]")
                 resource_buffer_section.append("type = Buffer")
                 resource_buffer_section.append("format = DXGI_FORMAT_R8_UINT")

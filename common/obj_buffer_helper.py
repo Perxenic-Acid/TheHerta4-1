@@ -10,6 +10,7 @@ from ..utils.vertexgroup_utils import VertexGroupUtils
 from ..utils.timer_utils import TimerUtils
 from ..utils.tbn_codec import TBNCodec
 from ..utils.ssmt_error_utils import SSMTErrorUtils
+from .d3d11_semantics import D3D11Semantic, D3D11Format
 from .global_config import LogicName
 from .global_config import GlobalConfig
 from .global_properties import GlobalProperties
@@ -36,20 +37,20 @@ class ObjBufferHelper:
         for d3d11_element_name in d3d11_game_type.OrderedFullElementList:
             d3d11_element = d3d11_game_type.ElementNameD3D11ElementDict[d3d11_element_name]
             # 校验并补全所有COLOR的存在
-            if d3d11_element_name.startswith("COLOR"):
+            if d3d11_element_name.startswith(D3D11Semantic.COLOR):
                 color_coll = obj.data.color_attributes if hasattr(obj.data, 'color_attributes') else obj.data.vertex_colors
                 if d3d11_element_name not in color_coll:
                     if hasattr(obj.data, 'color_attributes'):
                         obj.data.color_attributes.new(name=d3d11_element_name, type='BYTE_COLOR', domain='CORNER')
                     else:
                         obj.data.vertex_colors.new(name=d3d11_element_name)
-                    print("当前obj ["+ obj.name +"] 缺少游戏渲染所需的COLOR: ["+  "COLOR" + "]，已自动补全")
+                    print("当前obj ["+ obj.name +"] 缺少游戏渲染所需的COLOR: ["+  D3D11Semantic.COLOR + "]，已自动补全")
             
             # 校验TEXCOORD是否存在
-            if d3d11_element_name.startswith("TEXCOORD"):
+            if d3d11_element_name.startswith(D3D11Semantic.TEXCOORD):
                 if d3d11_element_name + ".xy" not in obj.data.uv_layers:
                     # 此时如果只有一个UV，则自动改名为TEXCOORD.xy
-                    if len(obj.data.uv_layers) == 1 and d3d11_element_name == "TEXCOORD":
+                    if len(obj.data.uv_layers) == 1 and d3d11_element_name == D3D11Semantic.TEXCOORD:
                             obj.data.uv_layers[0].name = d3d11_element_name + ".xy"
                     else:
                         # 否则就自动补一个UV，防止后续calc_tangents失败
@@ -130,7 +131,7 @@ class ObjBufferHelper:
             result = result.astype(numpy.float32)
             return result
 
-        elif d3d11_element.Format == 'R8G8B8A8_SNORM':
+        elif d3d11_element.Format == D3D11Format.R8G8B8A8_SNORM:
             # WWMI 这里已经确定过NORMAL没问题
 
             result = numpy.ones(mesh_loops_length * 4, dtype=numpy.float32)
@@ -149,7 +150,7 @@ class ObjBufferHelper:
             return FormatUtils.convert_4x_float32_to_r8g8b8a8_snorm(result)
 
 
-        elif d3d11_element.Format == 'R8G8B8A8_UNORM':
+        elif d3d11_element.Format == D3D11Format.R8G8B8A8_UNORM:
             # 因为法线数据是[-1,1]如果非要导出成UNORM，那一定是进行了归一化到[0,1]
             
             result = numpy.ones(mesh_loops_length * 4, dtype=numpy.float32)
@@ -236,15 +237,15 @@ class ObjBufferHelper:
         if d3d11_element.Format == 'R16G16B16A16_FLOAT':
             result = result.astype(numpy.float16)
 
-        elif d3d11_element.Format == 'R8G8B8A8_SNORM':
+        elif d3d11_element.Format == D3D11Format.R8G8B8A8_SNORM:
             # print("WWMI TANGENT To SNORM")
             result = FormatUtils.convert_4x_float32_to_r8g8b8a8_snorm(result)
 
-        elif d3d11_element.Format == 'R8G8B8A8_UNORM':
+        elif d3d11_element.Format == D3D11Format.R8G8B8A8_UNORM:
             result = FormatUtils.convert_4x_float32_to_r8g8b8a8_unorm(result)
         
         # 第五人格格式
-        elif d3d11_element.Format == "R32G32B32_FLOAT":
+        elif d3d11_element.Format == D3D11Format.R32G32B32_FLOAT:
             result = numpy.empty(mesh_loops_length * 3, dtype=numpy.float32)
 
             result[0::3] = tangents[0::3]  # x 分量
@@ -254,7 +255,7 @@ class ObjBufferHelper:
             result = result.reshape(-1, 3)
         
         # 燕云十六声格式
-        elif d3d11_element.Format == 'R16G16B16A16_SNORM':
+        elif d3d11_element.Format == D3D11Format.R16G16B16A16_SNORM:
             result = FormatUtils.convert_4x_float32_to_r16g16b16a16_snorm(result)
         
         return result
@@ -281,7 +282,7 @@ class ObjBufferHelper:
         result[3::4] = binormal_w
         result = result.reshape(-1, 4)
 
-        if d3d11_element.Format == 'R16G16B16A16_SNORM':
+        if d3d11_element.Format == D3D11Format.R16G16B16A16_SNORM:
             #  燕云十六声格式
             result = FormatUtils.convert_4x_float32_to_r16g16b16a16_snorm(result)
             
@@ -318,7 +319,7 @@ class ObjBufferHelper:
             elif d3d11_element.Format == "R16G16_FLOAT":
                 # 
                 result = result[:, :2]
-            elif d3d11_element.Format == 'R8G8B8A8_UNORM':
+            elif d3d11_element.Format == D3D11Format.R8G8B8A8_UNORM:
                 result = FormatUtils.convert_4x_float32_to_r8g8b8a8_unorm(result)
 
             print(d3d11_element.Format)
@@ -337,7 +338,7 @@ class ObjBufferHelper:
                 mesh.uv_layers[uv_name].data.foreach_get("uv",uvs_array.ravel())
                 uvs_array[:,1] = 1.0 - uvs_array[:,1]
 
-                if d3d11_element.Format == 'R16G16_FLOAT':
+                if d3d11_element.Format == D3D11Format.R16G16_FLOAT:
                     uvs_array = uvs_array.astype(numpy.float16)
                 
                 # 重塑 uvs_array 成 (mesh_loops_length, 2) 形状的二维数组
@@ -374,11 +375,11 @@ class ObjBufferHelper:
             return blendindices[:, :1]
         elif d3d11_element.Format == "R32_SINT":
             return blendindices[:, :1]
-        elif d3d11_element.Format == 'R8G8B8A8_SNORM':
+        elif d3d11_element.Format == D3D11Format.R8G8B8A8_SNORM:
             return FormatUtils.convert_4x_float32_to_r8g8b8a8_snorm(blendindices)
-        elif d3d11_element.Format == 'R8G8B8A8_UNORM':
+        elif d3d11_element.Format == D3D11Format.R8G8B8A8_UNORM:
             return FormatUtils.convert_4x_float32_to_r8g8b8a8_unorm(blendindices)
-        elif d3d11_element.Format == 'R8G8B8A8_UINT':
+        elif d3d11_element.Format == D3D11Format.R8G8B8A8_UINT:
             # TODO 这里类型截断错了吧，假如我们的全局顶点组索引是256或者300呢？
             # 这里截断直接没了，后续我们还怎么去和remap里进行映射？
             # 帮我在这里新加一个判断，如果blendindices里有大于255的值就不能转换为uint8
@@ -425,10 +426,10 @@ class ObjBufferHelper:
             return blendweights
         elif d3d11_element.Format == "R32G32_FLOAT":
             return blendweights[:, :2]
-        elif d3d11_element.Format == 'R8G8B8A8_SNORM':
+        elif d3d11_element.Format == D3D11Format.R8G8B8A8_SNORM:
             # print("BLENDWEIGHT R8G8B8A8_SNORM")
             return FormatUtils.convert_4x_float32_to_r8g8b8a8_snorm(blendweights)
-        elif d3d11_element.Format == 'R8G8B8A8_UNORM':
+        elif d3d11_element.Format == D3D11Format.R8G8B8A8_UNORM:
             # print("BLENDWEIGHT R8G8B8A8_UNORM")
             return FormatUtils.convert_4x_float32_to_r8g8b8a8_unorm_blendweights(blendweights)
         elif d3d11_element.Format == 'R16G16B16A16_FLOAT':
@@ -707,11 +708,11 @@ class ObjBufferHelper:
 
 
     @staticmethod
-    def average_normal_color(obj,indexed_vertices,d3d11GameType:D3D11GameType,dtype):
+    def average_normal_color(obj,indexed_vertices,d3d11_game_type:D3D11GameType,dtype):
         '''
         Nico: 算数平均归一化法线，HI3 2.0角色使用的方法
         '''
-        if "COLOR" not in d3d11GameType.OrderedFullElementList:
+        if D3D11Semantic.COLOR not in d3d11_game_type.OrderedFullElementList:
             return indexed_vertices
         allow_calc = False
         if GlobalProperties.recalculate_color():
@@ -777,7 +778,7 @@ class ObjBufferHelper:
 
 
     @staticmethod
-    def average_normal_tangent(obj,indexed_vertices,d3d11GameType,dtype):
+    def average_normal_tangent(obj,indexed_vertices,d3d11_game_type,dtype):
         '''
         Nico: 米游所有游戏都能用到这个，还有曾经的GPU-PreSkinning的GF2也会用到这个，崩坏三2.0新角色除外。
         尽管这个可以起到相似的效果，但是仍然无法完美获取模型本身的TANGENT数据，只能做到身体轮廓线99%近似。
@@ -785,7 +786,7 @@ class ObjBufferHelper:
         '''
         # TimerUtils.Start("Recalculate TANGENT")
 
-        if "TANGENT" not in d3d11GameType.OrderedFullElementList:
+        if D3D11Semantic.TANGENT not in d3d11_game_type.OrderedFullElementList:
             return indexed_vertices
         allow_calc = False
         if GlobalProperties.recalculate_tangent():
@@ -847,12 +848,12 @@ class ObjBufferHelper:
         return vb
 
     @staticmethod
-    def average_normal_tangent_xxmi(obj, indexed_vertices, flattened_ib, d3d11GameType, dtype, rounding_precision: int = 4):
+    def average_normal_tangent_xxmi(obj, indexed_vertices, flattened_ib, d3d11_game_type, dtype, rounding_precision: int = 4):
         '''
         使用 XXMI 的角度加权 outline 思路重计算 TANGENT.xyz。
         这里只替换 xyz，w 仍保持当前导出路径的处理习惯。
         '''
-        if "TANGENT" not in d3d11GameType.OrderedFullElementList:
+        if D3D11Semantic.TANGENT not in d3d11_game_type.OrderedFullElementList:
             return indexed_vertices
 
         allow_calc = False
@@ -869,7 +870,7 @@ class ObjBufferHelper:
             vb += bytes(vertex)
         vb = numpy.frombuffer(vb, dtype=dtype)
 
-        if len(vb) == 0 or len(flattened_ib) < 3 or "POSITION" not in vb.dtype.names or "TANGENT" not in vb.dtype.names:
+        if len(vb) == 0 or len(flattened_ib) < 3 or D3D11Semantic.POSITION not in vb.dtype.names or D3D11Semantic.TANGENT not in vb.dtype.names:
             return vb
 
         positions = numpy.asarray(vb['POSITION'], dtype=numpy.float32)
@@ -954,7 +955,7 @@ class ObjBufferHelper:
         return vb
 
     @staticmethod
-    def calc_index_vertex_buffer_universal(element_vertex_ndarray,mesh,obj,d3d11GameType,dtype):
+    def calc_index_vertex_buffer_universal(element_vertex_ndarray,mesh,obj,d3d11_game_type,dtype):
         '''
         计算IndexBuffer和CategoryBufferDict并返回
 
@@ -981,21 +982,21 @@ class ObjBufferHelper:
             obj=obj,
             indexed_vertices=indexed_vertices,
             flattened_ib=flattened_ib,
-            d3d11GameType=d3d11GameType,
+            d3d11_game_type=d3d11_game_type,
             dtype=dtype,
         )
         
         # 重计算COLOR步骤
-        indexed_vertices = ObjBufferHelper.average_normal_color(obj=obj, indexed_vertices=indexed_vertices, d3d11GameType=d3d11GameType,dtype=dtype)
+        indexed_vertices = ObjBufferHelper.average_normal_color(obj=obj, indexed_vertices=indexed_vertices, d3d11_game_type=d3d11_game_type,dtype=dtype)
 
         # print("indexed_vertices:")
         # print(str(len(indexed_vertices)))
 
         # (2) 转换为CategoryBufferDict
         # TimerUtils.Start("Calc CategoryBuffer")
-        category_stride_dict = d3d11GameType.get_real_category_stride_dict()
+        category_stride_dict = d3d11_game_type.get_real_category_stride_dict()
         category_buffer_dict:dict[str,list] = {}
-        for categoryname,category_stride in d3d11GameType.CategoryStrideDict.items():
+        for categoryname,category_stride in d3d11_game_type.CategoryStrideDict.items():
             category_buffer_dict[categoryname] = []
 
         data_matrix = numpy.array([numpy.frombuffer(byte_data,dtype=numpy.uint8) for byte_data in indexed_vertices])
@@ -1193,12 +1194,12 @@ class ObjBufferHelper:
             obj=obj,
             indexed_vertices=vertex_data_list,
             flattened_ib=flattened_ib,
-            d3d11GameType=d3d11_game_type,
+            d3d11_game_type=d3d11_game_type,
             dtype=dtype,
         )
         
         # 重计算COLOR步骤
-        indexed_vertices = ObjBufferHelper.average_normal_color(obj=obj, indexed_vertices=indexed_vertices, d3d11GameType=d3d11_game_type,dtype=dtype)
+        indexed_vertices = ObjBufferHelper.average_normal_color(obj=obj, indexed_vertices=indexed_vertices, d3d11_game_type=d3d11_game_type,dtype=dtype)
 
         # (2) 转换为CategoryBufferDict
         # TimerUtils.Start("Calc CategoryBuffer")

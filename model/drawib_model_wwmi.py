@@ -44,7 +44,7 @@ class DrawIBModelWWMI:
     blueprint_model: BluePrintModel # 当前DrawIBModel对应的BlueprintModel
 
     draw_ib_alias: str = field(init=False, default="") # 当前DrawIB的别名
-    d3d11GameType: D3D11GameType = field(init=False, repr=False) # 当前DrawIB的数据类型，因为WWMI中每个DrawIB只可能是一个数据类型
+    d3d11_game_type: D3D11GameType = field(init=False, repr=False) # 当前DrawIB的数据类型，因为WWMI中每个DrawIB只可能是一个数据类型
     wwmi_info: WWMIInfoObject = field(init=False, repr=False) 
 
     ordered_drawcall_model_list: list[DrawCallModel] = field(init=False, default_factory=list, repr=False)
@@ -87,7 +87,7 @@ class DrawIBModelWWMI:
         first_submesh_name = self.ordered_drawcall_model_list[0].get_submesh_name()
         first_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(first_submesh_name)
         first_submesh_json = SubmeshJson(first_json_path)
-        self.d3d11GameType = D3D11GameType.from_submesh_json_dict(first_submesh_json.JsonDict, first_json_path)
+        self.d3d11_game_type = D3D11GameType.from_submesh_json_dict(first_submesh_json.JsonDict, first_json_path)
 
         self.submesh_drawcall_groups = []
 
@@ -141,16 +141,16 @@ class DrawIBModelWWMI:
                 submesh_name=submesh_name,
                 display_str=submesh_name,  # 初始等于 submesh_name，后续由 apply_alias_dict 覆盖
                 match_first_index=mfi_int,
-                d3d11_game_type=self.d3d11GameType,
+                d3d11_game_type=self.d3d11_game_type,
             ))
 
         if self.submesh_model_list:
             self.submesh_texturemarkinfolist_dict = TextureMetadataResolver.load_submesh_texture_markup_info_from_all_submeshes(draw_ib_model=self)
 
-        ObjBufferHelper.check_and_verify_attributes(obj=self.merged_object.object, d3d11_game_type=self.d3d11GameType)
+        ObjBufferHelper.check_and_verify_attributes(obj=self.merged_object.object, d3d11_game_type=self.d3d11_game_type)
 
         element_context = ExportUtils.build_obj_element_context(
-            d3d11_game_type=self.d3d11GameType,
+            d3d11_game_type=self.d3d11_game_type,
             obj=self.merged_object.object,
         )
 
@@ -161,12 +161,12 @@ class DrawIBModelWWMI:
             mesh=element_context.mesh,
             original_elementname_data_dict=element_context.original_elementname_data_dict,
             final_elementname_data_dict=element_context.final_elementname_data_dict,
-            d3d11_game_type=self.d3d11GameType,
+            d3d11_game_type=self.d3d11_game_type,
         )
 
         self.obj_buffer_model_wwmi = ExportUtils.build_wwmi_obj_buffer_result(element_context)
 
-        position_stride: int = self.d3d11GameType.CategoryStrideDict["Position"]
+        position_stride: int = self.d3d11_game_type.CategoryStrideDict["Position"]
         position_bytelength: int = len(self.obj_buffer_model_wwmi.category_buffer_dict["Position"])
         self.mesh_vertex_count = int(position_bytelength / position_stride)
 
@@ -185,7 +185,7 @@ class DrawIBModelWWMI:
         if original_blendindices is None or unique_first_loop_indices is None:
             return None
 
-        num_vgs = self.d3d11GameType.get_blendindices_count_wwmi()
+        num_vgs = self.d3d11_game_type.get_blendindices_count_wwmi()
         vg_array = numpy.zeros((len(index_vertex_id_dict), num_vgs), dtype=numpy.uint16)
 
         sampled_blendindices = original_blendindices[unique_first_loop_indices]
@@ -382,7 +382,7 @@ class DrawIBModelWWMI:
         return merged_object
 
     def export_blendremap_forward_and_reverse(self, component_objects: list[bpy.types.Object]):
-        num_vgs = self.d3d11GameType.get_blendindices_count_wwmi()
+        num_vgs = self.d3d11_game_type.get_blendindices_count_wwmi()
 
         blend_remap_forward: numpy.ndarray = numpy.empty(0, dtype=numpy.uint16)
         blend_remap_reverse: numpy.ndarray = numpy.empty(0, dtype=numpy.uint16)

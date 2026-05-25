@@ -25,7 +25,7 @@ class ExportYYSLS:
     def add_unity_vs_texture_override_ib_sections(self, ini_builder: M_IniBuilder, drawib_model):
         texture_override_ib_section = M_IniSection(M_SectionType.TextureOverrideIB)
         draw_ib = drawib_model.draw_ib
-        d3d11_game_type = drawib_model.d3d11GameType
+        d3d11_game_type = drawib_model.d3d11_game_type
         for submesh_model in drawib_model.submesh_model_list:
             match_first_index = str(submesh_model.match_first_index)
             texture_override_name_suffix = submesh_model.submesh_name.replace("-", "_")
@@ -84,10 +84,10 @@ class ExportYYSLS:
     def add_unity_vs_resource_vb_sections(self, ini_builder: M_IniBuilder, drawib_model):
         resource_vb_section = M_IniSection(M_SectionType.ResourceBuffer)
         buffer_folder_name = "Meshes"
-        for category_name in drawib_model.d3d11GameType.OrderedCategoryNameList:
+        for category_name in drawib_model.d3d11_game_type.OrderedCategoryNameList:
             resource_vb_section.append("[Resource" + drawib_model.draw_ib + category_name + "]")
             resource_vb_section.append("type = Buffer")
-            resource_vb_section.append("stride = " + str(drawib_model.d3d11GameType.CategoryStrideDict[category_name]))
+            resource_vb_section.append("stride = " + str(drawib_model.d3d11_game_type.CategoryStrideDict[category_name]))
             resource_vb_section.append("filename = " + buffer_folder_name + "/" + drawib_model.draw_ib + "-" + category_name + ".buf")
             resource_vb_section.new_line()
 

@@ -21,7 +21,7 @@ class ExportUnity:
                 drawib_model.apply_alias_dict(alias_dict)
 
     def add_unity_vs_texture_override_vb_sections(self, ini_builder: M_IniBuilder, drawib_model):
-        d3d11_game_type = drawib_model.d3d11GameType
+        d3d11_game_type = drawib_model.d3d11_game_type
         draw_ib = drawib_model.draw_ib
 
         texture_override_vb_section = M_IniSection(M_SectionType.TextureOverrideVB)
@@ -88,7 +88,7 @@ class ExportUnity:
         ini_builder.append_section(texture_override_ib_section)
 
     def add_unity_vs_texture_override_vlr_section(self, ini_builder: M_IniBuilder, drawib_model, include_uav_byte_stride: bool = True):
-        d3d11_game_type = drawib_model.d3d11GameType
+        d3d11_game_type = drawib_model.d3d11_game_type
         if not d3d11_game_type.GPU_PreSkinning:
             return
 
@@ -107,10 +107,10 @@ class ExportUnity:
         resource_vb_section = M_IniSection(M_SectionType.ResourceBuffer)
         buffer_folder_name = "Meshes"
 
-        for category_name in drawib_model.d3d11GameType.OrderedCategoryNameList:
+        for category_name in drawib_model.d3d11_game_type.OrderedCategoryNameList:
             resource_vb_section.append("[Resource" + drawib_model.draw_ib + category_name + "]")
             resource_vb_section.append("type = Buffer")
-            resource_vb_section.append("stride = " + str(drawib_model.d3d11GameType.CategoryStrideDict[category_name]))
+            resource_vb_section.append("stride = " + str(drawib_model.d3d11_game_type.CategoryStrideDict[category_name]))
             resource_vb_section.append("filename = " + buffer_folder_name + "/" + drawib_model.draw_ib + "-" + category_name + ".buf")
             resource_vb_section.new_line()
 
@@ -147,7 +147,7 @@ class ExportUnity:
         ini_builder.append_section(resource_texture_section)
 
     def add_unity_cs_texture_override_vb_sections(self, ini_builder: M_IniBuilder, drawib_model):
-        d3d11_game_type = drawib_model.d3d11GameType
+        d3d11_game_type = drawib_model.d3d11_game_type
         draw_ib = drawib_model.draw_ib
 
         if not d3d11_game_type.GPU_PreSkinning:
@@ -189,7 +189,7 @@ class ExportUnity:
     def add_unity_cs_texture_override_ib_sections(self, ini_builder: M_IniBuilder, drawib_model):
         texture_override_ib_section = M_IniSection(M_SectionType.TextureOverrideIB)
         draw_ib = drawib_model.draw_ib
-        d3d11_game_type = drawib_model.d3d11GameType
+        d3d11_game_type = drawib_model.d3d11_game_type
 
         for submesh_model in drawib_model.submesh_model_list:
             ib_resource_name = drawib_model.get_submesh_ib_resource_name(submesh_model)
@@ -243,14 +243,14 @@ class ExportUnity:
         resource_vb_section = M_IniSection(M_SectionType.ResourceBuffer)
         buffer_folder_name = "Meshes"
 
-        for category_name in drawib_model.d3d11GameType.OrderedCategoryNameList:
+        for category_name in drawib_model.d3d11_game_type.OrderedCategoryNameList:
             resource_vb_section.append("[Resource" + drawib_model.draw_ib + category_name + "]")
-            if drawib_model.d3d11GameType.GPU_PreSkinning and (category_name == "Position" or category_name == "Blend"):
+            if drawib_model.d3d11_game_type.GPU_PreSkinning and (category_name == "Position" or category_name == "Blend"):
                 resource_vb_section.append("type = ByteAddressBuffer")
             else:
                 resource_vb_section.append("type = Buffer")
 
-            resource_vb_section.append("stride = " + str(drawib_model.d3d11GameType.CategoryStrideDict[category_name]))
+            resource_vb_section.append("stride = " + str(drawib_model.d3d11_game_type.CategoryStrideDict[category_name]))
             resource_vb_section.append("filename = " + buffer_folder_name + "/" + drawib_model.draw_ib + "-" + category_name + ".buf")
             resource_vb_section.new_line()
 
