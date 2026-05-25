@@ -197,7 +197,7 @@ class VertexGroupUtils:
             for vg in all_source_vgs:
                 try:
                     obj.vertex_groups.remove(vg)
-                except:
+                except Exception:
                     pass # Already removed?
             
             bpy.context.view_layer.objects.active = obj
@@ -313,7 +313,7 @@ class VertexGroupUtils:
             try:
                 bpy.ops.mesh.separate(type="SELECTED")
                 real_keys.append(gr)
-            except:
+            except Exception:
                 pass
         for i in range(1, len(real_keys) + 1):
             bpy.data.objects['{}.{:03d}'.format(origin_name, i)].name = '{}.{}'.format(

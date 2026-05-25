@@ -452,7 +452,7 @@ class ObjUtils:
                     obj.select_set(True)
                     bpy.context.view_layer.objects.active = obj
                     bpy.ops.object.mode_set(mode='EDIT')
-                except:
+                except Exception:
                     pass
             
             bpy.ops.object.select_all(action='DESELECT')
@@ -460,12 +460,12 @@ class ObjUtils:
                 if sel_obj:
                     try:
                         sel_obj.select_set(True)
-                    except:
+                    except Exception:
                         pass
             if original_active:
                 try:
                     bpy.context.view_layer.objects.active = original_active
-                except:
+                except Exception:
                     pass
 
     @staticmethod
@@ -498,7 +498,7 @@ class ObjUtils:
                     obj.select_set(True)
                     bpy.context.view_layer.objects.active = obj
                     bpy.ops.object.mode_set(mode='EDIT')
-                except:
+                except Exception:
                     pass
             
             bpy.ops.object.select_all(action='DESELECT')
@@ -506,12 +506,12 @@ class ObjUtils:
                 if sel_obj:
                     try:
                         sel_obj.select_set(True)
-                    except:
+                    except Exception:
                         pass
             if original_active:
                 try:
                     bpy.context.view_layer.objects.active = original_active
-                except:
+                except Exception:
                     pass
 
     @classmethod
@@ -682,7 +682,7 @@ class ObjUtils:
                     obj.select_set(True)
                     bpy.context.view_layer.objects.active = obj
                     bpy.ops.object.mode_set(mode='EDIT')
-                except:
+                except Exception:
                     pass
             
             bpy.ops.object.select_all(action='DESELECT')
@@ -690,12 +690,12 @@ class ObjUtils:
                 if sel_obj:
                     try:
                         sel_obj.select_set(True)
-                    except:
+                    except Exception:
                         pass
             if original_active:
                 try:
                     bpy.context.view_layer.objects.active = original_active
-                except:
+                except Exception:
                     pass
 
     @classmethod
@@ -785,7 +785,7 @@ class ObjUtils:
         if backup_collection:
             try:
                 bpy.data.collections.remove(backup_collection)
-            except:
+            except Exception:
                 pass
 
     # ============================================================
@@ -990,7 +990,7 @@ class ObjUtils:
                     obj.select_set(True)
                     bpy.context.view_layer.objects.active = obj
                     bpy.ops.object.mode_set(mode='EDIT')
-                except:
+                except Exception:
                     pass
 
             deselect_all_safe()
@@ -998,12 +998,12 @@ class ObjUtils:
                 if sel_obj:
                     try:
                         sel_obj.select_set(True)
-                    except:
+                    except Exception:
                         pass
             if original_active:
                 try:
                     bpy.context.view_layer.objects.active = original_active
-                except:
+                except Exception:
                     pass
 
     @staticmethod

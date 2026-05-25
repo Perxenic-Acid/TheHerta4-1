@@ -173,7 +173,7 @@ class SingletonUpdater:
     def auto_reload_post_update(self, value):
         try:
             self._auto_reload_post_update = bool(value)
-        except:
+        except Exception:
             raise ValueError("auto_reload_post_update must be a boolean value")
 
     @property
@@ -220,7 +220,7 @@ class SingletonUpdater:
         elif type(tuple_values) is not tuple:
             try:
                 tuple(tuple_values)
-            except:
+            except Exception:
                 raise ValueError(
                     "current_version must be a tuple of integers")
         for i in tuple_values:
@@ -272,7 +272,7 @@ class SingletonUpdater:
     def include_branch_auto_check(self, value):
         try:
             self._include_branch_auto_check = bool(value)
-        except:
+        except Exception:
             raise ValueError("include_branch_autocheck must be a boolean")
 
     @property
@@ -289,7 +289,7 @@ class SingletonUpdater:
                     "include_branch_list should be a list of valid branches")
             else:
                 self._include_branch_list = value
-        except:
+        except Exception:
             raise ValueError(
                 "include_branch_list should be a list of valid branches")
 
@@ -301,7 +301,7 @@ class SingletonUpdater:
     def include_branches(self, value):
         try:
             self._include_branches = bool(value)
-        except:
+        except Exception:
             raise ValueError("include_branches must be a boolean value")
 
     @property
@@ -324,7 +324,7 @@ class SingletonUpdater:
     def manual_only(self, value):
         try:
             self._manual_only = bool(value)
-        except:
+        except Exception:
             raise ValueError("manual_only must be a boolean value")
 
     @property
@@ -373,7 +373,7 @@ class SingletonUpdater:
     def repo(self, value):
         try:
             self._repo = str(value)
-        except:
+        except Exception:
             raise ValueError("repo must be a string value")
 
     @property
@@ -400,7 +400,7 @@ class SingletonUpdater:
         elif value is not None and not os.path.exists(value):
             try:
                 os.makedirs(value)
-            except:
+            except Exception:
                 self.print_verbose("Error trying to staging path")
                 self.print_trace()
                 return
@@ -449,7 +449,7 @@ class SingletonUpdater:
     def use_releases(self, value):
         try:
             self._use_releases = bool(value)
-        except:
+        except Exception:
             raise ValueError("use_releases must be a boolean value")
 
     @property
@@ -460,7 +460,7 @@ class SingletonUpdater:
     def user(self, value):
         try:
             self._user = str(value)
-        except:
+        except Exception:
             raise ValueError("User must be a string value")
 
     @property
@@ -472,7 +472,7 @@ class SingletonUpdater:
         try:
             self._verbose = bool(value)
             self.print_verbose("Verbose is enabled")
-        except:
+        except Exception:
             raise ValueError("Verbose must be a boolean value")
 
     @property
@@ -483,7 +483,7 @@ class SingletonUpdater:
     def use_print_traces(self, value):
         try:
             self._use_print_traces = bool(value)
-        except:
+        except Exception:
             raise ValueError("use_print_traces must be a boolean value")
 
     @property
@@ -670,7 +670,7 @@ class SingletonUpdater:
         request = urllib.request.Request(url)
         try:
             context = ssl._create_unverified_context()
-        except:
+        except Exception:
             # Some blender packaged python versions don't have this, largely
             # useful for local network setups otherwise minimal impact.
             context = None
@@ -751,13 +751,13 @@ class SingletonUpdater:
             try:
                 shutil.rmtree(local)
                 os.makedirs(local)
-            except:
+            except Exception:
                 error = "failed to remove existing staging directory"
                 self.print_trace()
         else:
             try:
                 os.makedirs(local)
-            except:
+            except Exception:
                 error = "failed to create staging directory"
                 self.print_trace()
 
@@ -814,7 +814,7 @@ class SingletonUpdater:
         if os.path.isdir(local):
             try:
                 shutil.rmtree(local)
-            except:
+            except Exception:
                 self.print_verbose(
                     "Failed to removed previous backup folder, continuing")
                 self.print_trace()
@@ -824,7 +824,7 @@ class SingletonUpdater:
         if os.path.isdir(tempdest):
             try:
                 shutil.rmtree(tempdest)
-            except:
+            except Exception:
                 self.print_verbose(
                     "Failed to remove existing temp folder, continuing")
                 self.print_trace()
@@ -835,14 +835,14 @@ class SingletonUpdater:
                 shutil.copytree(self._addon_root, tempdest,
                                 ignore=shutil.ignore_patterns(
                                     *self._backup_ignore_patterns))
-            except:
+            except Exception:
                 print("Failed to create backup, still attempting update.")
                 self.print_trace()
                 return
         else:
             try:
                 shutil.copytree(self._addon_root, tempdest)
-            except:
+            except Exception:
                 print("Failed to create backup, still attempting update.")
                 self.print_trace()
                 return
@@ -887,7 +887,7 @@ class SingletonUpdater:
         try:
             shutil.rmtree(outdir)
             self.print_verbose("Source folder cleared")
-        except:
+        except Exception:
             self.print_trace()
 
         # Create parent directories if needed, would not be relevant unless
@@ -1102,7 +1102,7 @@ class SingletonUpdater:
         # now remove the temp staging folder and downloaded zip
         try:
             shutil.rmtree(staging_path)
-        except:
+        except Exception:
             error = ("Error: Failed to remove existing staging directory, "
                      "consider manually removing ") + staging_path
             self.print_verbose(error)
@@ -1542,7 +1542,7 @@ class SingletonUpdater:
             with open(jpath, 'w') as outf:
                 data_out = json.dumps(self._json, indent=4)
                 outf.write(data_out)
-        except:
+        except Exception:
             print("Failed to open/save data to json: ", jpath)
             self.print_trace()
         self.print_verbose("Wrote out updater JSON settings with content:")

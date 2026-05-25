@@ -171,7 +171,7 @@ class SSMT_OT_SelectNodeObject(bpy.types.Operator):
         if obj:
             try:
                 bpy.ops.object.select_all(action='DESELECT')
-            except:
+            except Exception:
                 pass
                 
             obj.select_set(True)

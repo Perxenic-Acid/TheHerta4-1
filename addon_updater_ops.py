@@ -546,7 +546,7 @@ class AddonUpdaterRestoreBackup(bpy.types.Operator):
     def poll(cls, context):
         try:
             return os.path.isdir(os.path.join(updater.stage_path, "backup"))
-        except:
+        except Exception:
             return False
 
     def execute(self, context):
@@ -626,7 +626,7 @@ def updater_run_success_popup_handler(scene):
         else:
             bpy.app.handlers.depsgraph_update_post.remove(
                 updater_run_success_popup_handler)
-    except:
+    except Exception:
         pass
 
     atr = AddonUpdaterUpdatedSuccessful.bl_idname.split(".")
@@ -650,7 +650,7 @@ def updater_run_install_popup_handler(scene):
         else:
             bpy.app.handlers.depsgraph_update_post.remove(
                 updater_run_install_popup_handler)
-    except:
+    except Exception:
         pass
 
     if "ignore" in updater.json and updater.json["ignore"]:

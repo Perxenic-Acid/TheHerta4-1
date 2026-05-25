@@ -648,7 +648,7 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
                     if hasattr(target_node, 'update'):
                         target_node.inputs.new('SSMTSocketObject', iface_("输入 {count}").format(count=len(target_node.inputs) + 1))
                         available_input = target_node.inputs[-1]
-                except:
+                except Exception:
                     self.report({'WARNING'}, rpt_("节点 '{node_name}' 没有可用的输入端口").format(node_name=target_node.name))
                     continue
 
@@ -737,7 +737,7 @@ class SSMT_OT_BatchConnectNodes(bpy.types.Operator):
                         if hasattr(minority_node, 'update'):
                             minority_node.inputs.new('SSMTSocketObject', iface_("输入 {count}").format(count=len(minority_node.inputs) + 1))
                             available_input = minority_node.inputs[-1]
-                    except:
+                    except Exception:
                         self.report({'WARNING'}, rpt_("节点 '{node_name}' 没有可用的输入端口").format(node_name=minority_node.name))
                         majority_index += 1
                         continue
