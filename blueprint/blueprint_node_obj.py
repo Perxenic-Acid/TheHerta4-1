@@ -18,153 +18,117 @@ _picking_node_name = None
 _picking_tree_name = None
 
 
-def _is_duplicate_object_persistent_id(target_obj, object_id):
-    if not target_obj or not object_id:
+class ObjectPersistentIdManager:
+    '''Blender 物体的持久 UUID 管理：生成、查找、验证。'''
+
+    @staticmethod
+    def _is_duplicate(target_obj, object_id):
+        if not target_obj or not object_id:
+            return False
+        for obj in bpy.data.objects:
+            if obj == target_obj:
+                continue
+            if str(obj.get(OBJECT_PERSISTENT_ID_KEY, "") or "") == object_id:
+                return True
         return False
 
-    for obj in bpy.data.objects:
-        if obj == target_obj:
-            continue
-        if str(obj.get(OBJECT_PERSISTENT_ID_KEY, "") or "") == object_id:
-            return True
-    return False
+    @staticmethod
+    def ensure_id(obj):
+        """
+        获取或创建 Blender 物体的持久 UUID。
+        注意：这个函数只能在允许写数据块的上下文里调用，
+        不能在节点 draw 过程中直接调用。
+        """
+        if obj is None:
+            return ""
+        object_id = str(obj.get(OBJECT_PERSISTENT_ID_KEY, "") or "")
+        if not object_id or ObjectPersistentIdManager._is_duplicate(obj, object_id):
+            object_id = uuid.uuid4().hex
+            obj[OBJECT_PERSISTENT_ID_KEY] = object_id
+        return object_id
 
-
-def ensure_object_persistent_id(obj):
-    """
-    获取或创建 Blender 物体的持久 UUID。
-
-    注意：这个函数只能在允许写数据块的上下文里调用，
-    不能在节点 draw 过程中直接调用。
-    """
-    if obj is None:
-        return ""
-
-    object_id = str(obj.get(OBJECT_PERSISTENT_ID_KEY, "") or "")
-    if not object_id or _is_duplicate_object_persistent_id(obj, object_id):
-        object_id = uuid.uuid4().hex
-        obj[OBJECT_PERSISTENT_ID_KEY] = object_id
-    return object_id
-
-
-def find_object_by_persistent_id(object_id):
-    if not object_id:
+    @staticmethod
+    def find_by_id(object_id):
+        if not object_id:
+            return None
+        for obj in bpy.data.objects:
+            if str(obj.get(OBJECT_PERSISTENT_ID_KEY, "") or "") == str(object_id):
+                return obj
         return None
 
-    for obj in bpy.data.objects:
-        if str(obj.get(OBJECT_PERSISTENT_ID_KEY, "") or "") == str(object_id):
-            return obj
-    return None
+    @staticmethod
+    def resolve_node_target(node, allow_name_fallback=True):
+        if not node or getattr(node, "bl_idname", "") != 'SSMTNode_Object_Info':
+            return None
+        resolved_obj = None
+        node_object_name = str(getattr(node, "object_name", "") or "")
+        node_object_id = str(getattr(node, "object_id", "") or "")
+        if allow_name_fallback and node_object_name:
+            resolved_obj = bpy.data.objects.get(node_object_name)
+        if resolved_obj is None and node_object_id:
+            resolved_obj = ObjectPersistentIdManager.find_by_id(node_object_id)
+        return resolved_obj
 
-
-def resolve_object_info_node_target(node, allow_name_fallback=True):
-    if not node or getattr(node, "bl_idname", "") != 'SSMTNode_Object_Info':
-        return None
-
-    resolved_obj = None
-    node_object_name = str(getattr(node, "object_name", "") or "")
-    node_object_id = str(getattr(node, "object_id", "") or "")
-
-    if allow_name_fallback and node_object_name:
-        resolved_obj = bpy.data.objects.get(node_object_name)
-
-    if resolved_obj is None and node_object_id:
-        resolved_obj = find_object_by_persistent_id(node_object_id)
-
-    return resolved_obj
-
-
-def refresh_object_info_node(node, allow_name_fallback=True):
-    """
-    刷新单个 Object Info 节点。
-
-    写入行为只放在安全时机里调用：
-    1. 选择物体后。
-    2. 用户手动执行“刷新物体节点信息”。
-    3. 生成 Mod 前。
-    4. 节点被点击后通过 timer 延迟调度，而不是在 draw 中直接写入。
-    """
-    result = {
-        "found": False,
-        "changed": False,
-        "object": None,
-        "elapsed_ms": 0.0,
-    }
-
-    start_time = time.perf_counter()
-
-    resolved_obj = resolve_object_info_node_target(node, allow_name_fallback=allow_name_fallback)
-    if resolved_obj is None:
+    @staticmethod
+    def refresh_node(node, allow_name_fallback=True):
+        """
+        刷新单个 Object Info 节点。
+        写入行为只放在安全时机里调用：
+        1. 选择物体后。
+        2. 用户手动执行"刷新物体节点信息"。
+        3. 生成 Mod 前。
+        4. 节点被点击后通过 timer 延迟调度，而不是在 draw 中直接写入。
+        """
+        result = {"found": False, "changed": False, "object": None, "elapsed_ms": 0.0}
+        start_time = time.perf_counter()
+        resolved_obj = ObjectPersistentIdManager.resolve_node_target(node, allow_name_fallback=allow_name_fallback)
+        if resolved_obj is None:
+            result["elapsed_ms"] = (time.perf_counter() - start_time) * 1000.0
+            return result
+        result["found"] = True
+        result["object"] = resolved_obj
+        persistent_id = ObjectPersistentIdManager.ensure_id(resolved_obj)
+        if str(getattr(node, "object_id", "") or "") != persistent_id:
+            node.object_id = persistent_id
+            result["changed"] = True
+        if str(getattr(node, "object_name", "") or "") != resolved_obj.name:
+            node.object_name = resolved_obj.name
+            result["changed"] = True
         result["elapsed_ms"] = (time.perf_counter() - start_time) * 1000.0
         return result
 
-    result["found"] = True
-    result["object"] = resolved_obj
-
-    persistent_id = ensure_object_persistent_id(resolved_obj)
-    if str(getattr(node, "object_id", "") or "") != persistent_id:
-        node.object_id = persistent_id
-        result["changed"] = True
-
-    if str(getattr(node, "object_name", "") or "") != resolved_obj.name:
-        node.object_name = resolved_obj.name
-        result["changed"] = True
-
-    result["elapsed_ms"] = (time.perf_counter() - start_time) * 1000.0
-
-    return result
-
-
-def refresh_all_object_info_nodes(context=None, tree=None, include_all_blueprints=False, source="unknown"):
-    """
-    刷新蓝图中的所有 Object Info 节点。
-
-    导出前必须调一次，保证节点中的 object_name 能跟随 UUID 回写为最新名称。
-    """
-    checked_count = 0
-    updated_count = 0
-    missing_count = 0
-    start_time = time.perf_counter()
-
-    trees = []
-    if include_all_blueprints:
-        trees = [node_group for node_group in bpy.data.node_groups if getattr(node_group, "bl_idname", "") == 'SSMTBlueprintTreeType']
-    else:
-        tree = tree or BlueprintExportHelper.get_current_blueprint_tree(context=context)
-        if tree:
-            trees = [tree]
-
-    for blueprint_tree in trees:
-        for node in blueprint_tree.nodes:
-            if getattr(node, "bl_idname", "") != 'SSMTNode_Object_Info':
-                continue
-
-            checked_count += 1
-            refresh_result = refresh_object_info_node(node, allow_name_fallback=True)
-
-            if refresh_result["changed"]:
-                updated_count += 1
-
-            has_reference = bool(str(getattr(node, "object_name", "") or "") or str(getattr(node, "object_id", "") or ""))
-            if has_reference and not refresh_result["found"]:
-                missing_count += 1
-
-    elapsed_ms = (time.perf_counter() - start_time) * 1000.0
-
-    summary = {
-        "checked_count": checked_count,
-        "updated_count": updated_count,
-        "missing_count": missing_count,
-        "elapsed_ms": elapsed_ms,
-        "source": source,
-    }
-
-    print(
-        f"[ObjectInfoRefresh:{source}] checked={checked_count}, updated={updated_count}, "
-        f"missing={missing_count}, elapsed={elapsed_ms:.3f} ms"
-    )
-
-    return summary
+    @staticmethod
+    def refresh_all_nodes(context=None, tree=None, include_all_blueprints=False, source="unknown"):
+        """
+        刷新蓝图中的所有 Object Info 节点。
+        导出前必须调一次，保证节点中的 object_name 能跟随 UUID 回写为最新名称。
+        """
+        checked_count = 0
+        updated_count = 0
+        missing_count = 0
+        start_time = time.perf_counter()
+        trees = []
+        if include_all_blueprints:
+            trees = [node_group for node_group in bpy.data.node_groups if getattr(node_group, "bl_idname", "") == 'SSMTBlueprintTreeType']
+        else:
+            tree = tree or BlueprintExportHelper.get_current_blueprint_tree(context=context)
+            if tree:
+                trees = [tree]
+        for blueprint_tree in trees:
+            for node in blueprint_tree.nodes:
+                if getattr(node, "bl_idname", "") != 'SSMTNode_Object_Info':
+                    continue
+                checked_count += 1
+                refresh_result = ObjectPersistentIdManager.refresh_node(node, allow_name_fallback=True)
+                if refresh_result["changed"]:
+                    updated_count += 1
+                has_reference = bool(str(getattr(node, "object_name", "") or "") or str(getattr(node, "object_id", "") or ""))
+                if has_reference and not refresh_result["found"]:
+                    missing_count += 1
+        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+        summary = {"checked_count": checked_count, "updated_count": updated_count, "missing_count": missing_count, "elapsed_ms": elapsed_ms, "source": source}
+        print(f"[ObjectInfoRefresh:{source}] checked={checked_count}, updated={updated_count}, missing={missing_count}, elapsed={elapsed_ms:.3f} ms")
+        return summary
 
 
 class SSMT_OT_RefreshNodeObjectIDs(bpy.types.Operator):
@@ -174,7 +138,7 @@ class SSMT_OT_RefreshNodeObjectIDs(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
     
     def execute(self, context):
-        refresh_summary = refresh_all_object_info_nodes(include_all_blueprints=True, source="manual")
+        refresh_summary = ObjectPersistentIdManager.refresh_all_nodes(include_all_blueprints=True, source="manual")
 
         if refresh_summary["missing_count"] > 0:
             self.report({'WARNING'}, rpt_("已刷新 {updated_count} 个物体节点，另有 {missing_count} 个节点未找到对应物体，耗时 {elapsed_ms:.3f} ms").format(updated_count=refresh_summary['updated_count'], missing_count=refresh_summary['missing_count'], elapsed_ms=refresh_summary['elapsed_ms']))
@@ -199,7 +163,7 @@ class SSMT_OT_SelectNodeObject(bpy.types.Operator):
         if self.object_name:
             obj = bpy.data.objects.get(self.object_name)
         if obj is None and self.object_id:
-            obj = find_object_by_persistent_id(self.object_id)
+            obj = ObjectPersistentIdManager.find_by_id(self.object_id)
 
         if not obj:
             return {'CANCELLED'}
@@ -328,7 +292,7 @@ class SSMT_OT_PickObjectModal(bpy.types.Operator):
                         return {'CANCELLED'}
 
                     node.object_name = current_obj.name
-                    node.object_id = ensure_object_persistent_id(current_obj)
+                    node.object_id = ObjectPersistentIdManager.ensure_id(current_obj)
                     if tree:
                         BlueprintExportHelper.set_runtime_blueprint_tree(tree)
                     self.report({'INFO'}, rpt_("已选择物体: {name}").format(name=current_obj.name))
@@ -386,7 +350,7 @@ class SSMTNode_Object_Info(SSMTNodeBase):
         if self.object_name:
             obj = bpy.data.objects.get(self.object_name)
             if obj:
-                self.object_id = ensure_object_persistent_id(obj)
+                self.object_id = ObjectPersistentIdManager.ensure_id(obj)
         else:
             self.object_id = ""
 

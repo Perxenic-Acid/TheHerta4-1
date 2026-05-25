@@ -20,8 +20,11 @@ from ..workspace.ssmt_workspace import SSMTWorkSpace, WorkSpaceModel
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
 
-# 全量导入逻辑
-def ImprotFromWorkSpaceFull(self, context):
+class SSMTImportOrchestrator:
+    '''一键导入工作空间内容的编排器'''
+
+    @staticmethod
+    def import_full(self, context):
     
     # 创建 WorkSpaceModel 统一管理所有映射
     ws_model = WorkSpaceModel()

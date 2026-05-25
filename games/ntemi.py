@@ -35,11 +35,6 @@ _NTMI_CORE_VERTEX_COUNT = "cs-cb1[0]"
 _DEFAULT_DYNAMIC_SLOTS = 16
 
 
-def _resource_token(name: str) -> str:
-    """Sanitize a name into a valid INI resource token."""
-    return name.replace("-", "_").replace(" ", "_").replace(".", "_")
-
-
 @dataclass
 class ExportNTEMI:
 
@@ -48,6 +43,11 @@ class ExportNTEMI:
 
     def __post_init__(self):
         self.drawib_model_list = self.blueprint_model.parse_drawib_model_list(combine_ib=False)
+
+    @staticmethod
+    def _resource_token(name: str) -> str:
+        """Sanitize a name into a valid INI resource token."""
+        return name.replace("-", "_").replace(" ", "_").replace(".", "_")
         print(f"ExportNTEMI: 瑙ｆ瀽瀹屾垚锛屽叡 {len(self.drawib_model_list)} 涓?DrawIBModel")
 
         alias_dict = BlueprintExportHelper.get_alias_dict()
@@ -381,7 +381,7 @@ class ExportNTEMI:
         for drawib_model in self.drawib_model_list:
             for part_index, submesh_model in enumerate(drawib_model.submesh_model_list):
                 part_name = self._part_name(drawib_model, part_index, submesh_model)
-                token = _resource_token(part_name)
+                token = ExportNTEMI._resource_token(part_name)
                 vertex_count = self._get_vertex_count(submesh_model)
                 position_float_count = vertex_count * 3
                 normal_row_count = vertex_count * 2
@@ -507,7 +507,7 @@ class ExportNTEMI:
         for drawib_model in self.drawib_model_list:
             for part_index, submesh_model in enumerate(drawib_model.submesh_model_list):
                 part_name = self._part_name(drawib_model, part_index, submesh_model)
-                token = _resource_token(part_name)
+                token = ExportNTEMI._resource_token(part_name)
                 lines.append(
                     f"map = "
                     f"cs-u1:ResourcePart_{token}_RuntimeSkinnedPosition, "
@@ -639,7 +639,7 @@ class ExportNTEMI:
 
             for part_index, submesh_model in enumerate(drawib_model.submesh_model_list):
                 part_name = self._part_name(drawib_model, part_index, submesh_model)
-                token = _resource_token(part_name)
+                token = ExportNTEMI._resource_token(part_name)
 
                 lines.extend([
                     f"; [part:{part_name}] [vertex_count:{self._get_vertex_count(submesh_model)}]",
