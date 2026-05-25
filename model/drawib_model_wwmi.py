@@ -19,11 +19,6 @@ from ..utils.obj_utils import (
     ObjUtils,
     OpenObject,
     TempObject,
-    deselect_all_objects,
-    get_modifiers,
-    remove_vertex_groups,
-    select_object,
-    set_active_object,
 )
 from ..utils.shapekey_utils import ShapeKeyUtils
 from ..utils.vertexgroup_utils import VertexGroupUtils
@@ -274,7 +269,7 @@ class DrawIBModelWWMI:
 
                 if GlobalProterties.apply_all_modifiers():
                     with OpenObject(bpy.context, temp_obj) as opened_obj:
-                        selected_modifiers = [modifier.name for modifier in get_modifiers(opened_obj)]
+                        selected_modifiers = [modifier.name for modifier in ObjUtils.get_modifiers(opened_obj)]
                         ShapeKeyUtils.apply_modifiers_for_object_with_shape_keys(bpy.context, selected_modifiers, None)
 
                 ObjUtils.triangulate_object(bpy.context, temp_obj)
@@ -295,7 +290,7 @@ class DrawIBModelWWMI:
                         for vertex_group in vertex_groups
                         if "ignore" in vertex_group.name.lower() or vertex_group.index >= total_vg_count
                     ]
-                remove_vertex_groups(temp_obj, ignore_list)
+                ObjUtils.remove_vertex_groups(temp_obj, ignore_list)
 
                 temp_object.vertex_count = len(temp_obj.data.vertices)
                 temp_object.index_count = len(temp_obj.data.polygons) * 3
@@ -362,9 +357,9 @@ class DrawIBModelWWMI:
             VertexGroupUtils.merge_vertex_groups_with_same_number_v2()
             merged_obj.select_set(False)
 
-        deselect_all_objects()
-        select_object(merged_obj)
-        set_active_object(bpy.context, merged_obj)
+        ObjUtils.deselect_all_objects()
+        ObjUtils.select_object(merged_obj)
+        ObjUtils.set_active_object(bpy.context, merged_obj)
 
         mesh = ObjUtils.get_mesh_evaluate_from_obj(merged_obj)
         merged_object = MergedObject(

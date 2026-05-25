@@ -14,18 +14,6 @@ from .format_utils import Fatal
 from operator import attrgetter, itemgetter
 
 
-
-def get_mode(context):
-    if context.active_object:
-        return context.active_object.mode
-
-def set_mode(context, mode):
-    active_object = get_active_object(context)
-    if active_object is not None and mode is not None:
-        if not object_is_hidden(active_object):
-            bpy.ops.object.mode_set(mode=mode)
-
-
 @dataclass
 class UserContext:
     active_object: bpy.types.Object
@@ -33,352 +21,33 @@ class UserContext:
     mode: str
 
 
-def get_user_context(context):
-    return UserContext(
-        active_object = get_active_object(context),
-        selected_objects = get_selected_objects(context),
-        mode = get_mode(context),
-    )
-
-
-def set_user_context(context, user_context):
-    deselect_all_objects()
-    for object in user_context.selected_objects:
-        try:
-            select_object(object)
-        except ReferenceError as e:
-            pass
-    if user_context.active_object:
-        set_active_object(context, user_context.active_object)
-        set_mode(context, user_context.mode)
-
-
-
-        
-
-def get_active_object(context):
-    return context.view_layer.objects.active
-
-
-def get_selected_objects(context):
-    return context.selected_objects
-
-
-def link_object_to_scene(context, obj):
-    context.scene.collection.objects.link(obj)
-
-
-def unlink_object_from_scene(context, obj):
-    context.scene.collection.objects.unlink(obj)
-
-
-def object_exists(obj_name):
-    return obj_name in bpy.data.objects.keys()
-
-
-def link_object_to_collection(obj, col):
-    obj = ObjUtils.assert_object(obj)
-    col = assert_collection(col)
-    col.objects.link(obj)
-
-
-def unlink_object_from_collection(obj, col):
-    obj = ObjUtils.assert_object(obj)
-    col = assert_collection(col)
-    col.objects.unlink(obj) 
-
-
-
-    
-
-def select_object(obj):
-    obj = ObjUtils.assert_object(obj)
-    obj.select_set(True)
-
-
-def deselect_object(obj):
-    obj = ObjUtils.assert_object(obj)
-    obj.select_set(False)
-
-
-def deselect_all_objects():
-    for obj in bpy.context.selected_objects:
-        deselect_object(obj)
-    bpy.context.view_layer.objects.active = None
-
-
-def object_is_selected(obj):
-    return obj.select_get()
-
-
-def set_active_object(context, obj):
-    obj = ObjUtils.assert_object(obj)
-    context.view_layer.objects.active = obj
-
-
-def object_is_hidden(obj):
-    return obj.hide_get()
-
-
-def hide_object(obj):
-    obj = ObjUtils.assert_object(obj)
-    obj.hide_set(True)
-
-
-def unhide_object(obj):
-    obj = ObjUtils.assert_object(obj)
-    obj.hide_set(False)
-
-
-def set_custom_property(obj, property, value):
-    obj = ObjUtils.assert_object(obj)
-    obj[property] = value
-
-
-def remove_object(obj):
-    obj = ObjUtils.assert_object(obj)
-    bpy.data.objects.remove(obj, do_unlink=True)
-
-
-def get_modifiers(obj):
-    obj = ObjUtils.assert_object(obj)
-    return obj.modifiers
-
-
-
-
-
-def copy_object(context, obj, name=None, collection=None):
-    with OpenObject(context, obj, mode='OBJECT') as obj:
-        new_obj = obj.copy()
-        new_obj.data = obj.data.copy()
-        if name:
-            ObjUtils.rename_object(new_obj, name)
-        if collection:
-            link_object_to_collection(new_obj, collection)
-        return new_obj
-
-
-def assert_vertex_group(obj, vertex_group):
-    obj = ObjUtils.assert_object(obj)
-    if isinstance(vertex_group, bpy.types.VertexGroup):
-        vertex_group = vertex_group.name
-    return obj.vertex_groups[vertex_group]
-
-
-
-
-
-def remove_vertex_groups(obj, vertex_groups):
-    obj = ObjUtils.assert_object(obj)
-    for vertex_group in vertex_groups:
-        obj.vertex_groups.remove(assert_vertex_group(obj, vertex_group))
-
-
-def normalize_all_weights(context, obj):
-    with OpenObject(context, obj, mode='WEIGHT_PAINT') as obj:
-        bpy.ops.object.vertex_group_normalize_all()
-
-
-
-
-
 class OpenObjects:
     def __init__(self, context, objects, mode='OBJECT'):
         self.mode = mode
         self.objects = [ObjUtils.assert_object(obj) for obj in objects]
         self.context = context
-        self.user_context = get_user_context(context)
+        self.user_context = ObjUtils.get_user_context(context)
 
     def __enter__(self):
 
-        deselect_all_objects()
+        ObjUtils.deselect_all_objects()
         
         for obj in self.objects:
-            unhide_object(obj)
-            select_object(obj)
+            ObjUtils.unhide_object(obj)
+            ObjUtils.select_object(obj)
             if obj.mode == 'EDIT':
                 obj.update_from_editmode()
             
-        set_active_object(bpy.context, self.objects[0])
+        ObjUtils.set_active_object(bpy.context, self.objects[0])
 
-        set_mode(self.context, mode=self.mode)
+        ObjUtils.set_mode(self.context, mode=self.mode)
 
         return self.objects
 
     def __exit__(self, *args):
-        set_user_context(self.context, self.user_context)
+        ObjUtils.set_user_context(self.context, self.user_context)
 
 
-def assert_mesh(mesh):
-    if isinstance(mesh, str):
-        mesh = get_mesh(mesh)
-    elif mesh not in bpy.data.meshes.values():
-        raise ValueError('Not of mesh type: %s' % str(mesh))
-    return mesh
-
-
-def get_mesh(mesh_name):
-    return bpy.data.meshes[mesh_name]
-
-
-def remove_mesh(mesh):
-    mesh = assert_mesh(mesh)
-    bpy.data.meshes.remove(mesh, do_unlink=True)
-
-
-def mesh_triangulate(me):
-    bm = bmesh.new()
-    bm.from_mesh(me)
-    bmesh.ops.triangulate(bm, faces=bm.faces, quad_method='BEAUTY', ngon_method='BEAUTY')
-    bm.to_mesh(me)
-    bm.free()
-
-
-def mesh_triangulate_beauty(obj):
-    '''
-    使用 Blender 内置的 BEAUTY 算法进行三角化
-    使用 bpy.ops.mesh.quads_convert_to_tris 确保一致的三角化结果
-    '''
-    if obj.type != 'MESH':
-        return
-    
-    original_active = bpy.context.view_layer.objects.active
-    original_selected = list(bpy.context.selected_objects)
-    original_mode = obj.mode
-    
-    def deselect_all_safe():
-        for o in bpy.context.selected_objects:
-            o.select_set(False)
-    
-    try:
-        deselect_all_safe()
-        obj.select_set(True)
-        bpy.context.view_layer.objects.active = obj
-        
-        if original_mode != 'EDIT':
-            bpy.ops.object.mode_set(mode='EDIT')
-        
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
-        bpy.ops.object.mode_set(mode='OBJECT')
-        
-    finally:
-        if original_mode == 'EDIT':
-            try:
-                deselect_all_safe()
-                obj.select_set(True)
-                bpy.context.view_layer.objects.active = obj
-                bpy.ops.object.mode_set(mode='EDIT')
-            except:
-                pass
-        
-        deselect_all_safe()
-        for sel_obj in original_selected:
-            if sel_obj:
-                try:
-                    sel_obj.select_set(True)
-                except:
-                    pass
-        if original_active:
-            try:
-                bpy.context.view_layer.objects.active = original_active
-            except:
-                pass
-
-
-def get_vertex_groups_from_bmesh(bm: bmesh.types.BMesh):
-    layer_deform = bm.verts.layers.deform.active
-    return [sorted(vert[layer_deform].items(), key=itemgetter(1), reverse=True) for vert in bm.verts]
-
-
-
-
-def get_collection(col_name):
-    return bpy.data.collections[col_name]
-
-
-def get_layer_collection(col, layer_col=None):
-    col_name = assert_collection(col).name
-    if layer_col is None:
-        #        layer_col = bpy.context.scene.collection
-        layer_col = bpy.context.view_layer.layer_collection
-    if layer_col.name == col_name:
-        return layer_col
-    for sublayer_col in layer_col.children:
-        col = get_layer_collection(col_name, layer_col=sublayer_col)
-        if col:
-            return col
-
-
-def collection_exists(col_name):
-    return col_name in bpy.data.collections.keys()
-
-
-def assert_collection(col):
-    if isinstance(col, str):
-        col = get_collection(col)
-    elif not isinstance(col, bpy.types.Collection):
-        raise ValueError('Not of collection type: %s' % str(col))
-    return col
-
-
-def get_collection_objects(col):
-    col = assert_collection(col)
-    return col.objects
-
-
-def link_collection(col, col_parent):
-    col = assert_collection(col)
-    col_parent = assert_collection(col_parent)
-    col_parent.children.link(col)
-
-
-def new_collection(col_name, col_parent=None, allow_duplicate=True):
-    if not allow_duplicate:
-        try:
-            col = get_collection(col_name)
-            if col is not None:
-                raise ValueError('Collection already exists: %s' % str(col_name))
-        except Exception as e:
-            pass
-    new_col = bpy.data.collections.new(col_name)
-    if col_parent:
-        link_collection(new_col, col_parent)
-    else:
-        bpy.context.scene.collection.children.link(new_col)
-    #    bpy.context.view_layer.layer_collection.children[col_name] = new_col
-    #    bpy.context.view_layer.active_layer_collection = bpy.context.view_layer.layer_collection.children[-1]
-    #    bpy.context.scene.collection.children.link(new_col)
-    return new_col
-
-
-def hide_collection(col):
-    col = assert_collection(col)
-    #    col.hide_viewport = True
-    #    for k, v in bpy.context.view_layer.layer_collection.children.items():
-    #        print(k, " ", v)
-    #    bpy.context.view_layer.layer_collection.children.get(col.name).hide_viewport = True
-    get_layer_collection(col).hide_viewport = True
-
-
-def unhide_collection(col):
-    col = assert_collection(col)
-    #    col.hide_viewport = False
-    #    bpy.context.view_layer.layer_collection.children.get(col.name).hide_viewport = False
-    get_layer_collection(col).hide_viewport = False
-
-
-def collection_is_hidden(col):
-    col = assert_collection(col)
-    return get_layer_collection(col).hide_viewport
-
-
-def get_scene_collections():
-    return bpy.context.scene.collection.children
-
-
-    
 @dataclass
 class TempObject:
     name: str
@@ -415,29 +84,29 @@ class OpenObject:
         self.mode = mode
         self.object = ObjUtils.assert_object(obj)
         self.context = context
-        self.user_context = get_user_context(context)
-        self.was_hidden = object_is_hidden(self.object)
+        self.user_context = ObjUtils.get_user_context(context)
+        self.was_hidden = ObjUtils.object_is_hidden(self.object)
 
     def __enter__(self):
-        deselect_all_objects()
+        ObjUtils.deselect_all_objects()
 
-        unhide_object(self.object)
-        select_object(self.object)
-        set_active_object(bpy.context, self.object)
+        ObjUtils.unhide_object(self.object)
+        ObjUtils.select_object(self.object)
+        ObjUtils.set_active_object(bpy.context, self.object)
 
         if self.object.mode == 'EDIT':
             self.object.update_from_editmode()
 
-        set_mode(self.context, mode=self.mode)
+        ObjUtils.set_mode(self.context, mode=self.mode)
 
         return self.object
 
     def __exit__(self, *args):
         if self.was_hidden:
-            hide_object(self.object)
+            ObjUtils.hide_object(self.object)
         else:
-            unhide_object(self.object)
-        set_user_context(self.context, self.user_context)
+            ObjUtils.unhide_object(self.object)
+        ObjUtils.set_user_context(self.context, self.user_context)
 
 
 class ObjUtils:
@@ -460,10 +129,10 @@ class ObjUtils:
         with OpenObject(context, objects[0], mode='OBJECT'):
             for obj in objects[1:]:
                 unused_meshes.append(obj.data)
-                select_object(obj)  
+                ObjUtils.select_object(obj)  
                 bpy.ops.object.join()
         for mesh in unused_meshes:
-            remove_mesh(mesh)
+            ObjUtils.remove_mesh(mesh)
 
     @staticmethod
     def get_vertex_groups(obj):
@@ -731,7 +400,7 @@ class ObjUtils:
             if name:
                 ObjUtils.rename_object(new_obj, name)
             if collection:
-                link_object_to_collection(new_obj, collection)
+                ObjUtils.link_object_to_collection(new_obj, collection)
             return new_obj
     
     
@@ -1118,3 +787,300 @@ class ObjUtils:
                 bpy.data.collections.remove(backup_collection)
             except:
                 pass
+
+    # ============================================================
+    #  独立函数整合 — 以下均为从模块级移入的静态工具方法
+    # ============================================================
+
+    @staticmethod
+    def get_mode(context):
+        if context.active_object:
+            return context.active_object.mode
+
+    @staticmethod
+    def set_mode(context, mode):
+        active_object = ObjUtils.get_active_object(context)
+        if active_object is not None and mode is not None:
+            if not ObjUtils.object_is_hidden(active_object):
+                bpy.ops.object.mode_set(mode=mode)
+
+    @staticmethod
+    def get_user_context(context):
+        return UserContext(
+            active_object=ObjUtils.get_active_object(context),
+            selected_objects=ObjUtils.get_selected_objects(context),
+            mode=ObjUtils.get_mode(context),
+        )
+
+    @staticmethod
+    def set_user_context(context, user_context):
+        ObjUtils.deselect_all_objects()
+        for obj in user_context.selected_objects:
+            try:
+                ObjUtils.select_object(obj)
+            except ReferenceError:
+                pass
+        if user_context.active_object:
+            ObjUtils.set_active_object(context, user_context.active_object)
+            ObjUtils.set_mode(context, user_context.mode)
+
+    @staticmethod
+    def get_active_object(context):
+        return context.view_layer.objects.active
+
+    @staticmethod
+    def get_selected_objects(context):
+        return context.selected_objects
+
+    @staticmethod
+    def link_object_to_scene(context, obj):
+        context.scene.collection.objects.link(obj)
+
+    @staticmethod
+    def unlink_object_from_scene(context, obj):
+        context.scene.collection.objects.unlink(obj)
+
+    @staticmethod
+    def object_exists(obj_name):
+        return obj_name in bpy.data.objects.keys()
+
+    @staticmethod
+    def link_object_to_collection(obj, col):
+        obj = ObjUtils.assert_object(obj)
+        col = ObjUtils.assert_collection(col)
+        col.objects.link(obj)
+
+    @staticmethod
+    def unlink_object_from_collection(obj, col):
+        obj = ObjUtils.assert_object(obj)
+        col = ObjUtils.assert_collection(col)
+        col.objects.unlink(obj)
+
+    @staticmethod
+    def select_object(obj):
+        obj = ObjUtils.assert_object(obj)
+        obj.select_set(True)
+
+    @staticmethod
+    def deselect_object(obj):
+        obj = ObjUtils.assert_object(obj)
+        obj.select_set(False)
+
+    @staticmethod
+    def deselect_all_objects():
+        for obj in bpy.context.selected_objects:
+            ObjUtils.deselect_object(obj)
+        bpy.context.view_layer.objects.active = None
+
+    @staticmethod
+    def object_is_selected(obj):
+        return obj.select_get()
+
+    @staticmethod
+    def set_active_object(context, obj):
+        obj = ObjUtils.assert_object(obj)
+        context.view_layer.objects.active = obj
+
+    @staticmethod
+    def object_is_hidden(obj):
+        return obj.hide_get()
+
+    @staticmethod
+    def hide_object(obj):
+        obj = ObjUtils.assert_object(obj)
+        obj.hide_set(True)
+
+    @staticmethod
+    def unhide_object(obj):
+        obj = ObjUtils.assert_object(obj)
+        obj.hide_set(False)
+
+    @staticmethod
+    def set_custom_property(obj, property_name, value):
+        obj = ObjUtils.assert_object(obj)
+        obj[property_name] = value
+
+    @staticmethod
+    def remove_object(obj):
+        obj = ObjUtils.assert_object(obj)
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+    @staticmethod
+    def get_modifiers(obj):
+        obj = ObjUtils.assert_object(obj)
+        return obj.modifiers
+
+    @staticmethod
+    def assert_vertex_group(obj, vertex_group):
+        obj = ObjUtils.assert_object(obj)
+        if isinstance(vertex_group, bpy.types.VertexGroup):
+            vertex_group = vertex_group.name
+        return obj.vertex_groups[vertex_group]
+
+    @staticmethod
+    def remove_vertex_groups(obj, vertex_groups):
+        obj = ObjUtils.assert_object(obj)
+        for vg in vertex_groups:
+            obj.vertex_groups.remove(ObjUtils.assert_vertex_group(obj, vg))
+
+    @staticmethod
+    def normalize_all_weights(context, obj):
+        with OpenObject(context, obj, mode='WEIGHT_PAINT') as o:
+            bpy.ops.object.vertex_group_normalize_all()
+
+    @staticmethod
+    def assert_mesh(mesh):
+        if isinstance(mesh, str):
+            mesh = ObjUtils.get_mesh(mesh)
+        elif mesh not in bpy.data.meshes.values():
+            raise ValueError('Not of mesh type: %s' % str(mesh))
+        return mesh
+
+    @staticmethod
+    def get_mesh(mesh_name):
+        return bpy.data.meshes[mesh_name]
+
+    @staticmethod
+    def remove_mesh(mesh):
+        mesh = ObjUtils.assert_mesh(mesh)
+        bpy.data.meshes.remove(mesh, do_unlink=True)
+
+    @staticmethod
+    def mesh_triangulate_raw(me):
+        '''三角化一个 mesh（不涉及 context，纯数据操作）'''
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bmesh.ops.triangulate(bm, faces=bm.faces, quad_method='BEAUTY', ngon_method='BEAUTY')
+        bm.to_mesh(me)
+        bm.free()
+
+    @staticmethod
+    def mesh_triangulate_beauty(obj):
+        '''
+        使用 Blender 内置的 BEAUTY 算法进行三角化
+        使用 bpy.ops.mesh.quads_convert_to_tris 确保一致的三角化结果
+        '''
+        if obj.type != 'MESH':
+            return
+
+        original_active = bpy.context.view_layer.objects.active
+        original_selected = list(bpy.context.selected_objects)
+        original_mode = obj.mode
+
+        def deselect_all_safe():
+            for o in bpy.context.selected_objects:
+                o.select_set(False)
+
+        try:
+            deselect_all_safe()
+            obj.select_set(True)
+            bpy.context.view_layer.objects.active = obj
+
+            if original_mode != 'EDIT':
+                bpy.ops.object.mode_set(mode='EDIT')
+
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        finally:
+            if original_mode == 'EDIT':
+                try:
+                    deselect_all_safe()
+                    obj.select_set(True)
+                    bpy.context.view_layer.objects.active = obj
+                    bpy.ops.object.mode_set(mode='EDIT')
+                except:
+                    pass
+
+            deselect_all_safe()
+            for sel_obj in original_selected:
+                if sel_obj:
+                    try:
+                        sel_obj.select_set(True)
+                    except:
+                        pass
+            if original_active:
+                try:
+                    bpy.context.view_layer.objects.active = original_active
+                except:
+                    pass
+
+    @staticmethod
+    def get_vertex_groups_from_bmesh(bm):
+        layer_deform = bm.verts.layers.deform.active
+        return [sorted(vert[layer_deform].items(), key=itemgetter(1), reverse=True) for vert in bm.verts]
+
+    @staticmethod
+    def get_collection(col_name):
+        return bpy.data.collections[col_name]
+
+    @staticmethod
+    def get_layer_collection(col, layer_col=None):
+        col_name = ObjUtils.assert_collection(col).name
+        if layer_col is None:
+            layer_col = bpy.context.view_layer.layer_collection
+        if layer_col.name == col_name:
+            return layer_col
+        for sublayer_col in layer_col.children:
+            found = ObjUtils.get_layer_collection(col_name, layer_col=sublayer_col)
+            if found:
+                return found
+
+    @staticmethod
+    def collection_exists(col_name):
+        return col_name in bpy.data.collections.keys()
+
+    @staticmethod
+    def assert_collection(col):
+        if isinstance(col, str):
+            col = ObjUtils.get_collection(col)
+        elif not isinstance(col, bpy.types.Collection):
+            raise ValueError('Not of collection type: %s' % str(col))
+        return col
+
+    @staticmethod
+    def get_collection_objects(col):
+        col = ObjUtils.assert_collection(col)
+        return col.objects
+
+    @staticmethod
+    def link_collection(col, col_parent):
+        col = ObjUtils.assert_collection(col)
+        col_parent = ObjUtils.assert_collection(col_parent)
+        col_parent.children.link(col)
+
+    @staticmethod
+    def new_collection(col_name, col_parent=None, allow_duplicate=True):
+        if not allow_duplicate:
+            try:
+                col = ObjUtils.get_collection(col_name)
+                if col is not None:
+                    raise ValueError('Collection already exists: %s' % str(col_name))
+            except Exception:
+                pass
+        new_col = bpy.data.collections.new(col_name)
+        if col_parent:
+            ObjUtils.link_collection(new_col, col_parent)
+        else:
+            bpy.context.scene.collection.children.link(new_col)
+        return new_col
+
+    @staticmethod
+    def hide_collection(col):
+        col = ObjUtils.assert_collection(col)
+        ObjUtils.get_layer_collection(col).hide_viewport = True
+
+    @staticmethod
+    def unhide_collection(col):
+        col = ObjUtils.assert_collection(col)
+        ObjUtils.get_layer_collection(col).hide_viewport = False
+
+    @staticmethod
+    def collection_is_hidden(col):
+        col = ObjUtils.assert_collection(col)
+        return ObjUtils.get_layer_collection(col).hide_viewport
+
+    @staticmethod
+    def get_scene_collections():
+        return bpy.context.scene.collection.children

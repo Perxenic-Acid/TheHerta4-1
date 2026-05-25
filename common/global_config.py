@@ -105,8 +105,8 @@ class GlobalConfig:
     def base_path(cls):
         return cls.ssmtlocation
     
-    @classmethod
-    def path_drawib_config_json_path(cls):
+    @staticmethod
+    def path_drawib_config_json_path():
         '''
         当前工作空间目录下的Config.json
         存储了所有的DrawIB和别名
@@ -114,16 +114,16 @@ class GlobalConfig:
         game_config_json_path = os.path.join(GlobalConfig.path_workspace_folder(),"Config.json")
         return game_config_json_path
     
-    @classmethod
-    def path_configs_folder(cls):
+    @staticmethod
+    def path_configs_folder():
         return os.path.join(GlobalConfig.base_path(),"Configs\\")
     
-    @classmethod
-    def path_reverse_output_folder(cls):
+    @staticmethod
+    def path_reverse_output_folder():
         # 先从main_json_path里读取ssmt位置，也就是ssmt总工作空间的位置
         # 在新架构中，总工作空间位置已不会再发生改变，所以用户只需要选择一次就可以了
-        if os.path.exists(cls.path_main_json_ssmt4()):
-            main_setting_file = open(cls.path_main_json_ssmt4())
+        if os.path.exists(GlobalConfig.path_main_json_ssmt4()):
+            main_setting_file = open(GlobalConfig.path_main_json_ssmt4())
             main_setting_json = json.load(main_setting_file)
             main_setting_file.close()
             reverse_output_folder = main_setting_json.get("ReverseOutputFolder","") + "\\"
@@ -137,16 +137,16 @@ class GlobalConfig:
     def path_mods_folder(cls):
         return os.path.join(cls.current_game_migoto_folder,"Mods\\") 
 
-    @classmethod
-    def path_total_workspace_folder(cls):
+    @staticmethod
+    def path_total_workspace_folder():
         return os.path.join(GlobalConfig.base_path(),"WorkSpace\\") 
     
-    @classmethod
-    def path_current_game_total_workspace_folder(cls):
+    @staticmethod
+    def path_current_game_total_workspace_folder():
         return os.path.join(GlobalConfig.path_total_workspace_folder(),GlobalConfig.gamename + "\\") 
 
-    @classmethod
-    def _normalize_workspace_folder_path(cls, folder_path: str) -> str:
+    @staticmethod
+    def _normalize_workspace_folder_path(folder_path: str) -> str:
         normalized = str(folder_path or "").strip()
         if not normalized:
             return ""
@@ -167,7 +167,7 @@ class GlobalConfig:
                     return specified_workspace_name
 
             if workspace_source_mode == "CUSTOM":
-                custom_workspace_folder_path = cls._normalize_workspace_folder_path(
+                custom_workspace_folder_path = GlobalConfig._normalize_workspace_folder_path(
                     GlobalProterties.custom_workspace_folder_path()
                 )
                 if custom_workspace_folder_path:
@@ -181,7 +181,7 @@ class GlobalConfig:
     def path_workspace_folder(cls):
         try:
             if GlobalProterties.workspace_source_mode() == "CUSTOM":
-                custom_workspace_folder_path = cls._normalize_workspace_folder_path(
+                custom_workspace_folder_path = GlobalConfig._normalize_workspace_folder_path(
                     GlobalProterties.custom_workspace_folder_path()
                 )
                 if custom_workspace_folder_path:
@@ -206,12 +206,12 @@ class GlobalConfig:
                 os.makedirs(generate_mod_folder_path)
             return generate_mod_folder_path
     
-    @classmethod
-    def path_extract_gametype_folder(cls,draw_ib:str,gametype_name:str):
+    @staticmethod
+    def path_extract_gametype_folder(draw_ib:str,gametype_name:str):
         return os.path.join(GlobalConfig.path_workspace_folder(), draw_ib + "\\TYPE_" + gametype_name + "\\")
     
-    @classmethod
-    def path_generatemod_buffer_folder(cls):
+    @staticmethod
+    def path_generatemod_buffer_folder():
        
         buffer_folder_name = "Meshes"
         buffer_path = os.path.join(GlobalConfig.path_generate_mod_folder(), buffer_folder_name + "\\")
@@ -219,8 +219,8 @@ class GlobalConfig:
             os.makedirs(buffer_path)
         return buffer_path
     
-    @classmethod
-    def path_generatemod_texture_folder(cls,draw_ib:str):
+    @staticmethod
+    def path_generatemod_texture_folder(draw_ib:str):
 
         texture_path = os.path.join(GlobalConfig.path_generate_mod_folder(),"Textures\\")
         if not os.path.exists(texture_path):
@@ -230,15 +230,15 @@ class GlobalConfig:
             print("GlobalConfig: 使用已有贴图输出目录: " + texture_path + " (DrawIB: " + str(draw_ib) + ")")
         return texture_path
     
-    @classmethod
-    def path_appdata_local(cls):
+    @staticmethod
+    def path_appdata_local():
         return os.path.join(os.environ['LOCALAPPDATA'])
     
-    @classmethod
-    def path_ssmt4_global_configs_folder(cls):
+    @staticmethod
+    def path_ssmt4_global_configs_folder():
         return os.path.join(GlobalConfig.path_appdata_local(),"SSMT4GlobalConfigs\\")
 
     # 定义基础的Json文件路径
-    @classmethod
-    def path_main_json_ssmt4(cls):
+    @staticmethod
+    def path_main_json_ssmt4():
         return os.path.join(GlobalConfig.path_ssmt4_global_configs_folder(), "settings.json")
