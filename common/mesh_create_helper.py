@@ -14,7 +14,7 @@ from ..utils.timer_utils import TimerUtils
 from ..utils.vertexgroup_utils import VertexGroupUtils
 
 from .global_config import GlobalConfig
-from .global_properties import GlobalProterties
+from .global_properties import GlobalProperties
 from .global_config import LogicName
 from .d3d11_element import D3D11Element
 
@@ -228,7 +228,7 @@ class MeshCreateHelper:
             obj.rotation_euler[2] = 0
 
         if GlobalConfig.logic_name == LogicName.WWMI or GlobalConfig.logic_name == LogicName.NTEMI:
-            if GlobalProterties.import_skip_empty_vertex_groups():
+            if GlobalProperties.import_skip_empty_vertex_groups():
                 VertexGroupUtils.remove_unused_vertex_groups(obj)
 
         import_collection.objects.link(obj)
@@ -236,7 +236,7 @@ class MeshCreateHelper:
 
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-        if GlobalProterties.use_mirror_workflow():
+        if GlobalProperties.use_mirror_workflow():
             print(f"非镜像工作流：对 {obj.name} 应用镜像变换和面朝向翻转")
             ObjUtils.apply_mirror_workflow(obj)
 
@@ -739,7 +739,7 @@ class MeshCreateHelper:
             use_alpha=logic_name != LogicName.IdentityV,
         )
 
-        if normal_path is not None and GlobalProterties.use_normal_map():
+        if normal_path is not None and GlobalProperties.use_normal_map():
             MeshCreateHelper.apply_normal_texture(
                 node_tree=material.node_tree,
                 bsdf=bsdf,

@@ -1,6 +1,6 @@
 ﻿import os
 
-from ..common.global_properties import GlobalProterties
+from ..common.global_properties import GlobalProperties
 from ..common.global_config import GlobalConfig
 from ..common.global_config import LogicName
 from ..model.drawib_model_wwmi import DrawIBModelWWMI
@@ -44,7 +44,7 @@ class ExportWWMI:
         constants_section.append("global $shapekey_vertex_count = " + str(len(draw_ib_model.obj_buffer_model_wwmi.shapekey_vertex_ids)))
         constants_section.append("global $mod_id = -1000")
 
-        if GlobalProterties.import_merged_vgmap():
+        if GlobalProperties.import_merged_vgmap():
             constants_section.append("global $state_id = 0")
 
         constants_section.append("global $mod_enabled = 0")
@@ -59,7 +59,7 @@ class ExportWWMI:
         present_section.append("  if $mod_enabled")
         present_section.append("    post $object_detected = 0")
 
-        if GlobalProterties.import_merged_vgmap():
+        if GlobalProperties.import_merged_vgmap():
             if draw_ib_model.blend_remap:
                 present_section.append("    run = CommandListInitializeBlendRemaps")
             present_section.append("    run = CommandListUpdateMergedSkeleton")
@@ -93,7 +93,7 @@ class ExportWWMI:
 
     def add_commandlist_update_merged_skeleton(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
         commandlist_section = M_IniSection(M_SectionType.CommandList)
-        if GlobalProterties.import_merged_vgmap():
+        if GlobalProperties.import_merged_vgmap():
             commandlist_section.append("[CommandListUpdateMergedSkeleton]")
             commandlist_section.append("if $state_id")
             commandlist_section.append("  $state_id = 0")
@@ -110,7 +110,7 @@ class ExportWWMI:
     def add_blend_remap_sections(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
         blend_remap_section = M_IniSection(M_SectionType.CommandList)
 
-        if GlobalProterties.import_merged_vgmap():
+        if GlobalProperties.import_merged_vgmap():
             blend_remap_section.append("[ResourceMergedSkeletonRemap]")
             blend_remap_section.append("[ResourceExtraMergedSkeletonRemap]")
             blend_remap_section.new_line()
@@ -213,7 +213,7 @@ class ExportWWMI:
         commandlist_section.append("CheckTextureOverride = ps-t5")
         commandlist_section.append("CheckTextureOverride = ps-t6")
         commandlist_section.append("CheckTextureOverride = ps-t7")
-        if GlobalProterties.import_merged_vgmap():
+        if GlobalProperties.import_merged_vgmap():
             commandlist_section.append("CheckTextureOverride = vs-cb3")
             commandlist_section.append("CheckTextureOverride = vs-cb4")
         commandlist_section.new_line()
@@ -237,7 +237,7 @@ class ExportWWMI:
         # = ref ResourceMergedSkeleton 鎵嶆槸寮曠敤缁戝畾銆?
         # 缂哄皯 ref 鎰忓懗鐫€鍚庣画 compute shader 鏇存柊楠ㄦ灦鏃讹紝vs-cb 涓嶄細鍚屾鏇存柊銆?
 
-        if GlobalProterties.import_merged_vgmap():
+        if GlobalProperties.import_merged_vgmap():
             if draw_ib_model.blend_remap:
                 commandlist_section.append("if ResourceBlendBufferOverride === null")
                 commandlist_section.append("vb4 = ResourceBlendBuffer")
@@ -286,7 +286,7 @@ class ExportWWMI:
 
     def add_commandlist_merge_skeleton_section(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
         commandlist_section = M_IniSection(M_SectionType.CommandList)
-        if GlobalProterties.import_merged_vgmap():
+        if GlobalProperties.import_merged_vgmap():
             commandlist_section.append("[CommandListMergeSkeleton]")
             commandlist_section.append("$\\WWMIv1\\custom_mesh_scale = 1.00")
             commandlist_section.append("cs-cb8 = ref vs-cb4")
@@ -347,12 +347,12 @@ class ExportWWMI:
 
             if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
                 texture_override_component.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
-                if GlobalProterties.generate_branch_mod_gui():
+                if GlobalProperties.generate_branch_mod_gui():
                     texture_override_component.append("$ActiveCharacter = 1")
 
             texture_override_component.append("if $mod_enabled")
 
-            if GlobalProterties.import_merged_vgmap():
+            if GlobalProperties.import_merged_vgmap():
                 state_id_var_str = "$state_id_" + component_count_str
                 texture_override_component.append("  local " + state_id_var_str)
                 texture_override_component.append("  if " + state_id_var_str + " != $state_id")
@@ -438,7 +438,7 @@ class ExportWWMI:
             texture_override_shapekeys_section.append("hash = " + draw_ib_model.wwmi_info.shapekeys.offsets_hash)
             texture_override_shapekeys_section.append("match_priority = 0")
             texture_override_shapekeys_section.append("if $mod_enabled")
-            if GlobalProterties.import_merged_vgmap():
+            if GlobalProperties.import_merged_vgmap():
                 texture_override_shapekeys_section.append("  if cs == 3381.3333 && ResourceMergedSkeleton !== null")
             else:
                 texture_override_shapekeys_section.append("  if cs == 3381.3333")
@@ -459,7 +459,7 @@ class ExportWWMI:
             texture_override_shapekeys_section.append("hash = " + draw_ib_model.wwmi_info.shapekeys.offsets_hash)
             texture_override_shapekeys_section.append("match_priority = 0")
             texture_override_shapekeys_section.append("if $mod_enabled")
-            if GlobalProterties.import_merged_vgmap():
+            if GlobalProperties.import_merged_vgmap():
                 texture_override_shapekeys_section.append("  if cs == 3381.4444 && ResourceMergedSkeleton !== null")
             else:
                 texture_override_shapekeys_section.append("  if cs == 3381.4444")
@@ -595,7 +595,7 @@ class ExportWWMI:
             self.add_texture_override_shapekeys(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
             self.add_resource_shapekeys(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
 
-            if GlobalProterties.import_merged_vgmap():
+            if GlobalProperties.import_merged_vgmap():
                 self.add_resource_merged_skeleton(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
             
             self.add_resource_buffer(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)

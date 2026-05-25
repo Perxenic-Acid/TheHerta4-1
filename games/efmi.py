@@ -4,7 +4,7 @@ from ..model.submesh_model import SubMeshModel
 from ..model.drawib_model import DrawIBModel
 from dataclasses import dataclass,field
 from ..common.global_config import GlobalConfig
-from ..common.global_properties import GlobalProterties
+from ..common.global_properties import GlobalProperties
 
 from ..common.buffer_export_helper import BufferExportHelper
 from ..common.global_config import GlobalConfig
@@ -103,7 +103,7 @@ class ExportEFMI:
                 category_resource_name = "Resource_" + drawib_model.get_submesh_unique_key(submesh_model) + "_" + category
                 texture_override_ib_section.append(category_slot + " = " + category_resource_name)
 
-            if not GlobalProterties.forbid_auto_texture_ini() and drawib_model is not None:
+            if not GlobalProperties.forbid_auto_texture_ini() and drawib_model is not None:
                 texture_markup_info_list = drawib_model.get_submesh_texture_markup_info_list(submesh_model)
                 for texture_markup_info in texture_markup_info_list:
                     if getattr(texture_markup_info, "mark_type", "") not in ("Slot", "SharedSlot"):
@@ -115,7 +115,7 @@ class ExportEFMI:
 
             if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
                 texture_override_ib_section.append("$active" + str(active_index) + " = 1")
-                if GlobalProterties.generate_branch_mod_gui():
+                if GlobalProperties.generate_branch_mod_gui():
                     texture_override_ib_section.append("$ActiveCharacter = 1")
             
             texture_override_ib_section.new_line()
@@ -144,7 +144,7 @@ class ExportEFMI:
                 resource_buffer_section.append("filename = Meshes\\" + submesh_model.display_str + "-" + category + ".buf")
                 resource_buffer_section.new_line()
 
-        if not GlobalProterties.forbid_auto_texture_ini():
+        if not GlobalProperties.forbid_auto_texture_ini():
             resource_texture_section = M_IniSection(M_SectionType.ResourceTexture)
             appended_resource_names = set()
             for drawib_model in self.drawib_model_list:

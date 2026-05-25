@@ -39,7 +39,7 @@ def _get_workspace_enum_items(self, context):
         return [("", "当前没有工作空间", "当前游戏配置下未找到可用工作空间")]
 
 
-class GlobalProterties(bpy.types.PropertyGroup):
+class GlobalProperties(bpy.types.PropertyGroup):
     selected_blueprint_name: bpy.props.EnumProperty(
         name="当前蓝图",
         description="选择要打开或快捷生成 Mod 的蓝图",
@@ -270,17 +270,17 @@ class GlobalProterties(bpy.types.PropertyGroup):
 
 def register():
     try:
-        bpy.utils.register_class(GlobalProterties)
+        bpy.utils.register_class(GlobalProperties)
     except ValueError:
         pass
     if not hasattr(bpy.types.Scene, "global_properties"):
-        bpy.types.Scene.global_properties = bpy.props.PointerProperty(type=GlobalProterties)
+        bpy.types.Scene.global_properties = bpy.props.PointerProperty(type=GlobalProperties)
 
 
 def unregister():
     if hasattr(bpy.types.Scene, "global_properties"):
         del bpy.types.Scene.global_properties
     try:
-        bpy.utils.unregister_class(GlobalProterties)
+        bpy.utils.unregister_class(GlobalProperties)
     except (ValueError, RuntimeError):
         pass

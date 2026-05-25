@@ -1,7 +1,7 @@
 ﻿import os
 
 from ..common.global_config import GlobalConfig
-from ..common.global_properties import GlobalProterties
+from ..common.global_properties import GlobalProperties
 from ..common.global_config import GlobalConfig
 from ..common.m_ini_helper import M_IniHelper
 from ..common.m_ini_helper_gui import M_IniHelperGUI
@@ -48,11 +48,11 @@ class ExportGIMI(ExportUnity):
 
             texture_override_ib_section.append("ib = " + ib_resource_name)
 
-            if not GlobalProterties.forbid_auto_texture_ini():
+            if not GlobalProperties.forbid_auto_texture_ini():
                 texture_markup_info_list = drawib_model.get_submesh_texture_markup_info_list(submesh_model)
                 normal_exists = False
 
-                if GlobalProterties.gimi_use_orfix() and texture_markup_info_list:
+                if GlobalProperties.gimi_use_orfix() and texture_markup_info_list:
                     for texture_markup_info in texture_markup_info_list:
                         if texture_markup_info.mark_name == GIMITextureMarkName.NormalMap:
                             normal_exists = True
@@ -83,7 +83,7 @@ class ExportGIMI(ExportUnity):
                             slot_replace_exists = True
                             texture_override_ib_section.append(texture_markup_info.mark_slot + " = " + texture_markup_info.get_resource_name())
 
-                if GlobalProterties.gimi_use_orfix() and slot_replace_exists:
+                if GlobalProperties.gimi_use_orfix() and slot_replace_exists:
                     if normal_exists:
                         texture_override_ib_section.append("run = CommandList\\global\\ORFix\\ORFix")
                     else:

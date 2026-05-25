@@ -3,7 +3,7 @@ import os
 
 from ..common.global_config import GlobalConfig
 from ..common.global_config import LogicName
-from ..common.global_properties import GlobalProterties
+from ..common.global_properties import GlobalProperties
 from ..common.global_config import GlobalConfig
 from ..common.m_ini_helper import M_IniHelper
 from ..common.m_ini_helper_gui import M_IniHelperGUI
@@ -46,7 +46,7 @@ class ExportUnity:
             if category_name == d3d11_game_type.CategoryDrawCategoryDict["Position"]:
                 if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
                     texture_override_vb_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
-                    if GlobalProterties.generate_branch_mod_gui():
+                    if GlobalProperties.generate_branch_mod_gui():
                         texture_override_vb_section.append("$ActiveCharacter = 1")
 
             texture_override_vb_section.new_line()
@@ -74,7 +74,7 @@ class ExportUnity:
 
             texture_override_ib_section.append("ib = " + ib_resource_name)
 
-            if not GlobalProterties.forbid_auto_texture_ini():
+            if not GlobalProperties.forbid_auto_texture_ini():
                 for texture_markup_info in drawib_model.get_submesh_texture_markup_info_list(submesh_model):
                     if texture_markup_info.mark_type in ("Slot", "SharedSlot"):
                         texture_override_ib_section.append(texture_markup_info.mark_slot + " = " + texture_markup_info.get_resource_name())
@@ -125,7 +125,7 @@ class ExportUnity:
         ini_builder.append_section(resource_vb_section)
 
     def add_resource_texture_sections(self, ini_builder: M_IniBuilder, drawib_model):
-        if GlobalProterties.forbid_auto_texture_ini():
+        if GlobalProperties.forbid_auto_texture_ini():
             return
 
         resource_texture_section = M_IniSection(M_SectionType.ResourceTexture)
@@ -179,7 +179,7 @@ class ExportUnity:
             if category_name == d3d11_game_type.CategoryDrawCategoryDict["Position"]:
                 if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
                     texture_override_vb_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
-                    if GlobalProterties.generate_branch_mod_gui():
+                    if GlobalProperties.generate_branch_mod_gui():
                         texture_override_vb_section.append("$ActiveCharacter = 1")
 
             texture_override_vb_section.new_line()
@@ -200,7 +200,7 @@ class ExportUnity:
             texture_override_ib_section.append("match_first_index = " + str(submesh_model.match_first_index))
             texture_override_ib_section.append("checktextureoverride = vb1")
 
-            if not GlobalProterties.forbid_auto_texture_ini():
+            if not GlobalProperties.forbid_auto_texture_ini():
                 for texture_markup_info in drawib_model.get_submesh_texture_markup_info_list(submesh_model):
                     if texture_markup_info.mark_type == "Hash":
                         texture_override_ib_section.append("checktextureoverride = " + texture_markup_info.mark_slot)
@@ -220,7 +220,7 @@ class ExportUnity:
 
             texture_override_ib_section.append("ib = " + ib_resource_name)
 
-            if not GlobalProterties.forbid_auto_texture_ini():
+            if not GlobalProperties.forbid_auto_texture_ini():
                 for texture_markup_info in drawib_model.get_submesh_texture_markup_info_list(submesh_model):
                     if texture_markup_info.mark_type in ("Slot", "SharedSlot"):
                         texture_override_ib_section.append(texture_markup_info.mark_slot + " = " + texture_markup_info.get_resource_name())
@@ -234,7 +234,7 @@ class ExportUnity:
             if not d3d11_game_type.GPU_PreSkinning:
                 if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
                     texture_override_ib_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
-                    if GlobalProterties.generate_branch_mod_gui():
+                    if GlobalProperties.generate_branch_mod_gui():
                         texture_override_ib_section.append("$ActiveCharacter = 1")
 
         ini_builder.append_section(texture_override_ib_section)

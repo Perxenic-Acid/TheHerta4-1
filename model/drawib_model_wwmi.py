@@ -7,7 +7,7 @@ from typing import TypedDict
 import bpy
 import numpy
 
-from ..common.global_properties import GlobalProterties
+from ..common.global_properties import GlobalProperties
 from ..common.global_config import GlobalConfig
 from ..common.global_config import LogicName
 from ..utils.export_utils import ExportUtils, ObjElementContext, WWMIBufferBuildResult
@@ -258,7 +258,7 @@ class DrawIBModelWWMI:
             for temp_object in component.objects:
                 temp_obj = temp_object.object
 
-                if GlobalProterties.ignore_muted_shape_keys() and temp_obj.data.shape_keys:
+                if GlobalProperties.ignore_muted_shape_keys() and temp_obj.data.shape_keys:
                     muted_shape_keys = []
                     for shapekey_id in range(len(temp_obj.data.shape_keys.key_blocks)):
                         shape_key = temp_obj.data.shape_keys.key_blocks[shapekey_id]
@@ -267,7 +267,7 @@ class DrawIBModelWWMI:
                     for shape_key in muted_shape_keys:
                         temp_obj.shape_key_remove(shape_key)
 
-                if GlobalProterties.apply_all_modifiers():
+                if GlobalProperties.apply_all_modifiers():
                     with OpenObject(bpy.context, temp_obj) as opened_obj:
                         selected_modifiers = [modifier.name for modifier in ObjUtils.get_modifiers(opened_obj)]
                         ShapeKeyUtils.apply_modifiers_for_object_with_shape_keys(bpy.context, selected_modifiers, None)
@@ -275,7 +275,7 @@ class DrawIBModelWWMI:
                 ObjUtils.triangulate_object(bpy.context, temp_obj)
 
                 vertex_groups = ObjUtils.get_vertex_groups(temp_obj)
-                if GlobalProterties.import_merged_vgmap():
+                if GlobalProperties.import_merged_vgmap():
                     total_vg_count = sum(ec.vg_count for ec in self.wwmi_info.components)
                     ignore_list = [
                         vertex_group
@@ -321,7 +321,7 @@ class DrawIBModelWWMI:
                 component_obj.scale = (100, 100, 100)
                 bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-            if GlobalProterties.export_add_missing_vertex_groups():
+            if GlobalProperties.export_add_missing_vertex_groups():
                 ObjUtils.select_obj(component_obj)
                 VertexGroupUtils.fill_vertex_group_gaps()
                 component_obj.select_set(False)
@@ -352,7 +352,7 @@ class DrawIBModelWWMI:
         merged_obj = drawib_merged_object[0]
         ObjUtils.rename_object(merged_obj, "TEMP_EXPORT_OBJECT")
 
-        if GlobalProterties.export_add_missing_vertex_groups():
+        if GlobalProperties.export_add_missing_vertex_groups():
             ObjUtils.select_obj(merged_obj)
             VertexGroupUtils.merge_vertex_groups_with_same_number_v2()
             merged_obj.select_set(False)

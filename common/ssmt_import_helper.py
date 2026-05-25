@@ -5,7 +5,7 @@ import os
 from .d3d11_element import D3D11Element
 from .mesh_create_helper import MeshCreateHelper
 from ..workspace.submesh_json import SubmeshJson, SubmeshCategoryBuffer
-from .global_properties import GlobalProterties
+from .global_properties import GlobalProperties
 from ..utils.format_utils import Fatal, FormatUtils
 
 
@@ -22,7 +22,7 @@ class SSMTImportHelper:
 		gametypename = submesh_json.WorkGameType
 
 		# Merged VG模式：通过VGMap将local blend index重映射为global bone ID
-		wwmi_vg_map = submesh_json.VGMap if (submesh_json.VGMap and GlobalProterties.import_merged_vgmap()) else None
+		wwmi_vg_map = submesh_json.VGMap if (submesh_json.VGMap and GlobalProperties.import_merged_vgmap()) else None
 
 		return MeshCreateHelper.create_mesh_object(
 			mesh_name=mesh_name,

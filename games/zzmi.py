@@ -1,7 +1,7 @@
 ﻿import os
 
 from ..common.global_config import GlobalConfig
-from ..common.global_properties import GlobalProterties
+from ..common.global_properties import GlobalProperties
 from ..common.global_config import GlobalConfig
 from ..common.m_ini_helper import M_IniHelper
 from ..common.m_ini_helper_gui import M_IniHelperGUI
@@ -52,8 +52,8 @@ class ExportZZMI(ExportUnity):
             texture_override_ib_section.append("ib = " + ib_resource_name)
 
             texture_markup_info_list = drawib_model.get_submesh_texture_markup_info_list(submesh_model)
-            if not GlobalProterties.forbid_auto_texture_ini() and texture_markup_info_list:
-                slot_fix_enabled = GlobalProterties.zzz_use_slot_fix()
+            if not GlobalProperties.forbid_auto_texture_ini() and texture_markup_info_list:
+                slot_fix_enabled = GlobalProperties.zzz_use_slot_fix()
                 uses_slot_fix = False
 
                 for texture_markup_info in texture_markup_info_list:

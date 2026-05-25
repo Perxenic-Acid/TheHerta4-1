@@ -6,7 +6,7 @@ from .m_ini_builder import *
 from .m_key import M_Key
 from ..model.draw_call_model import DrawCallModel
 from .global_config import GlobalConfig
-from .global_properties import GlobalProterties
+from .global_properties import GlobalProperties
 
 class M_IniHelperGUI:
     @staticmethod
@@ -65,7 +65,7 @@ class M_IniHelperGUI:
         特别感谢：SinsOfSeven
         '''
 
-        if not GlobalProterties.generate_branch_mod_gui():
+        if not GlobalProperties.generate_branch_mod_gui():
             return
         else:
             # 在这里把所有的res下面的东西，复制到当前生成的Mod文件夹的res目录下
@@ -139,7 +139,7 @@ class M_IniHelperGUI:
         constants_section.append("; 流光边框控制参数")
         constants_section.append("global persist $ui_fx_phase = 0")
         constants_section.append("global $ui_fx_speed = 0.006")
-        constants_section.append("global $ui_fx_intensity = " + ("1" if GlobalProterties.generate_branch_mod_gui_flow_effect() else "0"))
+        constants_section.append("global $ui_fx_intensity = " + ("1" if GlobalProperties.generate_branch_mod_gui_flow_effect() else "0"))
         constants_section.new_line()
 
         constants_section.append(";设置按钮总数")

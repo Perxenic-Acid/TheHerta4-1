@@ -7,7 +7,7 @@ from bpy_extras.io_utils import ImportHelper
 
 from ..common.global_config import LogicName
 from ..common.global_config import GlobalConfig
-from ..common.global_properties import GlobalProterties
+from ..common.global_properties import GlobalProperties
 from ..utils.translate_utils import iface_, rpt_
 from .blueprint_export_helper import BlueprintExportHelper
 from .blueprint_node_base import SSMTNodeBase
@@ -522,7 +522,7 @@ class SSMTNode_Result_Output(SSMTNodeBase):
 
         layout.prop(context.scene.global_properties, "use_specific_generate_mod_folder_path")
 
-        if GlobalProterties.use_specific_generate_mod_folder_path():
+        if GlobalProperties.use_specific_generate_mod_folder_path():
             box = layout.box()
             box.label(text=iface_("当前生成Mod位置文件夹:"))
             box.label(text=context.scene.global_properties.generate_mod_folder_path)

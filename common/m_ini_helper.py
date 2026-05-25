@@ -8,7 +8,7 @@ from ..model.drawib_model import DrawIBModel
 from ..utils.json_utils import JsonUtils
 from ..utils.format_utils import Fatal
 from .global_config import GlobalConfig
-from .global_properties import GlobalProterties
+from .global_properties import GlobalProperties
 from ..workspace.ssmt_workspace import SSMTWorkSpace
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from ..workspace.texture_metadata_helper import TextureMetadataResolver, TextureMarkUpInfo
@@ -246,7 +246,7 @@ class M_IniHelper:
         # ═══════════════════════════════════════════════════
         # 步骤1: 检查全局开关，禁止时跳过全部处理
         # ═══════════════════════════════════════════════════
-        if GlobalProterties.forbid_auto_texture_ini():
+        if GlobalProperties.forbid_auto_texture_ini():
             print("[TRACE] generate_hash_style_texture_ini: forbid_auto_texture_ini=True, 跳过!")
             return
 
@@ -379,7 +379,7 @@ class M_IniHelper:
           - INI 输出 = Slot 风格（写 [Resource-XXX] 段，不写 TextureOverride 段）
         文件拷贝按 Hash 风格去重（同一 hash 只拷贝一次）。
         """
-        if GlobalProterties.forbid_auto_texture_ini():
+        if GlobalProperties.forbid_auto_texture_ini():
             print("[TRACE] generate_shared_slot_style_texture_ini: forbid_auto_texture_ini=True, 跳过!")
             return
 
@@ -499,7 +499,7 @@ class M_IniHelper:
         print("[TRACE] move_slot_style_textures() 入口 - DrawIB: " + draw_ib_model.draw_ib)
         print("=" * 60)
 
-        if GlobalProterties.forbid_auto_texture_ini():
+        if GlobalProperties.forbid_auto_texture_ini():
             print("[TRACE] move_slot_style_textures: forbid_auto_texture_ini=True, 跳过所有贴图复制!")
             return
 

@@ -1,7 +1,7 @@
 ﻿import os
 
 from ..common.global_config import GlobalConfig
-from ..common.global_properties import GlobalProterties
+from ..common.global_properties import GlobalProperties
 from ..common.global_config import GlobalConfig
 from ..common.m_ini_helper import M_IniHelper
 from ..common.m_ini_helper_gui import M_IniHelperGUI
@@ -98,7 +98,7 @@ class ExportIdentityV:
             if category_name == d3d11_game_type.CategoryDrawCategoryDict["Position"]:
                 if len(self.blueprint_model.keyname_mkey_dict.values()) != 0:
                     texture_override_vb_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
-                    if GlobalProterties.generate_branch_mod_gui():
+                    if GlobalProperties.generate_branch_mod_gui():
                         texture_override_vb_section.append("$ActiveCharacter = 1")
 
             texture_override_vb_section.new_line()
@@ -132,7 +132,7 @@ class ExportIdentityV:
             texture_override_ib_section.append(backup_resource_name + " = ref ib")
             texture_override_ib_section.append("checktextureoverride = vb0")
 
-            if not GlobalProterties.forbid_auto_texture_ini():
+            if not GlobalProperties.forbid_auto_texture_ini():
                 texture_markup_info_list = drawib_model.get_submesh_texture_markup_info_list(submesh_model)
                 if texture_markup_info_list:
                     for texture_markup_info in texture_markup_info_list:
@@ -141,7 +141,7 @@ class ExportIdentityV:
 
             texture_override_ib_section.append("ib = " + ib_resource_name)
 
-            if not GlobalProterties.forbid_auto_texture_ini():
+            if not GlobalProperties.forbid_auto_texture_ini():
                 texture_markup_info_list = drawib_model.get_submesh_texture_markup_info_list(submesh_model)
                 if texture_markup_info_list:
                     for texture_markup_info in texture_markup_info_list:
@@ -163,7 +163,7 @@ class ExportIdentityV:
             if not d3d11_game_type.GPU_PreSkinning:
                 if len(self.blueprint_model.keyname_mkey_dict.values()) != 0:
                     texture_override_ib_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
-                    if GlobalProterties.generate_branch_mod_gui():
+                    if GlobalProperties.generate_branch_mod_gui():
                         texture_override_ib_section.append("$ActiveCharacter = 1")
 
             texture_override_ib_section.append("ib = " + backup_resource_name)
@@ -192,7 +192,7 @@ class ExportIdentityV:
         ini_builder.append_section(resource_vb_section)
 
     def add_resource_texture_sections(self, ini_builder: M_IniBuilder, drawib_model):
-        if GlobalProterties.forbid_auto_texture_ini():
+        if GlobalProperties.forbid_auto_texture_ini():
             return
 
         resource_texture_section = M_IniSection(M_SectionType.ResourceTexture)
