@@ -82,7 +82,7 @@ def ImprotFromWorkSpaceFull(self, context):
                         if imported_obj is not None:
                             imported_obj.name = display_name
                             imported_obj.data.name = imported_obj.name
-                            foldername_imported_obj_dict[new_submesh_name] = imported_obj
+                            foldername_imported_obj_dict[new_submesh_name] = (imported_obj, display_name)
                             all_submesh_display_names.append(display_name)
                             successful_import_count += 1
 
@@ -122,9 +122,16 @@ def ImprotFromWorkSpaceFull(self, context):
         tree.use_fake_user = True
         BlueprintExportHelper.set_tree_submesh_names(all_submesh_display_names, tree=tree)
         
+        # 创建 Frame 框，包裹所有 Object Info 节点和 Group 节点
+        frame = tree.nodes.new('NodeFrame')
+        frame.label = "原始模型"
+        frame.use_custom_color = True
+        frame.color = (0.2, 0.35, 0.2)  # 深绿色调
+
         # 创建 Group 节点 (并在循环中连接)
         group_node = tree.nodes.new('SSMTNode_Object_Group')
         group_node.label = "Default Group"
+        group_node.parent = frame
         
         # 3. 遍历导入的对象并创建对应节点
         current_x = 0
@@ -133,7 +140,7 @@ def ImprotFromWorkSpaceFull(self, context):
         count = 0
         min_y = 0
 
-        for new_submesh_name, imported_obj in foldername_imported_obj_dict.items():
+        for new_submesh_name, (imported_obj, display_name) in foldername_imported_obj_dict.items():
             if imported_obj.type != 'MESH':
                 continue
 
@@ -144,12 +151,13 @@ def ImprotFromWorkSpaceFull(self, context):
             # 创建节点
             node = tree.nodes.new('SSMTNode_Object_Info')
             node.location = (current_x, current_y)
+            node.parent = frame
 
             # 填充属性
             node.object_name = imported_obj.name
             node.original_object_name = imported_obj.name
             node.component = component_str
-            node.submesh_name = imported_obj.name  # 已带 LOD 前缀（新格式）
+            node.submesh_name = display_name
 
             node.label = imported_obj.name
 
@@ -179,6 +187,9 @@ def ImprotFromWorkSpaceFull(self, context):
 
         if hasattr(group_node, "update"):
             group_node.update()
+        # 刷新 Frame 尺寸以包裹所有子节点
+        if hasattr(frame, "update"):
+            frame.update()
 
         BlueprintExportHelper.set_runtime_blueprint_tree(tree)
 
@@ -376,7 +387,7 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
                     if imported_obj is not None:
                         imported_obj.name = display_name
                         imported_obj.data.name = imported_obj.name
-                        foldername_imported_obj_dict[new_submesh_name] = imported_obj
+                        foldername_imported_obj_dict[new_submesh_name] = (imported_obj, display_name)
                         all_submesh_display_names.append(display_name)
                         successful_import_count += 1
 
@@ -435,8 +446,15 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
         tree.use_fake_user = True
         BlueprintExportHelper.set_tree_submesh_names(all_submesh_display_names, tree=tree)
 
+        # 创建 Frame 框，包裹所有 Object Info 节点和 Group 节点
+        frame = tree.nodes.new('NodeFrame')
+        frame.label = "原始模型"
+        frame.use_custom_color = True
+        frame.color = (0.2, 0.35, 0.2)  # 深绿色调
+
         group_node = tree.nodes.new('SSMTNode_Object_Group')
         group_node.label = "Default Group"
+        group_node.parent = frame
 
         current_x = 0
         current_y = 0
@@ -446,7 +464,7 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
 
         ws_model = WorkSpaceModel()
 
-        for new_submesh_name, imported_obj in foldername_imported_obj_dict.items():
+        for new_submesh_name, (imported_obj, display_name) in foldername_imported_obj_dict.items():
             if imported_obj.type != 'MESH':
                 continue
 
@@ -456,11 +474,12 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
 
             node = tree.nodes.new('SSMTNode_Object_Info')
             node.location = (current_x, current_y)
+            node.parent = frame
 
             node.object_name = imported_obj.name
             node.original_object_name = imported_obj.name
             node.component = component_str
-            node.submesh_name = imported_obj.name  # 已带 LOD 前缀（新格式）
+            node.submesh_name = display_name
 
             node.label = imported_obj.name
 
@@ -485,6 +504,8 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
 
         if hasattr(group_node, "update"):
             group_node.update()
+        if hasattr(frame, "update"):
+            frame.update()
 
         BlueprintExportHelper.set_runtime_blueprint_tree(tree)
 
