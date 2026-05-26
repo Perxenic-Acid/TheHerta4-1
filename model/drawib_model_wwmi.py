@@ -128,15 +128,24 @@ class DrawIBModelWWMI:
             self.submesh_drawcall_groups[idx] = updated_drawcall_model_list
 
         # 构建 submesh_model_list 和纹理标记字典，供 M_IniHelper 纹理导出使用
+        # 注意：需要按 match_first_index（即 ComponentIndex / FirstIndex）从小到大排序，
+        # 确保 DrawIB-0 (Component 0) 在 DrawIB-1 (Component 1) 前面，
+        # 并且同一个 submesh 只保留一个条目（去重），避免蓝图节点排列顺序影响导出结果。
         self.submesh_model_list = []
+        submesh_seen: dict[str, int] = {}  # submesh_name → match_first_index
         for drawcall_model in self.ordered_drawcall_model_list:
             submesh_name = drawcall_model.match_submesh_name
             if not submesh_name:
                 continue
+            if submesh_name in submesh_seen:
+                continue  # 已处理过该 submesh
             try:
                 mfi_int = int(drawcall_model.match_first_index)
             except (TypeError, ValueError):
                 mfi_int = 0
+            submesh_seen[submesh_name] = mfi_int
+
+        for submesh_name, mfi_int in sorted(submesh_seen.items(), key=lambda item: item[1]):
             self.submesh_model_list.append(SimpleNamespace(
                 submesh_name=submesh_name,
                 display_str=submesh_name,  # 初始等于 submesh_name，后续由 apply_alias_dict 覆盖

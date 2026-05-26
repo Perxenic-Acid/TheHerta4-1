@@ -179,6 +179,10 @@ class BluePrintModel:
             submesh_model.fix_indices_from_workspace(workspace_model)
             submesh_model_list.append(submesh_model)
 
+        # 按 match_first_index 升序排序，确保 DrawIB-0 (FirstIndex 最小的) 排在前面
+        # match_first_index 为 -1（未设置）的排到最后
+        submesh_model_list.sort(key=lambda sm: sm.match_first_index if sm.match_first_index >= 0 else float('inf'))
+
         return submesh_model_list
 
     def parse_drawib_model_list(self, combine_ib: bool = False) -> list[DrawIBModel]:
