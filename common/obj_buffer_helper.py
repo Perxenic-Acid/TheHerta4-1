@@ -380,32 +380,36 @@ class ObjBufferHelper:
         elif d3d11_element.Format == D3D11Format.R8G8B8A8_UNORM:
             return FormatUtils.convert_4x_float32_to_r8g8b8a8_unorm(blendindices)
         elif d3d11_element.Format == D3D11Format.R8G8B8A8_UINT:
-            # TODO 这里类型截断错了吧，假如我们的全局顶点组索引是256或者300呢？
-            # 这里截断直接没了，后续我们还怎么去和remap里进行映射？
-            # 帮我在这里新加一个判断，如果blendindices里有大于255的值就不能转换为uint8
-            # print("uint8")
+            # R8G8B8A8_UINT: 4 个 uint8 打包。
+            # 若 max_index >= 256 则保持原始 dtype，依赖 replace_remapped_blendindices
+            # 将其重映射到 0-255 后再赋值给 uint8 字段。
             max_index = numpy.max(blendindices)
             if max_index > 255:
-                print("BLENDINDICES大于255了,最大值是：" + str(max_index))
+                print("BLENDINDICES大于255了,最大值是：" + str(max_index) + "，保持原始类型，依赖 blend remap 重映射")
             else:
-                blendindices.astype(numpy.uint8)
+                if blendindices.dtype != numpy.uint8:
+                    blendindices = blendindices.astype(numpy.uint8)
             return blendindices
-            # print(original_elementname_data_dict[d3d11_element_name].dtype)
-        elif d3d11_element.Format == "R8_UINT" and d3d11_element.ByteWidth == 8:
+        elif d3d11_element.Format == "R8_UINT":
+            # R8_UINT: 多个独立的 uint8 值，ByteWidth 决定 VG 数量。
             max_index = numpy.max(blendindices)
             if max_index > 255:
-                print("BLENDINDICES大于255了,最大值是：" + str(max_index))
-
-            if blendindices.dtype != numpy.uint8:
-                blendindices = blendindices.astype(numpy.uint8)
+                print("BLENDINDICES大于255了,最大值是：" + str(max_index) + "，保持原始类型，依赖 blend remap 重映射")
+            else:
+                format_len = int(d3d11_element.ByteWidth / numpy.dtype(numpy.uint8).itemsize)
+                if blendindices.dtype != numpy.uint8:
+                    blendindices = blendindices[:, :format_len].astype(numpy.uint8)
+                else:
+                    blendindices = blendindices[:, :format_len]
+                return blendindices
+            # max_index > 255, 保持原始全部列返回，让 remap 处理
             return blendindices
-            # print(original_elementname_data_dict[d3d11_element_name].dtype)
-            # print("WWMI R8_UINT特殊处理")
-        elif d3d11_element.Format == "R16_UINT" and d3d11_element.ByteWidth == 16:
+        elif d3d11_element.Format == "R16_UINT":
+            # R16_UINT: 多个独立的 uint16 值。
             if blendindices.dtype != numpy.uint16:
                 blendindices = blendindices.astype(numpy.uint16)
-            return blendindices
-            # print("WWMI R16_UINT特殊处理")
+            format_len = int(d3d11_element.ByteWidth / numpy.dtype(numpy.uint16).itemsize)
+            return blendindices[:, :format_len]
         else:
             # print(blendindices.shape)
             SSMTErrorUtils.raise_fatal("未知的BLENDINDICES格式")
