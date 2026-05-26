@@ -102,6 +102,20 @@ def generate_mod_from_tree(tree, context, report_callback):
     return {'FINISHED'}
 
 
+def _cleanup_unico_temp_objects(blueprint_model: BluePrintModel):
+    """清理 UniComponent 拆分产生的临时物体"""
+    temp_objects = getattr(blueprint_model, '_unico_temp_objects', None)
+    if not temp_objects:
+        return
+    for temp_obj in temp_objects:
+        try:
+            if temp_obj and temp_obj.name in bpy.data.objects:
+                bpy.data.objects.remove(temp_obj, do_unlink=True)
+        except Exception as e:
+            print(f"[UniComponent] 清理临时物体时出错: {e}")
+    print(f"[UniComponent] 已清理 {len(temp_objects)} 个临时拆分物体")
+
+
 class SSMTGenerateModBlueprint(bpy.types.Operator):
     bl_idname = "ssmt.generate_mod_blueprint"
     bl_label = "生成Mod"

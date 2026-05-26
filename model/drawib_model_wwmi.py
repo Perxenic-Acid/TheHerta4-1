@@ -284,7 +284,7 @@ class DrawIBModelWWMI:
                 ObjUtils.triangulate_object(bpy.context, temp_obj)
 
                 vertex_groups = ObjUtils.get_vertex_groups(temp_obj)
-                if GlobalProperties.import_merged_vgmap():
+                if GlobalProperties.import_merged_vgmap() == 'MERGED':
                     total_vg_count = sum(ec.vg_count for ec in self.wwmi_info.components)
                     ignore_list = [
                         vertex_group
@@ -292,6 +292,7 @@ class DrawIBModelWWMI:
                         if "ignore" in vertex_group.name.lower() or vertex_group.index >= total_vg_count
                     ]
                 else:
+                    # PER_COMPONENT 或 UNICOMPONENT：使用组件本地 VG 范围
                     extracted_component = self.wwmi_info.components[component_id]
                     total_vg_count = len(extracted_component.vg_map)
                     ignore_list = [

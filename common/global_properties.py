@@ -139,10 +139,11 @@ class GlobalProperties(bpy.types.PropertyGroup):
 
     import_merged_vgmap: bpy.props.EnumProperty(
         name="顶点组模式",
-        description="Merged: 导入融合后的统一顶点组 (Unreal的合并顶点组技术会用到)，一般鸣潮Mod选这个来降低制作Mod的复杂度\nPerComponent: 按每个组件独立的顶点组导入",
+        description="Merged: 导入融合后的统一顶点组 (Unreal的合并顶点组技术会用到)，一般鸣潮Mod选这个来降低制作Mod的复杂度\nPerComponent: 按每个组件独立的顶点组导入\nUniComponent: Merged导入，导出时自动拆分回组件级顶点组",
         items=[
-            ('MERGED', 'Merged', '导入融合后的统一顶点组'),
+            ('MERGED', 'Merged', '导入融合后的统一顶点组，导出时使用ComputeShader运行时映射'),
             ('PER_COMPONENT', 'PerComponent', '按每个组件独立的顶点组导入'),
+            ('UNICOMPONENT', 'UniComponent', 'Merged导入，导出时自动按Submesh拆分并还原为本地顶点组'),
         ],
         default='MERGED',
     ) # type: ignore
@@ -244,8 +245,18 @@ class GlobalProperties(bpy.types.PropertyGroup):
         return cls._instance().use_normal_map
 
     @classmethod
-    def import_merged_vgmap(cls):
-        return cls._instance().import_merged_vgmap == 'MERGED'
+    def import_merged_vgmap(cls) -> str:
+        """返回 'MERGED' / 'PER_COMPONENT' / 'UNICOMPONENT'"""
+        return cls._instance().import_merged_vgmap
+
+    @classmethod
+    def is_unico_component(cls) -> bool:
+        return cls._instance().import_merged_vgmap == 'UNICOMPONENT'
+
+    @classmethod
+    def is_merged_mode(cls) -> bool:
+        """MERGED 或 UNICOMPONENT 在导入时都使用 VGMap 合并"""
+        return cls._instance().import_merged_vgmap in ('MERGED', 'UNICOMPONENT')
 
     @classmethod
     def ignore_muted_shape_keys(cls):

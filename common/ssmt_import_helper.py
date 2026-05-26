@@ -21,8 +21,8 @@ class SSMTImportHelper:
 		logic_name = submesh_json.GamePreset
 		gametypename = submesh_json.WorkGameType
 
-		# Merged VG模式：通过VGMap将local blend index重映射为global bone ID
-		wwmi_vg_map = submesh_json.VGMap if (submesh_json.VGMap and GlobalProperties.import_merged_vgmap()) else None
+		# Merged / UniComponent 模式：通过VGMap将local blend index重映射为global bone ID
+		wwmi_vg_map = submesh_json.VGMap if (submesh_json.VGMap and GlobalProperties.is_merged_mode()) else None
 
 		return MeshCreateHelper.create_mesh_object(
 			mesh_name=mesh_name,

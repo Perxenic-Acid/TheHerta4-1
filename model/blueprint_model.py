@@ -3,8 +3,10 @@ import bpy
 import copy
 
 from ..utils.log_utils import LOG
+from ..utils.vertexgroup_utils import VertexGroupUtils
 
 from ..common.m_key import M_Key
+from ..common.global_properties import GlobalProperties
 from .draw_call_model import DrawCallModel
 from .submesh_model import SubMeshModel
 from .drawib_model import DrawIBModel
@@ -23,6 +25,9 @@ class BluePrintModel:
 
         # 全局obj_model列表，主要是obj_model里装了每个obj的生效条件。
         self.ordered_draw_obj_data_model_list:list[DrawCallModel] = [] 
+
+        # UniComponent 拆分产生的临时物体，导出后需清理
+        self._unico_temp_objects: list[bpy.types.Object] = []
 
         # 从输出节点开始递归解析所有的节点
         tree = tree or BlueprintExportHelper.get_current_blueprint_tree(context=context)
@@ -142,17 +147,156 @@ class BluePrintModel:
                 LOG.info("BluePrintModel: 跳过空网格或无效对象: " + str(unknown_node.object_name))
                 return
 
-            obj_model = DrawCallModel(
-                obj_name=unknown_node.object_name,
-                submesh_name=getattr(unknown_node, 'submesh_name', ''),
-            )
-            
-            if hasattr(unknown_node, 'original_object_name') and unknown_node.original_object_name:
-                obj_model.display_name = unknown_node.original_object_name
+            # UniComponent 模式：自动检测并拆分物体
+            if GlobalProperties.is_unico_component():
+                split_results = self._unico_split_object(
+                    obj=obj,
+                    node_submesh_name=getattr(unknown_node, 'submesh_name', ''),
+                )
+                for submesh_name, temp_obj in split_results:
+                    obj_model = DrawCallModel(
+                        obj_name=temp_obj.name,
+                        submesh_name=submesh_name,
+                    )
+                    obj_model.work_key_list = copy.deepcopy(chain_key_list)
+                    self.ordered_draw_obj_data_model_list.append(obj_model)
+                    self._unico_temp_objects.append(temp_obj)
+                    LOG.info(f"BluePrintModel: UniComponent 拆分 '{unknown_node.object_name}' → "
+                             f"submesh='{submesh_name}' parsed='{obj_model.match_submesh_name}' "
+                             f"draw_ib='{obj_model.match_draw_ib}' (临时物体: '{temp_obj.name}')")
+            else:
+                # 传统模式：直接使用原物体
+                obj_model = DrawCallModel(
+                    obj_name=unknown_node.object_name,
+                    submesh_name=getattr(unknown_node, 'submesh_name', ''),
+                )
+                
+                if hasattr(unknown_node, 'original_object_name') and unknown_node.original_object_name:
+                    obj_model.display_name = unknown_node.original_object_name
 
-            obj_model.work_key_list = copy.deepcopy(chain_key_list)
-            
-            self.ordered_draw_obj_data_model_list.append(obj_model)
+                obj_model.work_key_list = copy.deepcopy(chain_key_list)
+                
+                self.ordered_draw_obj_data_model_list.append(obj_model)
+
+    def _unico_split_object(
+        self,
+        obj: bpy.types.Object,
+        node_submesh_name: str,
+    ) -> list[tuple[str, bpy.types.Object]]:
+        """
+        UniComponent 拆分：将 Merged 物体的顶点按 Submesh 的 VG 范围拆分。
+
+        从节点绑定的 submesh_name 推导出 draw_ib，
+        加载该 DrawIB 下所有 Submesh 的 SubmeshJson，
+        构建 submesh→VG 映射后调用 VertexGroupUtils.split_merged_object_by_submesh_vg_ranges()。
+
+        Returns:
+            [(submesh_name, temp_split_object), ...]
+        """
+        from ..workspace.ssmt_workspace import SSMTWorkSpace
+        from ..workspace.submesh_json import SubmeshJson
+
+        # 从节点 submesh_name 解析 draw_ib
+        # submesh_name 格式: "LOD0.94517393-0" 或 "94517393-0"
+        normalized_name = str(node_submesh_name or "").strip()
+        if not normalized_name:
+            LOG.warning(f"BluePrintModel: UniComponent 节点 '{obj.name}' 未设置 Submesh，跳过拆分")
+            return []
+
+        # 去掉 LOD 前缀获取 bare name
+        if normalized_name.upper().startswith("LOD") and "." in normalized_name:
+            bare_name = normalized_name.split(".", 1)[1]
+        else:
+            bare_name = normalized_name
+
+        # 提取 draw_ib (第一个 '-' 之前的部分)
+        draw_ib = bare_name.split("-")[0] if "-" in bare_name else ""
+        if not draw_ib:
+            LOG.warning(f"BluePrintModel: 无法从 submesh_name '{node_submesh_name}' 解析 draw_ib")
+            return []
+
+        # 获取该 DrawIB 下所有 Submesh 名称
+        all_submesh_names = SSMTWorkSpace.get_ordered_submesh_name_list_by_drawib(draw_ib)
+        if not all_submesh_names:
+            LOG.warning(f"BluePrintModel: DrawIB '{draw_ib}' 没有找到任何 Submesh")
+            return []
+
+        LOG.info(f"BluePrintModel: 共找到 {len(all_submesh_names)} 个 Submesh: {all_submesh_names}")
+
+        # 加载每个 Submesh 的 VGMap，构建 submesh→VG 映射
+        submesh_vg_map: dict[str, set[int]] = {}
+        submesh_reverse_vg_map: dict[str, dict[int, int]] = {}
+
+        for sm_name in all_submesh_names:
+            try:
+                sm_path = SSMTWorkSpace.check_and_get_submesh_json_path(sm_name)
+                sm_json = SubmeshJson(sm_path)
+                vg_map = sm_json.VGMap  # {local_idx: global_bone_id}
+                LOG.info(f"BluePrintModel:   Submesh '{sm_name}' VGMap = {dict(vg_map)}")
+                if not vg_map:
+                    continue
+
+                global_vg_set = set(int(v) for v in vg_map.values())
+                reverse_map = {int(v): int(k) for k, v in vg_map.items()}
+
+                submesh_vg_map[sm_name] = global_vg_set
+                submesh_reverse_vg_map[sm_name] = reverse_map
+            except Exception as e:
+                LOG.warning(f"BluePrintModel: 加载 Submesh '{sm_name}' 的 VGMap 失败: {e}")
+                continue
+
+        if not submesh_vg_map:
+            LOG.warning(f"BluePrintModel: DrawIB '{draw_ib}' 的所有 Submesh 均无 VGMap，无法拆分")
+            return []
+
+        # --- 过滤：只拆到有独有 VG 的 Submesh（或节点绑定的 Submesh 作为兜底）---
+        # 计算共享 VG（出现在多个 Submesh VGMap 中的 VG）
+        vg_occurrence: dict[int, set[str]] = {}
+        for sm_name, vg_set in submesh_vg_map.items():
+            for vg_id in vg_set:
+                vg_occurrence.setdefault(vg_id, set()).add(sm_name)
+
+        # 物体实际 VG
+        obj_vg_ids = set()
+        for vg in obj.vertex_groups:
+            try:
+                obj_vg_ids.add(int(vg.name))
+            except ValueError:
+                pass
+
+        # 只保留有意义的 Submesh
+        filtered_vg_map: dict[str, set[int]] = {}
+        for sm_name, vg_set in submesh_vg_map.items():
+            unique_vgs = {vg for vg in vg_set if len(vg_occurrence.get(vg, set())) == 1}
+            has_unique = bool(unique_vgs & obj_vg_ids)
+            is_node_submesh = (sm_name == node_submesh_name)
+            if has_unique or is_node_submesh:
+                filtered_vg_map[sm_name] = vg_set
+
+        LOG.info(f"BluePrintModel: UniComponent 拆分 '{obj.name}' "
+                 f"(顶点: {len(obj.data.vertices)}, VG: {len(obj.vertex_groups)})")
+        LOG.info(f"  节点 Submesh: '{node_submesh_name}', draw_ib: '{draw_ib}'")
+        LOG.info(f"  物体 VG: {sorted(obj_vg_ids)}")
+        LOG.info(f"  将拆分到: {list(filtered_vg_map.keys())} "
+                 f"(已过滤掉无独有 VG 的 Submesh)")
+
+        if not filtered_vg_map:
+            LOG.warning(f"BluePrintModel: 无有效 Submesh 可拆分，跳过")
+            return []
+        filtered_reverse_map = {k: v for k, v in submesh_reverse_vg_map.items() if k in filtered_vg_map}
+
+        # 构建独有 VG 映射（用于精确判定顶点归属）
+        filtered_unique_vg_map: dict[str, set[int]] = {}
+        for sm_name in filtered_vg_map:
+            unique = {vg for vg in submesh_vg_map[sm_name] if len(vg_occurrence.get(vg, set())) == 1}
+            filtered_unique_vg_map[sm_name] = unique
+
+        return VertexGroupUtils.split_merged_object_by_submesh_vg_ranges(
+            obj=obj,
+            submesh_vg_map=filtered_vg_map,
+            submesh_reverse_vg_map=filtered_reverse_map,
+            submesh_unique_vg_map=filtered_unique_vg_map,
+        )
 
     def parse_submesh_model_list(self) -> list[SubMeshModel]:
         """

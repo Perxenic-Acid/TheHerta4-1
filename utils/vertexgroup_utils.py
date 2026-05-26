@@ -1015,3 +1015,164 @@ class VertexGroupUtils:
 
         # -------------------- 6. 返回兼容旧接口的字典 --------------------
         return {0: blendweights}, {0: blendindices}
+
+    @staticmethod
+    def split_merged_object_by_submesh_vg_ranges(
+        obj: bpy.types.Object,
+        submesh_vg_map: dict[str, set[int]],
+        submesh_reverse_vg_map: dict[str, dict[int, int]],
+        submesh_unique_vg_map: dict[str, set[int]] | None = None,
+    ) -> list[tuple[str, bpy.types.Object]]:
+        """
+        UniComponent 核心拆分：复制+提取。
+
+        submesh_unique_vg_map: 每个 Submesh 的独有 VG。
+            用于精确判定顶点归属：顶点归于其「独有 VG 权重最高」的那个 Submesh。
+            共享 VG（如盆骨）不计入归属判定。
+        """
+        if obj.type != 'MESH' or len(obj.data.vertices) == 0:
+            return []
+
+        import bmesh
+        import time
+        print(f"\n[UniComponent] 拆分: '{obj.name}' ({len(obj.data.vertices)} 顶点, {len(obj.vertex_groups)} VG)")
+
+        # --- 预计算每个顶点的「主归属 Submesh」（基于独有 VG 的最高权重） ---
+        vert_primary_sm: list[str | None] = [None] * len(obj.data.vertices)
+        has_unique = submesh_unique_vg_map is not None
+
+        if has_unique:
+            # 构建：独有 VG index → 归属的 Submesh
+            unique_vg_sm: dict[int, str] = {}
+            for sm_name, uvgs in submesh_unique_vg_map.items():
+                for vg in obj.vertex_groups:
+                    try:
+                        if int(vg.name) in uvgs:
+                            unique_vg_sm[vg.index] = sm_name
+                    except ValueError:
+                        pass
+
+            for v in obj.data.vertices:
+                if not v.groups:
+                    continue
+                best_sm = None
+                best_w = 0.0
+                for g in v.groups:
+                    if g.weight > best_w and g.group in unique_vg_sm:
+                        best_sm = unique_vg_sm[g.group]
+                        best_w = g.weight
+                vert_primary_sm[v.index] = best_sm
+
+            # 对于没有独有 VG 的顶点（全绑在共享 VG 上），尝试用任意 VG 兜底
+            for v in obj.data.vertices:
+                if vert_primary_sm[v.index] is not None or not v.groups:
+                    continue
+                # 找权重最高的 VG，看它属于哪些 Submesh，取第一个
+                best_g = max(v.groups, key=lambda g: g.weight)
+                for sm_name, vg_set in submesh_vg_map.items():
+                    if best_g.group in {vg.index for vg in obj.vertex_groups if int(vg.name) in vg_set}:
+                        if best_g.group in unique_vg_sm:
+                            vert_primary_sm[v.index] = unique_vg_sm[best_g.group]
+                        else:
+                            # 共享 VG 兜底：取 VG 所属的第一个 Submesh
+                            vert_primary_sm[v.index] = sm_name
+                        break
+
+        # --- 对每个 Submesh 创建拆分物体 ---
+        results: list[tuple[str, bpy.types.Object]] = []
+        src_colls = list(obj.users_collection)
+        target_coll = src_colls[0] if src_colls else bpy.context.scene.collection
+
+        for sm_name, vg_set in sorted(submesh_vg_map.items()):
+            sm_vg_indices: set[int] = set()
+            for vg in obj.vertex_groups:
+                try:
+                    if int(vg.name) in vg_set:
+                        sm_vg_indices.add(vg.index)
+                except ValueError:
+                    pass
+            if not sm_vg_indices:
+                continue
+
+            # 1. 复制物体
+            new_obj = obj.copy()
+            new_obj.data = obj.data.copy()
+            new_obj.name = f"Uni_{int(time.time() * 1000) % 100000}_{sm_name.replace('.', '_')}"
+            target_coll.objects.link(new_obj)
+
+            # 2. BMesh 删除不归属本 Submesh 的顶点
+            bm = bmesh.new()
+            bm.from_mesh(new_obj.data)
+            bm.verts.ensure_lookup_table()
+
+            deform = bm.verts.layers.deform.active
+            to_delete = []
+            if deform is not None:
+                for bv in bm.verts:
+                    if has_unique:
+                        if vert_primary_sm[bv.index] != sm_name:
+                            to_delete.append(bv)
+                    else:
+                        weights = bv[deform]
+                        has_match = any(vg_idx in sm_vg_indices and w > 0.0
+                                        for vg_idx, w in weights.items())
+                        if not has_match:
+                            to_delete.append(bv)
+
+            if len(to_delete) == len(bm.verts):
+                bm.free()
+                bpy.data.objects.remove(new_obj, do_unlink=True)
+                continue
+
+            if to_delete:
+                bmesh.ops.delete(bm, geom=to_delete, context='VERTS')
+
+            bm.to_mesh(new_obj.data)
+            bm.free()
+            new_obj.data.update()
+
+            # 3. 清理并重命名 VG
+            reverse_map = submesh_reverse_vg_map.get(sm_name, {})
+            vg_to_remove = []
+            for vg in new_obj.vertex_groups:
+                try:
+                    vid = int(vg.name)
+                except ValueError:
+                    vg_to_remove.append(vg)
+                    continue
+                if vid in reverse_map:
+                    vg.name = str(reverse_map[vid])
+                elif vid not in vg_set:
+                    vg_to_remove.append(vg)
+            for vg in vg_to_remove:
+                new_obj.vertex_groups.remove(vg)
+            # VertexGroupUtils.remove_unused_vertex_groups(new_obj)
+
+            bpy.ops.object.select_all(action='DESELECT')
+            new_obj.select_set(True)
+            bpy.context.view_layer.objects.active = new_obj
+            bpy.ops.object.vertex_group_sort()
+            VertexGroupUtils.merge_vertex_groups_with_same_number_v2()
+            VertexGroupUtils.fill_vertex_group_gaps()
+
+            # 去掉补零，恢复纯数字名称
+            for vg in new_obj.vertex_groups:
+                try:
+                    vg.name = str(int(vg.name))
+                except ValueError:
+                    pass
+            bpy.ops.object.vertex_group_sort()
+            bpy.ops.object.select_all(action='DESELECT')
+
+            remaining_verts = len(new_obj.data.vertices)
+            remaining_vgs = len(new_obj.vertex_groups)
+            vg_names = [vg.name for vg in new_obj.vertex_groups]
+            print(f"[UniComponent]   → '{sm_name}': {remaining_verts} 顶点, {remaining_vgs} VG {vg_names[:5]}{'...' if remaining_vgs > 5 else ''}")
+
+            if remaining_verts > 0:
+                results.append((sm_name, new_obj))
+            else:
+                bpy.data.objects.remove(new_obj, do_unlink=True)
+
+        print(f"[UniComponent] 完成: {len(results)} 个部件 {[s for s, _ in results]}")
+        return results
