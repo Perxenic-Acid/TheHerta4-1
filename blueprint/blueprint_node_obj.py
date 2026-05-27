@@ -11,6 +11,7 @@ from ..common.global_properties import GlobalProperties
 from ..utils.translate_utils import iface_, rpt_
 from .blueprint_export_helper import BlueprintExportHelper
 from .blueprint_node_base import SSMTNodeBase
+from ..workspace.ssmt_workspace import WorkSpaceModel
 
 OBJECT_PERSISTENT_ID_KEY = "_ssmt_object_uuid"
 
@@ -344,8 +345,29 @@ class SSMTNode_Object_Info(SSMTNodeBase):
 
         self.update_node_width(width_texts)
 
+    def _refresh_index_info(self):
+        """根据 submesh_name 刷新 IndexCount/FirstIndex 显示。"""
+        self.index_count_display = ""
+        self.first_index_display = ""
+
+        submesh_name = str(self.submesh_name or "").strip()
+        if not submesh_name:
+            return
+
+        try:
+            ws_model = WorkSpaceModel()
+            parsed = ws_model.parse_any_format_name(submesh_name)
+            if parsed and parsed["lod"] and parsed["draw_ib"]:
+                ic = ws_model.get_index_count(parsed["lod"], parsed["draw_ib"], parsed["component"])
+                fi = ws_model.get_first_index(parsed["lod"], parsed["draw_ib"], parsed["component"])
+                self.index_count_display = str(ic)
+                self.first_index_display = str(fi)
+        except Exception:
+            pass
+
     def update_object_name(self, context):
         self._refresh_display_fields()
+        self._refresh_index_info()
 
         if self.object_name:
             obj = bpy.data.objects.get(self.object_name)
@@ -356,12 +378,15 @@ class SSMTNode_Object_Info(SSMTNodeBase):
 
     def update_submesh_name(self, context):
         self._refresh_display_fields()
+        self._refresh_index_info()
 
     object_name: bpy.props.StringProperty(name="物体名称", default="", update=update_object_name) #type: ignore
     object_id: bpy.props.StringProperty(name="物体ID", default="") #type: ignore
     original_object_name: bpy.props.StringProperty(name="原始物体名称", default="") #type: ignore
     component: bpy.props.StringProperty(name="Component", default="") #type: ignore
     submesh_name: bpy.props.StringProperty(name="Submesh", default="", update=update_submesh_name) #type: ignore
+    index_count_display: bpy.props.StringProperty(name="IndexCount", default="") #type: ignore
+    first_index_display: bpy.props.StringProperty(name="FirstIndex", default="") #type: ignore
 
     def init(self, context):
         self.outputs.new('SSMTSocketObject', iface_("对象"))
@@ -383,6 +408,11 @@ class SSMTNode_Object_Info(SSMTNodeBase):
 
         if tree is not None:
             layout.prop_search(self, "submesh_name", tree, "ssmt_submesh_items", text=iface_("Submesh"), icon='OUTLINER_COLLECTION')
+
+            if self.submesh_name:
+                layout.label(text=f"IndexCount: {self.index_count_display or '—'}")
+                layout.label(text=f"FirstIndex: {self.first_index_display or '—'}")
+
             if self.submesh_name and self.submesh_name not in BlueprintExportHelper.get_tree_submesh_names(tree=tree):
                 layout.label(text=iface_("当前 Submesh 不在列表中，导出时将回退到物体名解析"), icon='ERROR')
 
