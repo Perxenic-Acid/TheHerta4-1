@@ -579,25 +579,30 @@ class SSMT4FixDrawIBDataType(bpy.types.Operator):
             self.report({'ERROR'}, "工作空间文件夹不存在，请先设置工作空间")
             return {'CANCELLED'}
 
+        ws_model = WorkSpaceModel()
+
         # 1. 解析每个选中物体，收集 {lod_name: set_of_drawib}
         lod_drawib_set: dict[str, set[str]] = {}
         # 同时记录要删除的物体名称
-        all_obj_info = []  # [(obj_name, lod_name, submesh_folder_name, draw_ib)]
+        all_obj_info = []  # [(obj_name, lod_name, submesh_folder_name, draw_ib, gametypename)]
         for obj in selected_objects:
             gametypename = obj.get("3DMigoto:GameTypeName", "")
             if not gametypename:
                 self.report({'WARNING'}, f"物体 '{obj.name}' 没有数据类型属性，已跳过")
                 continue
 
-            lod_name, submesh_folder_name, draw_ib = SSMTWorkSpace.parse_object_name_to_folder_info(obj.name)
-            if not submesh_folder_name or not draw_ib:
+            parsed = ws_model.parse_any_format_name(obj.name)
+            if not parsed or not parsed["lod"] or not parsed["draw_ib"]:
                 self.report({'WARNING'}, f"无法解析物体 '{obj.name}' 的名称，已跳过")
                 continue
 
-            all_obj_info.append((obj.name, lod_name, submesh_folder_name, draw_ib, gametypename))
-            if lod_name not in lod_drawib_set:
-                lod_drawib_set[lod_name] = set()
-            lod_drawib_set[lod_name].add(draw_ib)
+            submesh_folder_path = ws_model.get_folder_path(parsed["lod"], parsed["draw_ib"], parsed["component"])
+            submesh_folder_name = os.path.basename(submesh_folder_path) if submesh_folder_path else ""
+
+            all_obj_info.append((obj.name, parsed["lod"], submesh_folder_name, parsed["draw_ib"], gametypename))
+            if parsed["lod"] not in lod_drawib_set:
+                lod_drawib_set[parsed["lod"]] = set()
+            lod_drawib_set[parsed["lod"]].add(parsed["draw_ib"])
 
         if not all_obj_info:
             self.report({'ERROR'}, "未能从选中物体中解析出任何有效信息")
@@ -649,9 +654,11 @@ class SSMT4FixDrawIBDataType(bpy.types.Operator):
             for obj in ws_coll.all_objects:
                 if obj.type != 'MESH':
                     continue
-                _, _, obj_draw_ib = SSMTWorkSpace.parse_object_name_to_folder_info(obj.name)
+                parsed = ws_model.parse_any_format_name(obj.name)
+                if not parsed or not parsed["draw_ib"]:
+                    continue
                 for _, draw_ib_set in lod_drawib_set.items():
-                    if obj_draw_ib in draw_ib_set:
+                    if parsed["draw_ib"] in draw_ib_set:
                         all_obj_to_delete.append(obj.name)
                         break
 
@@ -696,6 +703,8 @@ class SSMT4FixSubmeshDataType(bpy.types.Operator):
             self.report({'ERROR'}, "工作空间文件夹不存在，请先设置工作空间")
             return {'CANCELLED'}
 
+        ws_model = WorkSpaceModel()
+
         # 1. 解析每个选中物体，并预检
         submesh_entries: list[tuple[str, str, str, str]] = []  # [(obj_name, lod_name, submesh_folder_path, gametypename)]
 
@@ -705,13 +714,17 @@ class SSMT4FixSubmeshDataType(bpy.types.Operator):
                 self.report({'WARNING'}, f"物体 '{obj.name}' 没有数据类型属性，已跳过")
                 continue
 
-            lod_name, submesh_folder_name, _ = SSMTWorkSpace.parse_object_name_to_folder_info(obj.name)
-            if not submesh_folder_name:
+            parsed = ws_model.parse_any_format_name(obj.name)
+            if not parsed or not parsed["lod"] or not parsed["draw_ib"]:
                 self.report({'WARNING'}, f"无法解析物体 '{obj.name}' 的名称，已跳过")
                 continue
 
-            submesh_folder_path = os.path.join(workspace_folder, lod_name, submesh_folder_name)
-            submesh_entries.append((obj.name, lod_name, submesh_folder_path, gametypename))
+            submesh_folder_path = ws_model.get_folder_path(parsed["lod"], parsed["draw_ib"], parsed["component"])
+            if not submesh_folder_path or not os.path.isdir(submesh_folder_path):
+                self.report({'WARNING'}, f"找不到物体 '{obj.name}' 对应的 submesh 文件夹，已跳过")
+                continue
+
+            submesh_entries.append((obj.name, parsed["lod"], submesh_folder_path, gametypename))
 
         if not submesh_entries:
             self.report({'ERROR'}, "未能从选中物体中解析出任何有效信息")
@@ -737,7 +750,7 @@ class SSMT4FixSubmeshDataType(bpy.types.Operator):
                 self.report({'INFO'}, f"已删除数据类型文件夹: {type_folder_path}")
 
             submesh_to_reimport.append((lod_name, submesh_folder_path))
-            obj_names_to_delete.append(obj.name)
+            obj_names_to_delete.append(obj_name)
 
         if not submesh_to_reimport:
             self.report({'ERROR'}, "没有找到需要处理的 submesh")
