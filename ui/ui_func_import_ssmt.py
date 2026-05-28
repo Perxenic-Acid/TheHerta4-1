@@ -629,6 +629,8 @@ class SSMT4FixDrawIBDataType(bpy.types.Operator):
         # 3. 预检：检查是否有 submesh 只剩最后一个数据类型
         for lod_name, submesh_folder_name, submesh_folder_path in all_submesh_entries:
             for _, o_lod, o_submesh, o_draw_ib, gametypename in all_obj_info:
+                if o_lod != lod_name or o_submesh != submesh_folder_name:
+                    continue
                 type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
                 if os.path.exists(type_folder_path) and _count_type_folders(submesh_folder_path) <= 1:
                     _show_last_type_warning(submesh_folder_name=submesh_folder_name)
@@ -638,7 +640,7 @@ class SSMT4FixDrawIBDataType(bpy.types.Operator):
         # 4. 执行删除：删除 TYPE 文件夹
         for lod_name, submesh_folder_name, submesh_folder_path in all_submesh_entries:
             for _, o_lod, o_submesh, o_draw_ib, gametypename in all_obj_info:
-                if o_lod != lod_name:
+                if o_lod != lod_name or o_submesh != submesh_folder_name:
                     continue
                 type_folder_path = os.path.join(submesh_folder_path, "TYPE_" + gametypename)
                 if os.path.exists(type_folder_path):
