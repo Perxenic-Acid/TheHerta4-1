@@ -42,6 +42,7 @@ class DrawIBModel:
     category_hash_dict:dict = field(init=False,repr=False,default_factory=dict)
     submesh_texturemarkinfolist_dict:dict = field(init=False,repr=False,default_factory=dict)
     vertex_limit_hash:str = field(init=False,repr=False,default="")
+    cs_output_vertex_limit_hash:str = field(init=False,repr=False,default="")
     original_vertex_count:int = field(init=False,repr=False,default=0)
 
     ib:list = field(init=False,repr=False,default_factory=list)
@@ -99,6 +100,7 @@ class DrawIBModel:
                 draw_ib_model=self,
             )
             self.vertex_limit_hash = self.import_json_dict.get("VertexLimitVB", "")
+            self.cs_output_vertex_limit_hash = self.load_cs_output_vertex_limit_hash()
             self.original_vertex_count = self.import_json_dict.get("OriginalVertexCount", 0)
             print(
                 "DrawIBModel: 已使用新结构元数据，贴图标记SubMesh数量: "
@@ -107,6 +109,25 @@ class DrawIBModel:
             return
 
         print("DrawIBModel: 未读取到 SubmeshJson 元数据，贴图标记信息为空，DrawIB: " + self.draw_ib)
+
+    def load_cs_output_vertex_limit_hash(self) -> str:
+        for submesh_model in self.submesh_model_list:
+            try:
+                submesh_json = SubmeshJson(SSMTWorkSpace.check_and_get_submesh_json_path(submesh_model.submesh_name))
+            except Exception as ex:
+                print(
+                    "DrawIBModel: failed to read CSOutputVertexLimitVB, Submesh: "
+                    + submesh_model.submesh_name
+                    + ", error: "
+                    + str(ex)
+                )
+                continue
+
+            cs_output_vertex_limit_hash = str(submesh_json.CSOutputVertexLimitVB or "").strip()
+            if cs_output_vertex_limit_hash:
+                return cs_output_vertex_limit_hash
+
+        return ""
 
     def _assemble_category_buffers(self) -> tuple[dict, dict, dict, int]:
         total_category_buffer_chunks = {}

@@ -40,6 +40,7 @@ class SubmeshJson:
 
 	GamePreset:str = field(init=False, default="")
 	VertexLimitVB:str = field(init=False, default="")
+	CSOutputVertexLimitVB:str = field(init=False, default="")
 	CategoryHash:dict = field(init=False, default_factory=dict)
 	CategoryDrawCategoryMap:dict = field(init=False, default_factory=dict)
 	WorkGameType:str = field(init=False, default="")
@@ -68,6 +69,7 @@ class SubmeshJson:
 	def parse_json_dict(self):
 		self.GamePreset = self.JsonDict.get("GamePreset", "")
 		self.VertexLimitVB = self.JsonDict.get("VertexLimitVB", "")
+		self.CSOutputVertexLimitVB = self.JsonDict.get("CSOutputVertexLimitVB", "")
 		self.CategoryHash = self.JsonDict.get("CategoryHash", {})
 		self.CategoryDrawCategoryMap = self.JsonDict.get("CategoryDrawCategoryMap", {})
 		self.WorkGameType = self.JsonDict.get("WorkGameType", "")

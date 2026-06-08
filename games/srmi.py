@@ -104,6 +104,15 @@ class ExportSRMI:
                     vertexlimit_section.append("override_vertex_count = " + str(drawib_model.vertex_count))
                     vertexlimit_section.append("uav_byte_stride = 4")
                     vertexlimit_section.new_line()
+
+                    cs_output_vertex_limit_hash = str(drawib_model.cs_output_vertex_limit_hash or "").strip()
+                    if cs_output_vertex_limit_hash:
+                        vertexlimit_section.append("[TextureOverride_" + draw_ib + "_" + cs_output_vertex_limit_hash + "_ExtraVertexLimitRaise]")
+                        vertexlimit_section.append("hash = " + cs_output_vertex_limit_hash)
+                        vertexlimit_section.append("override_byte_stride = " + str(d3d11_game_type.CategoryStrideDict.get("Position", 0)))
+                        vertexlimit_section.append("override_vertex_count = " + str(drawib_model.vertex_count))
+                        vertexlimit_section.append("uav_byte_stride = 4")
+                        vertexlimit_section.new_line()
                 ini_builder.append_section(vertexlimit_section)
 
             if not GlobalProperties.forbid_auto_texture_ini() and drawib_model.submesh_texturemarkinfolist_dict:
