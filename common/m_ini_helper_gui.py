@@ -82,7 +82,7 @@ class M_IniHelperGUI:
             # 构建保存文件的路径
             res_source_path = os.path.join(addon_root_directory, "resources")
 
-            cls.copy_files(res_source_path,res_path)
+            M_IniHelperGUI.copy_files(res_source_path, res_path)
 
         if len(key_name_mkey_dict.keys()) == 0:
             return
