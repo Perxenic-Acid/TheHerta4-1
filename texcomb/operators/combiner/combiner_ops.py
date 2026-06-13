@@ -45,6 +45,7 @@ from ...type_annotations import (
 )
 from ...utils.images import get_image, get_packed_file
 from ...utils.materials import (
+    get_alpha_texture,
     get_diffuse,
     get_gfx_textures,
     get_image_from_material,
@@ -229,6 +230,7 @@ def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
                 "specular": None,
                 "normal_map": None,
                 "emission": None,
+                "alpha": None,
             },
             "dup": [],
             "ob": [],
@@ -550,6 +552,7 @@ def _set_image_or_color(item: StructureItem, mat: bpy.types.Material) -> None:
     if is_blender_modern:
         image = get_image_from_material(mat)
         item["gfx"]["img_or_color"] = get_packed_file(image) if image else None
+        item["gfx"]["alpha"] = get_alpha_texture(mat)
     else:
         item["gfx"]["img_or_color"] = get_packed_file(
             get_image(get_texture(mat))
@@ -625,12 +628,15 @@ def _get_gfx(
         Tuple[int, int],
         tuple(int(size - scn.smc_gaps) for size in item["gfx"]["size"]),
     )
+    alpha_texture = item["gfx"].get("alpha")
 
     if not img_or_color:
-        return Image.new("RGBA", size, (1, 1, 1, 1))
+        img = Image.new("RGBA", size, (255, 255, 255, 255))
+        return _apply_alpha_texture(item, img, alpha_texture, size)
 
     if isinstance(img_or_color, tuple):
-        return Image.new("RGBA", size, img_or_color)
+        img = Image.new("RGBA", size, img_or_color)
+        return _apply_alpha_texture(item, img, alpha_texture, size)
 
     img = Image.open(io.BytesIO(img_or_color.data)).convert("RGBA")
     if img.size != size:
@@ -643,6 +649,32 @@ def _get_gfx(
         diffuse_img = Image.new(img.mode, size, get_diffuse(mat))
         img = ImageChops.multiply(img, diffuse_img)
 
+    img = _apply_alpha_texture(item, img, alpha_texture, size)
+    return img
+
+
+def _apply_alpha_texture(
+    item: StructureItem,
+    img: ImageType,
+    alpha_texture: Optional[Tuple[bpy.types.PackedFile, str]],
+    size: Tuple[int, int],
+) -> ImageType:
+    """Apply a separate material alpha texture to an RGBA image."""
+    if not alpha_texture:
+        return img
+
+    packed_file, output_name = alpha_texture
+    source_img = Image.open(io.BytesIO(packed_file.data)).convert("RGBA")
+    alpha_img = (
+        source_img.getchannel("A")
+        if output_name == "Alpha"
+        else source_img.convert("L")
+    )
+    if alpha_img.size != size:
+        alpha_img = alpha_img.resize(size, resampling)
+    if max(item["gfx"]["uv_size"], default=0) > 1:
+        alpha_img = _get_uv_image(item, alpha_img, size)
+    img.putalpha(alpha_img)
     return img
 
 
@@ -662,7 +694,7 @@ def _get_uv_image(
     Returns:
         Tiled image.
     """
-    uv_img = Image.new("RGBA", size)
+    uv_img = Image.new(img.mode, size)
     size_height = size[1]
     img_width, img_height = img.size
     uv_width, uv_height = (math.ceil(x) for x in item["gfx"]["uv_size"])

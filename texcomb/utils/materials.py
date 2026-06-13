@@ -116,6 +116,7 @@ GFX_INPUT_NAMES = {
     "specular": "Specular Tint",
     "normal_map": "Normal",
     "emission": "Emission Color",
+    "alpha": "Alpha",
 }
 
 # Specular BSDF specific input names
@@ -354,6 +355,52 @@ def get_gfx_textures(
     return gfx_textures
 
 
+def get_alpha_texture(
+    mat: bpy.types.Material,
+) -> Optional[Tuple[bpy.types.PackedFile, str]]:
+    """Extract the texture connected to a shader's alpha input.
+
+    Args:
+        mat: Material to extract the alpha texture from.
+
+    Returns:
+        Packed file and the connected image output name, or None when the
+        material does not drive alpha from an image.
+    """
+    if not mat.node_tree or not mat.node_tree.nodes:
+        return None
+
+    shader_type = get_shader_type(mat)
+    if not shader_type:
+        return None
+
+    nodes = mat.node_tree.nodes
+    shader_node = None
+
+    if "principled" in shader_type:
+        shader_node = next(
+            (
+                node
+                for node in nodes
+                if node.bl_idname == "ShaderNodeBsdfPrincipled"
+            ),
+            None,
+        )
+
+    if not shader_node or "Alpha" not in shader_node.inputs:
+        return None
+
+    image_info = _check_socket_for_image_with_output(
+        shader_node.inputs["Alpha"]
+    )
+    if not image_info:
+        return None
+
+    image_node, output_name = image_info
+    packed_file = get_packed_file(image_node.image)
+    return (packed_file, output_name) if packed_file else None
+
+
 def sort_materials(
     materials: List[bpy.types.Material],
 ) -> ValuesView[MatDictItem]:
@@ -379,7 +426,10 @@ def sort_materials(
         packed_file = get_packed_file(image) if image else None
         diffuse = get_diffuse(mat)
         gfx_textures = get_gfx_textures(mat)
-        gfx_textures_tuple = tuple(sorted(gfx_textures.items()))
+        alpha_texture = get_alpha_texture(mat)
+        gfx_textures_tuple = tuple(sorted(gfx_textures.items())) + (
+            ("alpha_source", alpha_texture),
+        )
 
         if packed_file:
             # Group by texture and optionally diffuse color
@@ -658,6 +708,27 @@ def _check_socket_for_image(
         image_node = _find_image_in_tree(from_node)
         if image_node:
             return image_node
+
+    return None
+
+
+def _check_socket_for_image_with_output(
+    socket: bpy.types.NodeSocket,
+) -> Optional[Tuple[bpy.types.Node, str]]:
+    """Find an image texture connected to a socket and preserve output name."""
+    if not socket.links:
+        return None
+
+    for link in socket.links:
+        from_node = link.from_node
+        output_name = getattr(link.from_socket, "name", "")
+
+        if _is_image_texture_node(from_node):
+            return from_node, output_name
+
+        image_node = _find_image_in_tree(from_node)
+        if image_node:
+            return image_node, output_name
 
     return None
 
