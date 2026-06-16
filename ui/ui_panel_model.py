@@ -10,6 +10,49 @@ from ..utils.vertexgroup_utils import VertexGroupUtils
 from ..utils.shapekey_utils import ShapeKeyUtils
 from ..utils.algorithm_utils import AlgorithmUtils
 
+def keep_one_triangle_in_mesh_object(obj):
+    if obj.type != 'MESH':
+        raise ValueError("Selected object is not a mesh.")
+
+    mesh = obj.data
+    if len(mesh.polygons) == 0:
+        raise ValueError(obj.name + " has no faces.")
+
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bm.faces.ensure_lookup_table()
+    bm.verts.ensure_lookup_table()
+
+    tri_face = next((face for face in bm.faces if len(face.verts) == 3), None)
+    if tri_face is None:
+        bmesh.ops.triangulate(bm, faces=list(bm.faces))
+        bm.faces.ensure_lookup_table()
+        bm.verts.ensure_lookup_table()
+        tri_face = bm.faces[0] if bm.faces else None
+
+    if tri_face is None:
+        bm.free()
+        raise ValueError(obj.name + " has no triangle face.")
+
+    keep_verts = set(tri_face.verts)
+    bmesh.ops.delete(
+        bm,
+        geom=[face for face in bm.faces if face != tri_face],
+        context='FACES_ONLY',
+    )
+    bmesh.ops.delete(
+        bm,
+        geom=[vert for vert in bm.verts if vert not in keep_verts],
+        context='VERTS',
+    )
+
+    bm.normal_update()
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.validate()
+    mesh.update()
+
+
 class ModelSplitByLoosePart(bpy.types.Operator):
     bl_idname = "panel_model.split_by_loose_part"
     bl_label = "根据UV松散块儿分割模型"
@@ -146,6 +189,31 @@ class ModelClearCustomSplitNormals(bpy.types.Operator):
                 bpy.ops.mesh.customdata_custom_splitnormals_clear()
         return {'FINISHED'}
     
+class KeepOneTriangleInSelectedSubmesh(bpy.types.Operator):
+    bl_idname = "object.keep_one_triangle_in_selected_submesh"
+    bl_label = "保留选中Submesh的一个三角面"
+    bl_description = "把选中的 Submesh 原地精简为一个三角面，其它顶点和面都会被移除"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        mesh_objects = [obj for obj in context.selected_objects if obj.type == 'MESH']
+        if not mesh_objects:
+            self.report({'ERROR'}, "没有选中任何 Mesh/Submesh 对象")
+            return {'CANCELLED'}
+
+        processed_count = 0
+        for obj in mesh_objects:
+            try:
+                keep_one_triangle_in_mesh_object(obj)
+                processed_count += 1
+            except Exception as e:
+                self.report({'ERROR'}, obj.name + ": " + str(e))
+                return {'CANCELLED'}
+
+        self.report({'INFO'}, "已将 " + str(processed_count) + " 个 Submesh 精简为单个三角面")
+        return {'FINISHED'}
+
+
 class ModelRenameVertexGroupNameWithTheirSuffix(bpy.types.Operator):
     bl_idname = "panel_model.rename_vertex_group_name_with_their_suffix"
     bl_label = "用模型名称作为前缀重命名顶点组"
@@ -691,6 +759,7 @@ class PanelModelProcess(bpy.types.Panel):
         layout.operator(MMTResetRotation.bl_idname)
         layout.operator(ModelDeleteLoosePoint.bl_idname)
         layout.operator(ModelClearCustomSplitNormals.bl_idname)
+        layout.operator(KeepOneTriangleInSelectedSubmesh.bl_idname)
         layout.separator()
 
 
@@ -742,6 +811,7 @@ class CatterRightClickMenu(bpy.types.Menu):
         layout.operator(MMTResetRotation.bl_idname)
         layout.operator(ModelDeleteLoosePoint.bl_idname)
         layout.operator(ModelClearCustomSplitNormals.bl_idname)
+        layout.operator(KeepOneTriangleInSelectedSubmesh.bl_idname)
         layout.separator()
 
         layout.operator(ModelSplitByLoosePart.bl_idname)
@@ -802,6 +872,7 @@ def register():
     bpy.utils.register_class(ModelSplitByVertexGroup)
     bpy.utils.register_class(ModelDeleteLoosePoint)
     bpy.utils.register_class(ModelClearCustomSplitNormals)
+    bpy.utils.register_class(KeepOneTriangleInSelectedSubmesh)
     bpy.utils.register_class(ModelRenameVertexGroupNameWithTheirSuffix)
     bpy.utils.register_class(ModelResetLocation)
     bpy.utils.register_class(ModelSortVertexGroupByName)
@@ -835,6 +906,7 @@ def unregister():
     bpy.utils.unregister_class(ModelResetLocation)
     bpy.utils.unregister_class(ModelRenameVertexGroupNameWithTheirSuffix)
     bpy.utils.unregister_class(ModelClearCustomSplitNormals)
+    bpy.utils.unregister_class(KeepOneTriangleInSelectedSubmesh)
     bpy.utils.unregister_class(ModelDeleteLoosePoint)
     bpy.utils.unregister_class(ModelSplitByVertexGroup)
     bpy.utils.unregister_class(ModelSplitByLoosePart)
