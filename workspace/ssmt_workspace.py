@@ -75,23 +75,45 @@ class WorkSpaceModel:
             return None
 
     def _read_config_json(self, folder_path: str) -> Dict[str, str]:
-        '''读取某个目录下的 Config.json，返回 {draw_ib: alias_name} 字典。'''
+        '''读取某个目录下的别名映射，返回 {draw_ib: alias_name} 字典。
+        优先读取 Config.json（旧格式），若不存在则尝试 Config\Tabs\*.json（新格式）。'''
         result = {}
         config_path = os.path.join(folder_path, "Config.json")
-        if not os.path.exists(config_path):
+        if os.path.exists(config_path):
+            try:
+                config_json = JsonUtils.LoadFromFile(config_path)
+                if isinstance(config_json, list):
+                    for item in config_json:
+                        if not isinstance(item, dict):
+                            continue
+                        draw_ib = str(item.get("DrawIB", "")).strip()
+                        alias = str(item.get("Alias", "")).strip()
+                        if draw_ib:
+                            result[draw_ib] = alias
+            except Exception:
+                pass
             return result
-        try:
-            config_json = JsonUtils.LoadFromFile(config_path)
-            if isinstance(config_json, list):
-                for item in config_json:
-                    if not isinstance(item, dict):
+
+        # 新格式: Config\Tabs\*.json -> modelRows[].aliasName
+        tabs_dir = os.path.join(folder_path, "Config", "Tabs")
+        if os.path.isdir(tabs_dir):
+            for filename in os.listdir(tabs_dir):
+                if not filename.endswith(".json"):
+                    continue
+                try:
+                    tab_data = JsonUtils.LoadFromFile(os.path.join(tabs_dir, filename))
+                except Exception:
+                    continue
+                if not isinstance(tab_data, dict):
+                    continue
+                for row in tab_data.get("modelRows", []):
+                    if not isinstance(row, dict):
                         continue
-                    draw_ib = str(item.get("DrawIB", "")).strip()
-                    alias = str(item.get("Alias", "")).strip()
-                    if draw_ib:
+                    draw_ib = str(row.get("drawIB", "")).strip()
+                    alias = str(row.get("aliasName", "")).strip()
+                    if draw_ib and alias:
                         result[draw_ib] = alias
-        except Exception:
-            pass
+
         return result
 
     def _scan(self):
@@ -602,9 +624,12 @@ class SSMTWorkSpace:
     @staticmethod
     def get_drawib_aliasname_dict_for_path(folder_path: str) -> Dict[str, str]:
         '''
-        从指定目录下的 Config.json 里读取 DrawIB 和别名的对应关系。
+        从指定目录下读取 DrawIB 和别名的对应关系。
+        优先读取 Config.json（旧格式），若不存在则尝试 Config\Tabs\*.json（新格式）。
         '''
         drawib_aliasname_dict = {}
+
+        # 策略1: 读取 Config.json（旧格式）
         config_json_path = os.path.join(folder_path, "Config.json")
         if os.path.exists(config_json_path):
             config_json = JsonUtils.LoadFromFile(config_json_path)
@@ -616,20 +641,45 @@ class SSMTWorkSpace:
                     alias_name = str(item.get("Alias", "")).strip()
                     if draw_ib:
                         drawib_aliasname_dict[draw_ib] = alias_name
+            return drawib_aliasname_dict
+
+        # 策略2: 从 Config\Tabs\*.json 中读取（新格式）
+        tabs_dir = os.path.join(folder_path, "Config", "Tabs")
+        if os.path.isdir(tabs_dir):
+            for filename in os.listdir(tabs_dir):
+                if not filename.endswith(".json"):
+                    continue
+                tab_json_path = os.path.join(tabs_dir, filename)
+                try:
+                    tab_data = JsonUtils.LoadFromFile(tab_json_path)
+                except Exception:
+                    continue
+                if not isinstance(tab_data, dict):
+                    continue
+                for row in tab_data.get("modelRows", []):
+                    if not isinstance(row, dict):
+                        continue
+                    draw_ib = str(row.get("drawIB", "")).strip()
+                    alias_name = str(row.get("aliasName", "")).strip()
+                    if draw_ib and alias_name:
+                        drawib_aliasname_dict[draw_ib] = alias_name
+
         return drawib_aliasname_dict
 
     @staticmethod
     def get_drawib_aliasname_dict() -> Dict[str,str]:
         '''
-        从当前工作空间目录下的Config.json里读取DrawIB和别名的对应关系
+        从当前工作空间目录下读取DrawIB和别名的对应关系。
+        按优先级: Config.json > Config\\Tabs\\*.json > LOD子目录的Config.json
         '''
         drawib_aliasname_dict = {}
 
-        # 如果工作空间下存在Config.json就尝试获取其别名
-        config_json_path = GlobalConfig.path_drawib_config_json_path()
+        workspace_folder = GlobalConfig.path_workspace_folder()
+
+        # 策略1: 读取工作空间根目录的 Config.json（旧格式）
+        config_json_path = os.path.join(workspace_folder, "Config.json")
         if os.path.exists(config_json_path):
             config_json = JsonUtils.LoadFromFile(config_json_path)
-            # 读取每个DrawIB的别名到字典里，键是DrawIB名称，值是别名
             if isinstance(config_json, list):
                 for item in config_json:
                     if not isinstance(item, dict):
@@ -638,6 +688,52 @@ class SSMTWorkSpace:
                     alias_name = str(item.get("Alias", "")).strip()
                     if draw_ib:
                         drawib_aliasname_dict[draw_ib] = alias_name
+            if drawib_aliasname_dict:
+                return drawib_aliasname_dict
+
+        # 策略2: 从 Config\\Tabs\\*.json 中读取（SSMT4 新格式）
+        tabs_dir = os.path.join(workspace_folder, "Config", "Tabs")
+        if os.path.isdir(tabs_dir):
+            for filename in os.listdir(tabs_dir):
+                if not filename.endswith(".json"):
+                    continue
+                tab_json_path = os.path.join(tabs_dir, filename)
+                try:
+                    tab_data = JsonUtils.LoadFromFile(tab_json_path)
+                except Exception:
+                    continue
+                if not isinstance(tab_data, dict):
+                    continue
+                for row in tab_data.get("modelRows", []):
+                    if not isinstance(row, dict):
+                        continue
+                    draw_ib = str(row.get("drawIB", "")).strip()
+                    alias_name = str(row.get("aliasName", "")).strip()
+                    if draw_ib and alias_name:
+                        drawib_aliasname_dict[draw_ib] = alias_name
+            if drawib_aliasname_dict:
+                return drawib_aliasname_dict
+
+        # 策略3: 扫描 LOD 子目录的 Config.json
+        for entry in os.scandir(workspace_folder):
+            if not entry.is_dir():
+                continue
+            lod_config_path = os.path.join(entry.path, "Config.json")
+            if not os.path.exists(lod_config_path):
+                continue
+            try:
+                config_json = JsonUtils.LoadFromFile(lod_config_path)
+            except Exception:
+                continue
+            if isinstance(config_json, list):
+                for item in config_json:
+                    if not isinstance(item, dict):
+                        continue
+                    draw_ib = str(item.get("DrawIB", "")).strip()
+                    alias_name = str(item.get("Alias", "")).strip()
+                    if draw_ib:
+                        drawib_aliasname_dict[draw_ib] = alias_name
+
         return drawib_aliasname_dict
     
 

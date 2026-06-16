@@ -194,24 +194,6 @@ class BlueprintExportHelper:
         return None
 
     @staticmethod
-    def get_alias_dict(tree=None, context=None) -> dict:
-        '''
-        从当前蓝图树中找到 SSMTNode_Submesh_Alias 节点，
-        返回 {submesh_name: alias_name} 字典（只包含 alias_name 非空的项）。
-        若蓝图中不存在该节点或列表为空，返回空字典。
-        '''
-        current_tree = tree or BlueprintExportHelper.get_current_blueprint_tree(context=context)
-        if not BlueprintExportHelper._is_valid_blueprint_tree(current_tree):
-            return {}
-        for node in current_tree.nodes:
-            if getattr(node, "bl_idname", "") == 'SSMTNode_Submesh_Alias':
-                return {
-                    item.submesh_name: item.alias_name
-                    for item in node.alias_items
-                    if item.submesh_name and item.alias_name.strip()
-                }
-        return {}
-
     @staticmethod
     def get_node_from_bl_idname(tree, node_type:str):
         """在树中查找输出节点 (假设只有一个)"""

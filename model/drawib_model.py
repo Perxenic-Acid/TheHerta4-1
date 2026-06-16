@@ -283,23 +283,11 @@ class DrawIBModel:
     def get_submesh_part_name(self, submesh_model: SubMeshModel) -> str:
         return submesh_model.submesh_name
 
-    def apply_alias_dict(self, alias_dict: dict):
-        '''
-        将别名字典应用到所有 submesh_model.display_str。
-        alias_dict: {submesh_name: alias_name}，例如 {"LOD0.5a4c1ef3-318-46683": "身体"}
-        alias_name 为空字符串时，display_str 保持等于 submesh_name。
-        '''
-        for submesh_model in self.submesh_model_list:
-            submesh_name = submesh_model.submesh_name
-            alias = str(alias_dict.get(submesh_name, "") or "").strip()
-            if alias:
-                lod_name, _ = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
-                if lod_name:
-                    submesh_model.display_str = lod_name + "." + alias
-                else:
-                    submesh_model.display_str = alias
-            else:
-                submesh_model.display_str = submesh_name
+    def apply_drawib_alias(self):
+        '''从工作空间读取并应用当前 DrawIB 的别名。'''
+        alias_name = SSMTWorkSpace.get_drawib_aliasname_dict().get(self.draw_ib, "").strip()
+        if alias_name:
+            self.draw_ib_alias = alias_name
 
     def get_submesh_unique_key(self, submesh_model: SubMeshModel) -> str:
         return submesh_model.display_str.replace("-", "_")

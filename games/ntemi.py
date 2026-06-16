@@ -43,25 +43,15 @@ class ExportNTEMI:
 
     def __post_init__(self):
         self.drawib_model_list = self.blueprint_model.parse_drawib_model_list(combine_ib=False)
+        for drawib_model in self.drawib_model_list:
+            drawib_model.apply_drawib_alias()
 
     @staticmethod
     def _resource_token(name: str) -> str:
         """Sanitize a name into a valid INI resource token."""
         return name.replace("-", "_").replace(" ", "_").replace(".", "_")
-        print(f"ExportNTEMI: 瑙ｆ瀽瀹屾垚锛屽叡 {len(self.drawib_model_list)} 涓?DrawIBModel")
 
-        alias_dict = BlueprintExportHelper.get_alias_dict()
-        if alias_dict:
-            for drawib_model in self.drawib_model_list:
-                drawib_model.apply_alias_dict(alias_dict)
-                for submesh_model in drawib_model.submesh_model_list:
-                    submesh_name = submesh_model.submesh_name
-                    alias = str(alias_dict.get(submesh_name, "") or "").strip()
-                    if alias:
-                        lod_name, _ = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
-                        submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias
-
-    # 鈹€鈹€ buffer file generation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # ── buffer file generation ──
 
     def generate_buffer_files(self):
         buf_output_folder = GlobalConfig.path_generatemod_buffer_folder()
@@ -684,7 +674,7 @@ class ExportNTEMI:
         tex_lines: list[str] = []
 
         for drawib_model in self.drawib_model_list:
-            for submesh_model in drawib_model.submesh_model_list:
+            for idx, submesh_model in enumerate(drawib_model.submesh_model_list):
                 for tmi in drawib_model.get_submesh_texture_markup_info_list(submesh_model):
                     if getattr(tmi, "mark_type", "") != "Slot":
                         continue
@@ -692,9 +682,10 @@ class ExportNTEMI:
                     if rn in appended:
                         continue
                     appended.add(rn)
+                    slot_filename = M_IniHelper._get_slot_style_texture_filename(drawib_model, idx, tmi)
                     tex_lines.extend([
                         f"[{rn}]",
-                        f"filename = Textures\\{tmi.mark_filename}",
+                        f"filename = Textures\\{slot_filename}",
                         "",
                     ])
 

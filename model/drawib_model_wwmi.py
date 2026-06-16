@@ -511,15 +511,8 @@ class DrawIBModelWWMI:
     def get_submesh_texture_markup_info_list(self, submesh_model):
         return self.submesh_texturemarkinfolist_dict.get(submesh_model.submesh_name, [])
 
-    def apply_alias_dict(self, alias_dict: dict):
-        """
-        将别名字典应用到所有 submesh_model.display_str。
-        alias_dict: {submesh_name: alias_name}
-        alias_name 为空字符串时，display_str 保持等于 submesh_name。
-        """
-        for submesh_model in self.submesh_model_list:
-            submesh_name = submesh_model.submesh_name
-            alias = str(alias_dict.get(submesh_name, "") or "").strip()
-            if alias:
-                lod_name, _ = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
-                submesh_model.display_str = (lod_name + "." + alias) if lod_name else alias
+    def apply_drawib_alias(self):
+        """从工作空间读取并应用当前 DrawIB 的别名（WWMI 版）。"""
+        alias_name = SSMTWorkSpace.get_drawib_aliasname_dict().get(self.draw_ib, "").strip()
+        if alias_name:
+            self.draw_ib_alias = alias_name

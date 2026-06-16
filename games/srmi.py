@@ -22,10 +22,8 @@ class ExportSRMI:
 
     def __post_init__(self):
         self.drawib_model_list = self.blueprint_model.parse_drawib_model_list(combine_ib=False)
-        alias_dict = BlueprintExportHelper.get_alias_dict()
-        if alias_dict:
-            for drawib_model in self.drawib_model_list:
-                drawib_model.apply_alias_dict(alias_dict)
+        for drawib_model in self.drawib_model_list:
+            drawib_model.apply_drawib_alias()
 
     def generate_buffer_files(self):
         buf_output_folder = GlobalConfig.path_generatemod_buffer_folder()
@@ -118,7 +116,7 @@ class ExportSRMI:
             if not GlobalProperties.forbid_auto_texture_ini() and drawib_model.submesh_texturemarkinfolist_dict:
                 resource_texture_section = M_IniSection(M_SectionType.ResourceTexture)
                 appended_resource_names = set()
-                for submesh_model in drawib_model.submesh_model_list:
+                for idx, submesh_model in enumerate(drawib_model.submesh_model_list):
                     for texture_markup_info in drawib_model.get_submesh_texture_markup_info_list(submesh_model):
                         if getattr(texture_markup_info, "mark_type", "") != "Slot":
                             continue
@@ -126,8 +124,9 @@ class ExportSRMI:
                         if resource_name in appended_resource_names:
                             continue
                         appended_resource_names.add(resource_name)
+                        slot_filename = M_IniHelper._get_slot_style_texture_filename(drawib_model, idx, texture_markup_info)
                         resource_texture_section.append("[" + texture_markup_info.get_resource_name() + "]")
-                        resource_texture_section.append("filename = Textures/" + texture_markup_info.mark_filename)
+                        resource_texture_section.append("filename = Textures/" + slot_filename)
                         resource_texture_section.new_line()
                 ini_builder.append_section(resource_texture_section)
 

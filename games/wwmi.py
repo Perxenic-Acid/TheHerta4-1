@@ -45,10 +45,8 @@ class ExportWWMI:
                     sm_name = draw_ib_model.wwmi_info.components[idx] if idx < len(draw_ib_model.wwmi_info.components) else None
                     print(f"  Component {idx}: {names}")
 
-        alias_dict = BlueprintExportHelper.get_alias_dict()
-        if alias_dict:
-            for draw_ib_model in self.drawib_drawibmodel_dict.values():
-                draw_ib_model.apply_alias_dict(alias_dict)
+        for draw_ib_model in self.drawib_drawibmodel_dict.values():
+            draw_ib_model.apply_drawib_alias()
 
     def add_constants_section(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
         constants_section = M_IniSection(M_SectionType.Constants)

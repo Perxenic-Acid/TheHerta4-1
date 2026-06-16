@@ -15,42 +15,6 @@ from ..workspace.texture_metadata_helper import TextureMetadataResolver, Texture
 
 class M_IniHelper:
     @staticmethod
-    def _get_aliased_texture_output_filename(mark_filename: str, submesh_model) -> str:
-        '''
-        若 submesh_model 已应用别名（display_str != submesh_name），则将 mark_filename 的
-        bare_submesh_name 前缀替换为 display_str，以便输出文件名使用别名。
-        例：mark_filename="5a4c1ef3-318-46683-DiffuseMap.dds", display_str="LOD0.身体"
-        → 返回 "LOD0.身体-DiffuseMap.dds"
-        若无别名（display_str == submesh_name），原样返回。
-
-        新格式兼容: submesh_name 可能是 "LOD0.5a4c1ef3-0"（新格式），
-        此时通过 WorkSpaceModel 查找对应的旧文件夹名来做前缀匹配。
-        '''
-        display_str = getattr(submesh_model, "display_str", "")
-        submesh_name = getattr(submesh_model, "submesh_name", "")
-        if not display_str or not submesh_name or display_str == submesh_name:
-            return mark_filename
-        _, bare_submesh_name = SSMTWorkSpace.parse_lod_submesh_name(submesh_name)
-        old_prefix = bare_submesh_name + "-"
-
-        # 先尝试直接匹配（适用于旧格式）
-        if mark_filename.startswith(old_prefix):
-            return display_str + "-" + mark_filename[len(old_prefix):]
-
-        # 新格式兼容：通过 WorkSpaceModel 找到旧文件夹名再试
-        from ..workspace.ssmt_workspace import WorkSpaceModel
-        ws_model = WorkSpaceModel()
-        parsed = ws_model.parse_new_format_name(submesh_name)
-        if parsed is not None:
-            old_folder = ws_model.get_old_folder_name(parsed["lod"], parsed["draw_ib"], parsed["component"])
-            if old_folder:
-                old_prefix2 = old_folder + "-"
-                if mark_filename.startswith(old_prefix2):
-                    return display_str + "-" + mark_filename[len(old_prefix2):]
-
-        return mark_filename
-
-    @staticmethod
     def _count_marked_textures(draw_ib_model: DrawIBModel, mark_type: str | None = None) -> int:
         count = 0
         for submesh_model in getattr(draw_ib_model, "submesh_model_list", []):
@@ -471,6 +435,15 @@ class M_IniHelper:
             if has_shared_slot:
                 ini_builder.append_section(shared_slot_resource_section)
 
+    @staticmethod
+    def _get_slot_style_texture_filename(draw_ib_model: DrawIBModel, submesh_index: int, texture_markup_info) -> str:
+        """
+        生成 Slot 风格贴图文件名。
+        格式: {别名或DrawIB}-{Submesh序号}-{标记名称}.dds
+        """
+        prefix = draw_ib_model.draw_ib_alias or draw_ib_model.draw_ib
+        return f"{prefix}-{submesh_index}-{texture_markup_info.mark_name}.dds"
+
     @classmethod
     def move_slot_style_textures(cls,draw_ib_model:DrawIBModel):
         '''
@@ -520,11 +493,10 @@ class M_IniHelper:
                 print("M_IniHelper: Slot 贴图输出目录: " + texture_output_folder)
                 print("[TRACE] Slot 贴图输出目录是否存在: " + str(os.path.exists(texture_output_folder)))
 
-                aliased_texture_filename = cls._get_aliased_texture_output_filename(texture_markup_info.mark_filename, submesh_model)
-                if aliased_texture_filename != texture_markup_info.mark_filename:
-                    print("[TRACE] Slot 贴图别名替换: " + texture_markup_info.mark_filename + " -> " + aliased_texture_filename)
+                slot_texture_filename = cls._get_slot_style_texture_filename(draw_ib_model, idx, texture_markup_info)
+                print("[TRACE] Slot 贴图新文件名: " + slot_texture_filename)
 
-                target_path = GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib_model.draw_ib) + aliased_texture_filename
+                target_path = GlobalConfig.path_generatemod_texture_folder(draw_ib=draw_ib_model.draw_ib) + slot_texture_filename
                 source_path = cls._get_slot_texture_source_path(draw_ib_model, part_name, texture_markup_info)
                 print("[TRACE] Slot 贴图 source_path 解析结果: '" + source_path + "'")
                 print("[TRACE] Slot 贴图 target_path: '" + target_path + "'")
