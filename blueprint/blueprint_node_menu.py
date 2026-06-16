@@ -812,7 +812,6 @@ def register():
     bpy.utils.register_class(SSMT_MT_ObjectContextMenuSub)
     bpy.utils.register_class(SSMT_MT_NodeMenu_ShapeKey)
     bpy.utils.register_class(SSMT_MT_NodeMenu_ModPanel)
-
     bpy.types.NODE_MT_add.prepend(draw_node_add_menu)
     # 添加到 3D 视图物体右键菜单
     bpy.types.VIEW3D_MT_object_context_menu.append(draw_objects_context_menu_add)

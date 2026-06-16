@@ -536,6 +536,9 @@ class M_IniHelper:
         if len(shapekeyname_mkey_dict.keys()) == 0:
             return
 
+        from .m_ini_helper_gui import M_IniHelperGUI
+        M_IniHelperGUI.copy_res_to_mod_folder()
+
         # [Constants]
         constants_section = M_IniSection(M_SectionType.Constants)
         constants_section.append("[Constants]")
