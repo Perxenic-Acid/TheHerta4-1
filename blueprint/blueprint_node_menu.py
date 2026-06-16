@@ -313,15 +313,6 @@ class SSMT_MT_ObjectContextMenuSub(bpy.types.Menu):
         layout.operator("ssmt.create_group_from_selection", text=iface_("将所选物体新建到组节点"), icon='GROUP')
         layout.operator("ssmt.create_internal_switch", text=iface_("创建内部切换"), icon='ARROW_LEFTRIGHT')
 
-class SSMT_MT_NodeMenu_ShapeKey(bpy.types.Menu):
-    bl_label = "形态键"
-    
-    def draw(self, context):
-        layout = self.layout
-        layout.operator("node.add_node", text=iface_("形态键"), icon='SHAPEKEY_DATA').type = "SSMTNode_ShapeKey"
-        layout.operator("node.add_node", text=iface_("生成形态键Buffer"), icon='EXPORT').type = "SSMTNode_ShapeKey_Output"
-
-
 class SSMT_MT_NodeMenu_ModPanel(bpy.types.Menu):
     bl_label = "Mod面板"
 
@@ -773,7 +764,7 @@ def draw_node_add_menu(self, context):
     layout.operator("node.add_node", text=iface_("分组"), icon='GROUP').type = "SSMTNode_Object_Group"
     layout.operator("node.add_node", text=iface_("生成Mod"), icon='EXPORT').type = "SSMTNode_Result_Output"
     layout.operator("node.add_node", text=iface_("按键切换"), icon='GROUP').type = "SSMTNode_SwitchKey"
-    layout.menu("SSMT_MT_NodeMenu_ShapeKey", text=iface_("形态键"), icon='SHAPEKEY_DATA')
+    layout.operator("node.add_node", text=iface_("生成形态键"), icon='SHAPEKEY_DATA').type = "SSMTNode_GenerateShapeKey"
     layout.menu("SSMT_MT_NodeMenu_ModPanel", text=iface_("Mod面板"), icon='MENU_PANEL')
     layout.separator()
 
@@ -810,7 +801,6 @@ def register():
     bpy.utils.register_class(SSMT_OT_AlignNodes)
     bpy.utils.register_class(SSMT_OT_BatchConnectNodes)
     bpy.utils.register_class(SSMT_MT_ObjectContextMenuSub)
-    bpy.utils.register_class(SSMT_MT_NodeMenu_ShapeKey)
     bpy.utils.register_class(SSMT_MT_NodeMenu_ModPanel)
     bpy.types.NODE_MT_add.prepend(draw_node_add_menu)
     # 添加到 3D 视图物体右键菜单
@@ -824,7 +814,6 @@ def unregister():
     bpy.types.VIEW3D_MT_object_context_menu.remove(draw_objects_context_menu_add)
 
     bpy.utils.unregister_class(SSMT_MT_NodeMenu_ModPanel)
-    bpy.utils.unregister_class(SSMT_MT_NodeMenu_ShapeKey)
     bpy.utils.unregister_class(SSMT_MT_ObjectContextMenuSub)
     bpy.utils.unregister_class(SSMT_OT_BatchConnectNodes)
     bpy.utils.unregister_class(SSMT_OT_AlignNodes)

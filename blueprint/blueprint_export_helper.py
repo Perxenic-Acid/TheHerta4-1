@@ -257,56 +257,31 @@ class BlueprintExportHelper:
 
     @staticmethod
     def get_current_shapekeyname_mkey_dict(context=None):
-        """获取当前蓝图及所有嵌套蓝图中所有 ShapeKey 节点的形态键名称和按键列表"""
+        """从「生成形态键」节点读取勾选的形态键列表和按键映射"""
         tree = BlueprintExportHelper.get_current_blueprint_tree(context=context)
         if not tree:
             return {}
-        
+
+        gen_node = None
+        for node in tree.nodes:
+            if node.bl_idname == 'SSMTNode_GenerateShapeKey':
+                gen_node = node
+                break
+        if not gen_node:
+            return {}
+
         shapekey_name_mkey_dict = {}
-        visited_blueprints = set()
         key_index = 0
-        
-        def collect_shapekey_nodes(current_tree):
-            """递归收集形态键节点"""
-            nonlocal key_index
-            
-            if current_tree.name in visited_blueprints:
-                return
-            visited_blueprints.add(current_tree.name)
-            
-            shapekey_output_node = None
-            for node in current_tree.nodes:
-                if node.bl_idname == 'SSMTNode_ShapeKey_Output':
-                    shapekey_output_node = node
-                    break
-            
-            if not shapekey_output_node:
-                return
-            
-            shapekey_nodes = BlueprintExportHelper.get_connected_nodes(shapekey_output_node)
-            
-            for shapekey_node in shapekey_nodes:
-                if shapekey_node.mute:
-                    continue
-                if shapekey_node.bl_idname != 'SSMTNode_ShapeKey':
-                    continue
-                
-                shapekey_name = shapekey_node.shapekey_name
-                key = shapekey_node.key
-                comment = getattr(shapekey_node, 'comment', '')
+        for item in gen_node.shapekey_items:
+            if not item.enabled or not item.shapekey_name.strip():
+                continue
+            m_key = M_Key()
+            m_key.key_name = "$shapekey" + str(key_index)
+            m_key.initialize_value = 0
+            m_key.initialize_vk_str = item.key.strip()
+            shapekey_name_mkey_dict[item.shapekey_name.strip()] = m_key
+            key_index += 1
 
-                m_key = M_Key()
-                m_key.key_name = "$shapekey" + str(key_index)
-                m_key.initialize_value = 0
-                m_key.initialize_vk_str = key
-                m_key.comment = comment
-
-                shapekey_name_mkey_dict[shapekey_name] = m_key
-                key_index += 1
-            
-  
-        
-        collect_shapekey_nodes(tree)
         return shapekey_name_mkey_dict
 
 
