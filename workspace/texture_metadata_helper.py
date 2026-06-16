@@ -17,7 +17,7 @@ class TextureMarkUpInfo:
         return "Resource-" + self.mark_filename.split(".")[0]
 
     def get_hash_style_filename(self):
-        return self.mark_hash + "-" + self.mark_name + "." + self.mark_filename.split(".")[1]
+        return self.mark_hash + "_" + self.mark_name + ".dds"
 
 
 class TextureMetadataResolver:

@@ -297,8 +297,8 @@ class M_IniHelper:
                         continue
 
                     # ── 构造输出文件名 ──
-                    #  前缀: "{draw_ib}_{alias}_"
-                    hash_style_texture_filename = draw_ib + "_" + draw_ib_model.draw_ib_alias + "_"
+                    #  新格式: "{mark_hash}_{mark_name}_{format}.dds"
+                    hash_style_texture_filename = ""
 
                     #  查找 Hash 去重信息，优先使用当前 SubMesh 的，失败时查询所有 SubMesh
                     deduped_texture_info = hash_deduped_texture_info_dict.get(
@@ -318,20 +318,11 @@ class M_IniHelper:
                             if deduped_texture_info is not None:
                                 break
 
-                    if deduped_texture_info is None:
-                        hash_style_texture_filename = texture_markup_info.mark_filename
-                        hash_style_texture_filename = cls._get_aliased_texture_output_filename(
-                            hash_style_texture_filename, submesh_model,
-                        )
-                    else:
-                        hash_style_texture_filename += (
-                            "_" + deduped_texture_info.componet_count_list_str + "_"
-                            + deduped_texture_info.original_hash + "_"
-                            + deduped_texture_info.render_hash + "_"
-                            + deduped_texture_info.format + "_"
-                            + texture_markup_info.mark_name
-                            + "." + texture_markup_info.mark_filename.split(".")[1]
-                        )
+                    hash_style_texture_filename = (
+                        texture_markup_info.mark_hash + "_"
+                        + texture_markup_info.mark_name
+                        + ".dds"
+                    )
 
                     # ── 组装目标路径 ──
                     target_texture_file_path = (
@@ -429,7 +420,7 @@ class M_IniHelper:
                         if not original_texture_file_path or not os.path.exists(original_texture_file_path):
                             continue
 
-                        hash_style_texture_filename = draw_ib + "_" + draw_ib_model.draw_ib_alias + "_"
+                        hash_style_texture_filename = ""
 
                         deduped_texture_info = hash_deduped_texture_info_dict.get(
                             texture_markup_info.mark_hash, None,
@@ -448,20 +439,11 @@ class M_IniHelper:
                                 if deduped_texture_info is not None:
                                     break
 
-                        if deduped_texture_info is None:
-                            hash_style_texture_filename = texture_markup_info.mark_filename
-                            hash_style_texture_filename = cls._get_aliased_texture_output_filename(
-                                hash_style_texture_filename, submesh_model,
-                            )
-                        else:
-                            hash_style_texture_filename += (
-                                "_" + deduped_texture_info.componet_count_list_str + "_"
-                                + deduped_texture_info.original_hash + "_"
-                                + deduped_texture_info.render_hash + "_"
-                                + deduped_texture_info.format + "_"
-                                + texture_markup_info.mark_name
-                                + "." + texture_markup_info.mark_filename.split(".")[1]
-                            )
+                        hash_style_texture_filename = (
+                            texture_markup_info.mark_hash + "_"
+                            + texture_markup_info.mark_name
+                            + ".dds"
+                        )
 
                         # ── 拷贝文件（去重）──
                         target_texture_file_path = (
