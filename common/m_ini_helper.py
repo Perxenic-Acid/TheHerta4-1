@@ -536,8 +536,12 @@ class M_IniHelper:
         if len(shapekeyname_mkey_dict.keys()) == 0:
             return
 
-        from .m_ini_helper_gui import M_IniHelperGUI
-        M_IniHelperGUI.copy_res_to_mod_folder()
+        import shutil
+        addon_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        src = os.path.join(addon_root, "resources", "Shapes.hlsl")
+        dst_dir = os.path.join(GlobalConfig.path_generate_mod_folder(), "res")
+        os.makedirs(dst_dir, exist_ok=True)
+        shutil.copy2(src, os.path.join(dst_dir, "Shapes.hlsl"))
 
         # [Constants]
         constants_section = M_IniSection(M_SectionType.Constants)
