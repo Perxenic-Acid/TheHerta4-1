@@ -61,6 +61,8 @@ class WWMIBufferBuildResult:
     export_shapekey: bool = False
     unique_element_vertex_ndarray: Optional[numpy.ndarray] = field(default=None, repr=False)
     unique_first_loop_indices: Optional[numpy.ndarray] = field(default=None, repr=False)
+    shapekey_position_buffer_dict: dict = field(default_factory=dict, repr=False)
+    shapekey_vector_buffer_dict: dict = field(default_factory=dict, repr=False)
 
 
 class ExportUtils:
@@ -339,6 +341,64 @@ class ExportUtils:
         return shapekey_offsets, shapekey_vertex_ids, shapekey_vertex_offsets, True
 
     @staticmethod
+    def build_wwmi_shape_key_category_buffer_dict(
+        obj: bpy.types.Object,
+        unique_first_loop_indices: numpy.ndarray,
+        d3d11_game_type: D3D11GameType,
+    ) -> dict:
+        shape_key_category_buffer_dict = {}
+        shapekeyname_mkey_dict = BlueprintExportHelper.get_current_shapekeyname_mkey_dict()
+        if len(shapekeyname_mkey_dict.keys()) == 0:
+            return shape_key_category_buffer_dict
+
+        if obj.data.shape_keys is None or not getattr(obj.data.shape_keys, "key_blocks", None):
+            return shape_key_category_buffer_dict
+
+        shapekey_names = list(shapekeyname_mkey_dict.keys())
+        shape_keys = [
+            shapekey for shapekey in obj.data.shape_keys.key_blocks
+            if shapekey.name in shapekey_names
+        ]
+        if not shape_keys:
+            return shape_key_category_buffer_dict
+
+        try:
+            for shapekey in shape_keys:
+                ShapeKeyUtils.reset_shapekey_values(
+                    obj,
+                    configured_shapekey_names=shapekey_names,
+                    current_shapekey_name=shapekey.name,
+                )
+                shapekey.value = 1.0
+
+                mesh_eval = ObjUtils.get_mesh_evaluate_from_obj(obj=obj)
+                if len(mesh_eval.polygons) > 0:
+                    try:
+                        mesh_eval.calc_tangents()
+                    except RuntimeError:
+                        ObjUtils.mesh_triangulate(mesh_eval)
+                        mesh_eval.calc_tangents()
+
+                element_data = ObjBufferHelper.parse_elementname_data_dict(
+                    mesh=mesh_eval,
+                    d3d11_game_type=d3d11_game_type,
+                )
+                shape_key_category_buffer_dict[shapekey.name] = {
+                    "Position": element_data["POSITION"][unique_first_loop_indices].astype(numpy.float32).reshape(-1),
+                }
+
+                vector_parts = []
+                for element_name in ("TANGENT", "NORMAL"):
+                    if element_name in element_data:
+                        vector_parts.append(element_data[element_name][unique_first_loop_indices])
+                if vector_parts:
+                    shape_key_category_buffer_dict[shapekey.name]["Vector"] = numpy.concatenate(vector_parts, axis=1).reshape(-1)
+        finally:
+            ShapeKeyUtils.reset_shapekey_values(obj)
+
+        return shape_key_category_buffer_dict
+
+    @staticmethod
     def build_wwmi_obj_buffer_result(element_context: ObjElementContext) -> WWMIBufferBuildResult:
         element_vertex_ndarray = element_context.element_vertex_ndarray
         if element_vertex_ndarray is None:
@@ -359,6 +419,11 @@ class ExportUtils:
             obj=element_context.obj,
             index_vertex_id_dict=index_vertex_id_dict,
         )
+        shapekey_category_buffer_dict = ExportUtils.build_wwmi_shape_key_category_buffer_dict(
+            obj=element_context.obj,
+            unique_first_loop_indices=unique_first_loop_indices,
+            d3d11_game_type=element_context.d3d11_game_type,
+        )
 
         return WWMIBufferBuildResult(
             obj=element_context.obj,
@@ -376,4 +441,14 @@ class ExportUtils:
             export_shapekey=export_shapekey,
             unique_element_vertex_ndarray=unique_element_vertex_ndarray,
             unique_first_loop_indices=unique_first_loop_indices,
+            shapekey_position_buffer_dict={
+                name: category_buffers["Position"]
+                for name, category_buffers in shapekey_category_buffer_dict.items()
+                if "Position" in category_buffers
+            },
+            shapekey_vector_buffer_dict={
+                name: category_buffers["Vector"]
+                for name, category_buffers in shapekey_category_buffer_dict.items()
+                if "Vector" in category_buffers
+            },
         )

@@ -1,5 +1,6 @@
 ﻿import math
 import os
+import re
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import TypedDict
@@ -212,6 +213,18 @@ class DrawIBModelWWMI:
 
         BufferExportHelper.write_buf_ib_r32_uint(self.obj_buffer_model_wwmi.ib, self.draw_ib + "-Component1.buf")
         BufferExportHelper.write_category_buffer_files(self.obj_buffer_model_wwmi.category_buffer_dict, self.draw_ib)
+        for shapekey_name, position_buffer in self.obj_buffer_model_wwmi.shapekey_position_buffer_dict.items():
+            safe_shapekey_name = self.get_safe_shapekey_name(shapekey_name)
+            BufferExportHelper.write_numpy_buffer(
+                position_buffer,
+                self.draw_ib + "-Position." + safe_shapekey_name + ".buf",
+            )
+        for shapekey_name, vector_buffer in self.obj_buffer_model_wwmi.shapekey_vector_buffer_dict.items():
+            safe_shapekey_name = self.get_safe_shapekey_name(shapekey_name)
+            BufferExportHelper.write_numpy_buffer(
+                vector_buffer,
+                self.draw_ib + "-Vector." + safe_shapekey_name + ".buf",
+            )
 
         if self.obj_buffer_model_wwmi.export_shapekey:
             BufferExportHelper.write_buf_shapekey_offsets(self.obj_buffer_model_wwmi.shapekey_offsets, self.draw_ib + "-ShapeKeyOffset.buf")
@@ -516,3 +529,7 @@ class DrawIBModelWWMI:
         alias_name = SSMTWorkSpace.get_drawib_aliasname_dict().get(self.draw_ib, "").strip()
         if alias_name:
             self.draw_ib_alias = alias_name
+
+    @staticmethod
+    def get_safe_shapekey_name(shapekey_name: str) -> str:
+        return re.sub(r"[^0-9A-Za-z_.-]+", "_", shapekey_name).strip("._") or "ShapeKey"

@@ -28,6 +28,12 @@ class BufferExportHelper:
                 category_buf.tofile(ibf)
 
     @staticmethod
+    def write_numpy_buffer(buffer, filename: str):
+        buf_path = os.path.join(GlobalConfig.path_generatemod_buffer_folder(), filename)
+        with open(buf_path, 'wb') as buf_file:
+            buffer.tofile(buf_file)
+
+    @staticmethod
     def write_buf_ib_r32_uint(index_list:list[int],buf_file_name:str):
         ib_path = os.path.join(GlobalConfig.path_generatemod_buffer_folder(), buf_file_name)
         packed_data = struct.pack(f'<{len(index_list)}I', *index_list)

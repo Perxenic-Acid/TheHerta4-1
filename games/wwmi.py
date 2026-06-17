@@ -1,5 +1,7 @@
 ﻿import os
 
+import shutil
+
 from ..common.global_properties import GlobalProperties
 from ..common.global_config import GlobalConfig
 from ..common.global_config import LogicName
@@ -47,6 +49,38 @@ class ExportWWMI:
 
         for draw_ib_model in self.drawib_drawibmodel_dict.values():
             draw_ib_model.apply_drawib_alias()
+
+    @staticmethod
+    def get_safe_shapekey_name(shapekey_name: str) -> str:
+        return DrawIBModelWWMI.get_safe_shapekey_name(shapekey_name)
+
+    @staticmethod
+    def get_wwmi_shapekey_entries(draw_ib_model: DrawIBModelWWMI | None = None):
+        shapekeyname_mkey_dict = BlueprintExportHelper.get_current_shapekeyname_mkey_dict()
+        if draw_ib_model is not None:
+            available_names = (
+                set(draw_ib_model.obj_buffer_model_wwmi.shapekey_position_buffer_dict.keys())
+                & set(draw_ib_model.obj_buffer_model_wwmi.shapekey_vector_buffer_dict.keys())
+            )
+            shapekeyname_mkey_dict = {
+                shapekey_name: m_key
+                for shapekey_name, m_key in shapekeyname_mkey_dict.items()
+                if shapekey_name in available_names
+            }
+        return [
+            (shapekey_name, ExportWWMI.get_safe_shapekey_name(shapekey_name), m_key)
+            for shapekey_name, m_key in shapekeyname_mkey_dict.items()
+        ]
+
+    @staticmethod
+    def copy_wwmi_shapekey_shaders_to_mod_folder():
+        res_path = os.path.join(GlobalConfig.path_generate_mod_folder(), "res")
+        os.makedirs(res_path, exist_ok=True)
+
+        addon_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for filename in ("ShapesWWMIPosition.hlsl", "ShapesWWMIVector.hlsl"):
+            src = os.path.join(addon_root, "resources", filename)
+            shutil.copy2(src, os.path.join(res_path, filename))
 
     def add_constants_section(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
         constants_section = M_IniSection(M_SectionType.Constants)
@@ -237,8 +271,14 @@ class ExportWWMI:
         commandlist_section.append("[CommandListOverrideSharedResources]")
         commandlist_section.append("ResourceBypassVB0 = ref vb0")
         commandlist_section.append("ib = ResourceIndexBuffer")
-        commandlist_section.append("vb0 = ResourcePositionBuffer")
-        commandlist_section.append("vb1 = ResourceVectorBuffer")
+        if self.get_wwmi_shapekey_entries(draw_ib_model):
+            commandlist_section.append("run = CommandListApplyShapeKeysPosition")
+            commandlist_section.append("run = CommandListApplyShapeKeysVector")
+            commandlist_section.append("vb0 = ref ResourcePositionBufferShapeKeyVB")
+            commandlist_section.append("vb1 = ref ResourceVectorBufferShapeKeyVB")
+        else:
+            commandlist_section.append("vb0 = ResourcePositionBuffer")
+            commandlist_section.append("vb1 = ResourceVectorBuffer")
         commandlist_section.append("vb2 = ResourceTexcoordBuffer")
         commandlist_section.append("vb3 = ResourceColorBuffer")
 
@@ -497,6 +537,132 @@ class ExportWWMI:
         resource_shapekeys_section.append("array = 32")
         ini_builder.append_section(resource_shapekeys_section)
 
+    def add_wwmi_shapekey_sections(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
+        shapekey_entries = self.get_wwmi_shapekey_entries(draw_ib_model)
+        if not shapekey_entries:
+            return
+
+        self.copy_wwmi_shapekey_shaders_to_mod_folder()
+
+        constants_section = M_IniSection(M_SectionType.Constants)
+        constants_section.SectionName = "Constants"
+        for shapekey_name, _safe_name, m_key in shapekey_entries:
+            constants_section.append("; ShapeKey: " + shapekey_name)
+            constants_section.append("global persist " + m_key.key_name + " = " + str(m_key.initialize_value))
+            constants_section.new_line()
+        ini_builder.append_section(constants_section)
+
+        key_section = M_IniSection(M_SectionType.Key)
+        for shapekey_name, _safe_name, m_key in shapekey_entries:
+            if m_key.initialize_vk_str == "":
+                continue
+
+            key_section.append("[Key_ShapeKey_" + shapekey_name + "]")
+            comment = getattr(m_key, 'comment', '')
+            if comment:
+                key_section.append("; " + comment)
+            key_section.append("key = " + m_key.initialize_vk_str)
+            key_section.append("type = cycle")
+            key_section.append(m_key.key_name + " = 0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1")
+            key_section.new_line()
+        ini_builder.append_section(key_section)
+
+        commandlist_section = M_IniSection(M_SectionType.CommandList)
+        commandlist_section.append("[CommandListApplyShapeKeysPosition]")
+        commandlist_section.append("ResourcePositionBufferRW = copy ResourcePositionBufferFloat")
+        commandlist_section.append("x89 = " + str(draw_ib_model.mesh_vertex_count * 3))
+        commandlist_section.append("cs-t50 = ResourcePositionBufferFloat")
+        commandlist_section.append("cs-u5 = ResourcePositionBufferRW")
+        for shapekey_name, safe_name, m_key in shapekey_entries:
+            commandlist_section.append("; ShapeKey: " + shapekey_name)
+            commandlist_section.append("x88 = " + m_key.key_name)
+            commandlist_section.append("cs-t51 = ResourceShapeKeyPosition_" + safe_name)
+            commandlist_section.append("run = CustomShaderComputeWWMIShapeKeyPosition")
+        commandlist_section.append("cs-t50 = null")
+        commandlist_section.append("cs-t51 = null")
+        commandlist_section.append("cs-u5 = null")
+        commandlist_section.append("ResourcePositionBufferShapeKeyVB = copy ResourcePositionBufferRW")
+        commandlist_section.new_line()
+
+        commandlist_section.append("[CustomShaderComputeWWMIShapeKeyPosition]")
+        commandlist_section.append("cs = .\\res\\ShapesWWMIPosition.hlsl")
+        commandlist_section.append("vs = null")
+        commandlist_section.append("ps = null")
+        commandlist_section.append("hs = null")
+        commandlist_section.append("ds = null")
+        commandlist_section.append("gs = null")
+        commandlist_section.append("dispatch = " + str((draw_ib_model.mesh_vertex_count * 3 + 63) // 64) + ", 1, 1")
+        commandlist_section.new_line()
+
+        commandlist_section.append("[CommandListApplyShapeKeysVector]")
+        commandlist_section.append("ResourceVectorBufferRW = copy ResourceVectorBufferInt")
+        commandlist_section.append("x89 = " + str(draw_ib_model.mesh_vertex_count * 2))
+        commandlist_section.append("cs-t50 = ResourceVectorBufferInt")
+        commandlist_section.append("cs-u5 = ResourceVectorBufferRW")
+        for shapekey_name, safe_name, m_key in shapekey_entries:
+            commandlist_section.append("; ShapeKey: " + shapekey_name)
+            commandlist_section.append("x88 = " + m_key.key_name)
+            commandlist_section.append("cs-t51 = ResourceShapeKeyVector_" + safe_name)
+            commandlist_section.append("run = CustomShaderComputeWWMIShapeKeyVector")
+        commandlist_section.append("cs-t50 = null")
+        commandlist_section.append("cs-t51 = null")
+        commandlist_section.append("cs-u5 = null")
+        commandlist_section.append("ResourceVectorBufferShapeKeyVB = copy ResourceVectorBufferRW")
+        commandlist_section.new_line()
+
+        commandlist_section.append("[CustomShaderComputeWWMIShapeKeyVector]")
+        commandlist_section.append("cs = .\\res\\ShapesWWMIVector.hlsl")
+        commandlist_section.append("vs = null")
+        commandlist_section.append("ps = null")
+        commandlist_section.append("hs = null")
+        commandlist_section.append("ds = null")
+        commandlist_section.append("gs = null")
+        commandlist_section.append("dispatch = " + str((draw_ib_model.mesh_vertex_count * 2 + 63) // 64) + ", 1, 1")
+        commandlist_section.new_line()
+        ini_builder.append_section(commandlist_section)
+
+        resource_section = M_IniSection(M_SectionType.ResourceBuffer)
+        resource_section.append("[ResourcePositionBufferRW]")
+        resource_section.append("type = RWBuffer")
+        resource_section.append("format = R32_FLOAT")
+        resource_section.append("array = " + str(draw_ib_model.mesh_vertex_count * 3))
+        resource_section.new_line()
+        resource_section.append("[ResourcePositionBufferFloat]")
+        resource_section.append("type = Buffer")
+        resource_section.append("format = R32_FLOAT")
+        resource_section.append("filename = Meshes/" + draw_ib_model.draw_ib + "-Position.buf")
+        resource_section.new_line()
+        resource_section.append("[ResourcePositionBufferShapeKeyVB]")
+        resource_section.append("type = Buffer")
+        resource_section.append("stride = 12")
+        resource_section.new_line()
+        resource_section.append("[ResourceVectorBufferRW]")
+        resource_section.append("type = RWBuffer")
+        resource_section.append("format = R8_SINT")
+        resource_section.append("array = " + str(draw_ib_model.mesh_vertex_count * 8))
+        resource_section.new_line()
+        resource_section.append("[ResourceVectorBufferInt]")
+        resource_section.append("type = Buffer")
+        resource_section.append("format = R8_SINT")
+        resource_section.append("filename = Meshes/" + draw_ib_model.draw_ib + "-Vector.buf")
+        resource_section.new_line()
+        resource_section.append("[ResourceVectorBufferShapeKeyVB]")
+        resource_section.append("type = Buffer")
+        resource_section.append("stride = 8")
+        resource_section.new_line()
+        for shapekey_name, safe_name, _m_key in shapekey_entries:
+            resource_section.append("[ResourceShapeKeyPosition_" + safe_name + "]")
+            resource_section.append("type = Buffer")
+            resource_section.append("format = R32_FLOAT")
+            resource_section.append("filename = Meshes/" + draw_ib_model.draw_ib + "-Position." + safe_name + ".buf")
+            resource_section.new_line()
+            resource_section.append("[ResourceShapeKeyVector_" + safe_name + "]")
+            resource_section.append("type = Buffer")
+            resource_section.append("format = R8_SINT")
+            resource_section.append("filename = Meshes/" + draw_ib_model.draw_ib + "-Vector." + safe_name + ".buf")
+            resource_section.new_line()
+        ini_builder.append_section(resource_section)
+
     def add_resource_merged_skeleton(self, ini_builder: M_IniBuilder, draw_ib_model: DrawIBModelWWMI):
         resource_skeleton_section = M_IniSection(M_SectionType.ResourceSkeletonOverride)
         resource_skeleton_section.append("[ResourceMergedSkeleton]")
@@ -605,8 +771,7 @@ class ExportWWMI:
             self.add_commandlist_merge_skeleton_section(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
             self.add_commandlist_trigger_shared_cleanup_section(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
             self.add_texture_override_component(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
-            self.add_texture_override_shapekeys(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
-            self.add_resource_shapekeys(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
+            self.add_wwmi_shapekey_sections(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
 
             if GlobalProperties.import_merged_vgmap() == 'MERGED':
                 self.add_resource_merged_skeleton(ini_builder=config_ini_builder, draw_ib_model=draw_ib_model)
