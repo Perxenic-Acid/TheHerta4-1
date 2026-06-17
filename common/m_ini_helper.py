@@ -740,13 +740,7 @@ class M_IniHelper:
                     key_section.append("key = " + mkey.key_value)
                 key_section.append("type = cycle")
 
-                key_value_number = len(mkey.value_list)
-                key_cycle_str = ""
-                for i in range(key_value_number):
-                    if i < key_value_number + 1:
-                        key_cycle_str = key_cycle_str + str(i) + ","
-                    else:
-                        key_cycle_str = key_cycle_str + str(i)
+                key_cycle_str = ",".join(str(i) for i in range(len(mkey.value_list)))
                 key_section.append(mkey.key_name + " = " + key_cycle_str)
                 key_section.new_line()
                 ini_builder.append_section(key_section)

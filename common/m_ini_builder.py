@@ -72,6 +72,7 @@ class M_IniBuilder:
     def clear(self):
         self.line_list.clear()
         self.ini_section_list.clear()
+        self.ini_section_name_set.clear()
 
     def __append_section_line(self,ini_section_type:M_SectionType):
         '''
@@ -102,15 +103,18 @@ class M_IniBuilder:
         '''
         不重新排序的版本，方便我们的ini格式和其它工具生成的ini格式进行对比。
         '''
+        current_section_name = None
         for ini_section in self.ini_section_list:
-            section_name_exists = ini_section.SectionName in self.ini_section_name_set
+            section_name_exists = ini_section.SectionName == current_section_name
+            if ini_section.SectionName == "":
+                current_section_name = None
             # if not section_name_exists:
             #     self.line_list.append("\n;MARK:" + ini_section.SectionType + "\n")
             
             # SectionName不为空的时候才会自动补SectionName，否则由用户控制
             if ini_section.SectionName != "" and not section_name_exists:
                 self.line_list.append("[" + ini_section.SectionName + "]\n")
-                self.ini_section_name_set.add(ini_section.SectionName)
+                current_section_name = ini_section.SectionName
 
             # 添加Section的内容
             for line in ini_section.SectionLineList:
