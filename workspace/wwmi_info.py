@@ -20,6 +20,7 @@ class WWMIInfoShapeKeys:
     vertex_count: int = 0
     dispatch_y: int = 0
     checksum: int = 0
+    batches: list = field(default_factory=list)
 
 
 @dataclass
@@ -75,7 +76,15 @@ class WWMIInfoHelper:
             vertex_count=sk_info.get("vertex_count", 0),
             dispatch_y=sk_info.get("dispatch_y", 0),
             checksum=sk_info.get("checksum", 0),
+            batches=list(sk_info.get("batches", [])),
         )
+        if not shapekeys.batches and shapekeys.checksum > 0:
+            shapekeys.batches = [{
+                "vertex_offset": 0,
+                "vertex_count": shapekeys.vertex_count,
+                "dispatch_y": shapekeys.dispatch_y,
+                "checksum": shapekeys.checksum,
+            }]
 
         return WWMIInfoObject(
             vb0_hash=vb0_hash,
