@@ -25,6 +25,7 @@ __bl_classes = [
     operators.combine_list.SelectNoneMaterials,
     operators.combiner.Combiner,
     operators.get_pillow.InstallPIL,
+    operators.get_pillow.CheckPillow,
     extend_types.CombineListEntry,
     extend_lists.SMC_UL_Combine_List,
 ]

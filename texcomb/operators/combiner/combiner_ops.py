@@ -60,21 +60,40 @@ ImageFile = None
 ImageType = None
 resampling = None
 
-try:
-    from PIL import Image, ImageChops, ImageFile
 
-    ImageType = Image.Image
+def initialize_pillow() -> bool:
+    """Initialize cached Pillow module globals used by combiner helpers."""
+    global Image, ImageChops, ImageFile, ImageType, resampling
 
-    Image.MAX_IMAGE_PIXELS = None
     try:
-        resampling = Image.LANCZOS
-    except AttributeError:
-        resampling = Image.ANTIALIAS
+        from PIL import Image as pil_image
+        from PIL import ImageChops as pil_image_chops
+        from PIL import ImageFile as pil_image_file
 
-    if ImageFile:
-        ImageFile.LOAD_TRUNCATED_IMAGES = True
-except ImportError:
-    pass
+        Image = pil_image
+        ImageChops = pil_image_chops
+        ImageFile = pil_image_file
+        ImageType = Image.Image
+
+        Image.MAX_IMAGE_PIXELS = None
+        try:
+            resampling = Image.LANCZOS
+        except AttributeError:
+            resampling = Image.ANTIALIAS
+
+        if ImageFile:
+            ImageFile.LOAD_TRUNCATED_IMAGES = True
+        return True
+    except ImportError:
+        Image = None
+        ImageChops = None
+        ImageFile = None
+        ImageType = None
+        resampling = None
+        return False
+
+
+initialize_pillow()
 
 atlas_prefix = "Atlas_"
 atlas_texture_prefix = "texture_atlas_"

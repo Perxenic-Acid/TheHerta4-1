@@ -6,6 +6,7 @@ list, action buttons, and support links.
 """
 
 import bpy
+import textwrap
 
 from ... import globs
 from ...type_annotations import Scene
@@ -22,11 +23,29 @@ def draw_ui(context: bpy.types.Context, m_col: bpy.types.UILayout) -> None:
     if globs.pil_available:
         _materials_list(context.scene, m_col)
     elif globs.pil_install_attempted:
-        col = m_col.box().column()
-        col.label(text="安装完成", icon="CHECKMARK")
-        col.label(text="请重启 Blender")
+        if globs.pil_install_success:
+            col = m_col.box().column()
+            col.label(text="安装完成", icon="CHECKMARK")
+            col.label(text="请重启 Blender")
+        else:
+            box = m_col.box().column()
+            box.label(text="安装失败", icon="ERROR")
+            box.separator()
+
+            if globs.pil_install_error_message:
+                error_box = box.box()
+                error_col = error_box.column()
+                error_col.label(text="错误详情:", icon="INFO")
+                for line in textwrap.wrap(globs.pil_install_error_message, width=60):
+                    error_col.label(text=line)
+                box.separator()
+
+            row = box.row(align=True)
+            row.scale_y = 1.2
+            row.operator("smc.get_pillow", text="重试安装", icon="FILE_REFRESH")
+            row.operator("smc.check_pillow", text="检查安装", icon="FILE_TICK")
     else:
-        MaterialCombinerPanel.pillow_installator(m_col)
+        MaterialCombinerPanel.draw_pillow_installer(context, m_col)
 
 
 def _materials_list(scn: Scene, m_col: bpy.types.UILayout) -> None:

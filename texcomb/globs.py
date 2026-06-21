@@ -19,6 +19,54 @@ pil_available = all(
 )
 
 pil_install_attempted = False
+pil_install_success = False
+pil_install_error_message = ""
+
+
+def refresh_pil_availability() -> bool:
+    """Refresh the Pillow availability status.
+
+    This function re-checks if Pillow is available in the current environment,
+    and updates the global pil_available flag. It's useful after installation
+    attempts without requiring a restart.
+
+    Returns:
+        True if Pillow is available after refresh, False otherwise.
+    """
+    global pil_available, pil_install_success, pil_install_error_message
+
+    # 重新检查 PIL 是否可用
+    try:
+        # 刷新 site 目录
+        import importlib
+        if 'site' in sys.modules:
+            importlib.reload(sys.modules['site'])
+
+        # 添加 user site packages 到路径（避免重复添加）
+        user_site = site.getusersitepackages()
+        if user_site not in sys.path:
+            sys.path.insert(0, user_site)
+
+        # 检查各个模块
+        for module in ("PIL", "PIL.Image", "PIL.ImageChops"):
+            # 先清除可能已经加载的旧模块
+            if module in sys.modules:
+                del sys.modules[module]
+
+        pil_available = all(
+            importlib.util.find_spec(module) is not None
+            for module in ("PIL", "PIL.Image", "PIL.ImageChops")
+        )
+
+        # 如果可用，更新安装状态
+        if pil_available:
+            pil_install_success = True
+            pil_install_error_message = ""
+
+        return pil_available
+    except Exception:
+        # 如果刷新过程出错，保持原样
+        return pil_available
 
 is_blender_legacy = bpy.app.version < (2, 80, 0)
 is_blender_modern = bpy.app.version >= (2, 80, 0)

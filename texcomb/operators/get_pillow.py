@@ -6,6 +6,7 @@ It handles installation of pip if needed, and works across different Blender ver
 
 Usage example:
     bpy.ops.smc.get_pillow()
+    bpy.ops.smc.check_pillow()
 """
 
 import importlib.util
@@ -17,6 +18,17 @@ from typing import Set
 import bpy
 
 from .. import globs
+
+
+def _refresh_combiner_pillow_cache() -> bool:
+    """Refresh cached Pillow globals used by the combiner module."""
+    try:
+        from .combiner import combiner_ops
+
+        return combiner_ops.initialize_pillow()
+    except Exception as e:
+        globs.pil_install_error_message = "刷新 Pillow 模块缓存失败: {}".format(e)
+        return False
 
 
 class InstallPIL(bpy.types.Operator):
@@ -44,21 +56,51 @@ class InstallPIL(bpy.types.Operator):
             Set containing "FINISHED" if the installation completes successfully,
             or "CANCELLED" if the installation fails.
         """
+        # 重置错误信息
+        globs.pil_install_error_message = ""
+
         has_pip = all(self._module_exists(m) for m in ("pip", "pip._internal"))
         has_pil = all(
             self._module_exists(m)
             for m in ("PIL", "PIL.Image", "PIL.ImageChops")
         )
 
-        success = True
+        # 如果已经都有了，就不需要安装
+        if has_pip and has_pil:
+            globs.pil_install_attempted = True
+            globs.pil_install_success = _refresh_combiner_pillow_cache()
+            globs.pil_available = globs.pil_install_success
+            if not globs.pil_install_success:
+                self.report({"ERROR"}, globs.pil_install_error_message)
+                return {"CANCELLED"}
+            self.report({"INFO"}, "Pillow 已经安装了！")
+            return {"FINISHED"}
+
+        success = False
         if not has_pip:
             success = self._install_pip()
             if success:
                 success = self._install_pillow()
-        elif not has_pil:
+        else:
+            # pip 已存在，直接安装 pillow
             success = self._install_pillow()
 
         globs.pil_install_attempted = True
+        globs.pil_install_success = success
+
+        # 验证安装是否真的成功
+        if success:
+            try:
+                import PIL
+                import PIL.Image
+                import PIL.ImageChops
+                success = _refresh_combiner_pillow_cache()
+                globs.pil_install_success = success
+                globs.pil_available = success
+            except ImportError:
+                success = False
+                globs.pil_install_success = False
+                globs.pil_install_error_message = "安装后仍无法导入 Pillow 库，请尝试重启 Blender。"
 
         self.report(
             {"INFO" if success else "ERROR"},
@@ -93,7 +135,9 @@ class InstallPIL(bpy.types.Operator):
             else:
                 return self._install_pip_clean()
         except Exception as e:
-            self.report({"ERROR"}, "pip 安装失败: {}".format(e))
+            error_msg = "pip 安装失败: {}".format(e)
+            self.report({"ERROR"}, error_msg)
+            globs.pil_install_error_message = error_msg
             return False
 
     def _try_install_pip_with_ensurepip(self) -> bool:
@@ -111,6 +155,11 @@ class InstallPIL(bpy.types.Operator):
             ensurepip.bootstrap()
             return True
         except ImportError:
+            return self._install_pip_clean()
+        except Exception as e:
+            error_msg = "ensurepip 失败: {}".format(e)
+            self.report({"ERROR"}, error_msg)
+            globs.pil_install_error_message = error_msg
             return self._install_pip_clean()
 
     def _install_pip_clean(self) -> bool:
@@ -141,14 +190,16 @@ class InstallPIL(bpy.types.Operator):
             )
 
             if process.returncode != 0:
-                self.report(
-                    {"ERROR"}, "get-pip.py 执行失败: {}".format(process.stderr)
-                )
+                error_msg = "get-pip.py 执行失败: {}".format(process.stderr or process.stdout or "未知错误")
+                self.report({"ERROR"}, error_msg)
+                globs.pil_install_error_message = error_msg
                 return False
 
             return True
         except Exception as e:
-            self.report({"ERROR"}, "运行 get-pip.py 失败: {}".format(e))
+            error_msg = "运行 get-pip.py 失败: {}".format(e)
+            self.report({"ERROR"}, error_msg)
+            globs.pil_install_error_message = error_msg
             return False
 
     def _install_pillow(self) -> bool:
@@ -165,23 +216,70 @@ class InstallPIL(bpy.types.Operator):
             from pip import _internal
 
             deps_result = _internal.main(
-                ["install", "pip", "setuptools", "wheel", "-U"]
+                ["install", "pip", "setuptools", "wheel", "-U", "--user"]
             )
             if deps_result != 0:
-                self.report({"ERROR"}, "更新 pip 依赖失败")
+                error_msg = "更新 pip 依赖失败 (错误代码: {})".format(deps_result)
+                self.report({"ERROR"}, error_msg)
+                globs.pil_install_error_message = error_msg
                 return False
 
-            pillow_result = _internal.main(["install", "Pillow"])
+            pillow_result = _internal.main(["install", "Pillow", "--user"])
             if pillow_result != 0:
-                self.report({"ERROR"}, "Pillow 安装失败")
+                error_msg = "Pillow 安装失败 (错误代码: {})".format(pillow_result)
+                self.report({"ERROR"}, error_msg)
+                globs.pil_install_error_message = error_msg
                 return False
 
             return True
-        except ImportError:
-            self.report({"ERROR"}, "安装后无法导入 pip")
+        except ImportError as e:
+            error_msg = "安装后无法导入 pip: {}".format(e)
+            self.report({"ERROR"}, error_msg)
+            globs.pil_install_error_message = error_msg
             return False
         except Exception as e:
-            self.report(
-                {"ERROR"}, "Pillow 安装过程中出错: {}".format(e)
-            )
+            error_msg = "Pillow 安装过程中出错: {}".format(e)
+            self.report({"ERROR"}, error_msg)
+            globs.pil_install_error_message = error_msg
             return False
+
+
+class CheckPillow(bpy.types.Operator):
+    """Checks if Pillow is installed and refreshes the status.
+
+    This operator re-checks the Pillow installation status and updates
+    the global flags accordingly. Useful after manual installation or
+    to refresh the UI without restarting Blender.
+    """
+
+    bl_idname = "smc.check_pillow"
+    bl_label = "检查 Pillow"
+    bl_description = "重新检查 Pillow 库是否已安装，可以在不重启的情况下刷新状态。"
+
+    def execute(self, context: bpy.types.Context) -> Set[str]:
+        """Executes the Pillow status check.
+
+        Args:
+            context: Current Blender context.
+
+        Returns:
+            Set containing "FINISHED".
+        """
+        success = globs.refresh_pil_availability()
+
+        if success:
+            success = _refresh_combiner_pillow_cache()
+            if success:
+                self.report({"INFO"}, "Pillow 已安装，可以使用！")
+                # 清除之前的错误状态
+                globs.pil_install_success = True
+                globs.pil_available = True
+                globs.pil_install_error_message = ""
+            else:
+                globs.pil_install_success = False
+                globs.pil_available = False
+                self.report({"ERROR"}, globs.pil_install_error_message)
+        else:
+            self.report({"ERROR"}, "Pillow 仍未安装，请尝试重新安装或手动安装。")
+
+        return {"FINISHED"}

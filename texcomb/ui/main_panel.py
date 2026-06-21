@@ -47,7 +47,10 @@ class MaterialCombinerPanel(bpy.types.Panel):
         if globs.pil_available:
             self._render_main_interface(context, layout)
         elif globs.pil_install_attempted:
-            self.render_install_success(layout)
+            if globs.pil_install_success:
+                self.render_install_success(layout)
+            else:
+                self.render_install_failure(layout)
         else:
             self.draw_pillow_installer(context, layout)
 
@@ -281,3 +284,46 @@ class MaterialCombinerPanel(bpy.types.Panel):
         box.label(
             text="请重启 Blender", icon="FILE_REFRESH"
         )
+
+    @staticmethod
+    def render_install_failure(layout: bpy.types.UILayout) -> None:
+        """Render an installation failure message with error details.
+
+        Displays a message indicating that the Pillow installation failed,
+        shows any error details if available, and provides options to retry.
+
+        Args:
+            layout: The layout to draw into.
+        """
+        box = layout.box().column()
+        box.label(text="安装失败", icon="ERROR")
+        box.separator()
+
+        # 显示错误信息
+        if globs.pil_install_error_message:
+            error_box = box.box()
+            error_col = error_box.column()
+            error_col.label(text="错误详情:", icon="INFO")
+            # 把错误信息分段显示
+            error_msg = globs.pil_install_error_message
+            # 每80个字符左右换行
+            import textwrap
+            for line in textwrap.wrap(error_msg, width=60):
+                error_col.label(text=line)
+            box.separator()
+
+        # 显示帮助信息
+        help_col = box.column()
+        help_col.label(text="可能的解决方案:", icon="HELP")
+        help_col.label(text="1. 以管理员身份运行 Blender")
+        help_col.label(text="2. 检查网络连接")
+        help_col.label(text="3. 检查防火墙设置")
+        help_col.label(text="4. 尝试手动安装:")
+        help_col.label(text="   在命令行运行: python -m pip install Pillow --user")
+        box.separator()
+
+        # 按钮行
+        row = box.row(align=True)
+        row.scale_y = 1.2
+        row.operator("smc.get_pillow", text="重试安装", icon="FILE_REFRESH")
+        row.operator("smc.check_pillow", text="检查安装", icon="FILE_TICK")
