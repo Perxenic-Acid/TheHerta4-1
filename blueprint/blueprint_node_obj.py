@@ -587,15 +587,29 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
         if not node:
              return {'CANCELLED'}
 
+        # 在当前上下文中查找3D视图，确保area和screen匹配
         view_3d_area = None
-        for window in context.window_manager.windows:
-            for area in window.screen.areas:
-                if area.type == 'VIEW_3D':
-                    view_3d_area = area
-                    break
-            if view_3d_area:
+        target_window = None
+        target_screen = context.screen
+
+        # 优先在当前screen中查找
+        for area in target_screen.areas:
+            if area.type == 'VIEW_3D':
+                view_3d_area = area
                 break
-        
+
+        # 如果当前screen没有，再在其他window/screen中查找
+        if not view_3d_area:
+            for window in context.window_manager.windows:
+                for area in window.screen.areas:
+                    if area.type == 'VIEW_3D':
+                        view_3d_area = area
+                        target_window = window
+                        target_screen = window.screen
+                        break
+                if view_3d_area:
+                    break
+
         if not view_3d_area:
             self.report({'WARNING'}, rpt_("未找到3D视图"))
             return {'CANCELLED'}
@@ -605,10 +619,22 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
             if space.type == 'VIEW_3D' and space.local_view:
                 in_local_view = True
                 break
-        
+
         if in_local_view:
-            with context.temp_override(area=view_3d_area):
-                bpy.ops.view3d.localview()
+            # 安全退出局部视图
+            try:
+                if target_window:
+                    with context.temp_override(window=target_window, area=view_3d_area, screen=target_screen):
+                        bpy.ops.view3d.localview()
+                else:
+                    with context.temp_override(area=view_3d_area, screen=target_screen):
+                        bpy.ops.view3d.localview()
+            except Exception:
+                # 降级方案：直接修改space数据而不通过operator
+                for space in view_3d_area.spaces:
+                    if space.type == 'VIEW_3D':
+                        space.local_view = None
+                        break
             self.report({'INFO'}, rpt_("已退出局部视图"))
             return {'FINISHED'}
 
@@ -617,7 +643,7 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
         visited_blueprints = set()
 
         def collect_objects(current_node):
-            if current_node in checked_nodes: 
+            if current_node in checked_nodes:
                 return
             checked_nodes.add(current_node)
 
@@ -636,7 +662,7 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
                             collect_objects(link.from_node)
 
         collect_objects(node)
-        
+
         if not objects_to_show:
             self.report({'WARNING'}, rpt_("该分组中未找到任何物体"))
             return {'CANCELLED'}
@@ -646,23 +672,52 @@ class SSMT_OT_View_Group_Objects(bpy.types.Operator):
                 o.select_set(False)
 
         if context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')
+            try:
+                bpy.ops.object.mode_set(mode='OBJECT')
+            except Exception:
+                pass
 
         deselect_all_safe()
         for obj in objects_to_show:
             obj.select_set(True)
 
-        region = next((r for r in view_3d_area.regions if r.type == 'WINDOW'), None)
-        if region:
-            with context.temp_override(area=view_3d_area, region=region):
+        # 获取view3d空间并设置
+        view_3d_space = None
+        for space in view_3d_area.spaces:
+            if space.type == 'VIEW_3D':
+                view_3d_space = space
+                break
+
+        if view_3d_space:
+            # 直接设置shading类型
+            view_3d_space.shading.type = 'SOLID'
+
+            # 查找有效的region
+            region = next((r for r in view_3d_area.regions if r.type == 'WINDOW'), None)
+
+            if region:
+                # 构建完整的override上下文，包含window/screen/area/region
                 try:
-                    bpy.ops.view3d.localview()
-                    bpy.ops.view3d.view_axis(type='FRONT')
-                    bpy.ops.view3d.view_selected()
-                    if view_3d_area.spaces.active:
-                        view_3d_area.spaces.active.shading.type = 'SOLID'
-                except Exception as e:
-                    print(f"View setup warning: {e}")
+                    override_kwargs = {
+                        'area': view_3d_area,
+                        'region': region,
+                        'screen': target_screen
+                    }
+                    if target_window:
+                        override_kwargs['window'] = target_window
+
+                    with context.temp_override(**override_kwargs):
+                        try:
+                            bpy.ops.view3d.localview()
+                            bpy.ops.view3d.view_axis(type='FRONT')
+                            bpy.ops.view3d.view_selected()
+                        except Exception as e:
+                            print(f"View setup warning: {e}")
+                except TypeError as e:
+                    # 如果temp_override仍然失败，降级处理：不使用operator
+                    print(f"temp_override failed, using fallback: {e}")
+                    # 至少设置了shading type，给用户一个提示
+                    self.report({'WARNING'}, rpt_("已选中物体，但视图切换失败，请手动按 '/' 进入局部视图"))
 
         self.report({'INFO'}, rpt_("已在局部视图中显示 {count} 个物体").format(count=len(objects_to_show)))
         return {'FINISHED'}
