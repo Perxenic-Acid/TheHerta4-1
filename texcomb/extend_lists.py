@@ -19,7 +19,11 @@ from .globs import (
     is_blender_modern,
 )
 from .utils.images import get_image_pack_issue
-from .utils.materials import get_image_from_material
+from .utils.materials import (
+    get_alpha_texture_image,
+    get_alpha_texture_issue,
+    get_image_from_material,
+)
 
 
 class SMC_UL_Combine_List(bpy.types.UIList):
@@ -188,6 +192,15 @@ class SMC_UL_Combine_List(bpy.types.UIList):
 
         if get_image_pack_issue(image):
             layout.label(text="贴图异常", icon="ERROR")
+            return
+
+        alpha_issue = get_alpha_texture_issue(item.mat)
+        if alpha_issue:
+            layout.label(text="Alpha异常", icon="ERROR")
+            return
+
+        if get_alpha_texture_image(item.mat):
+            layout.label(text="Alpha贴图", icon="IMAGE_DATA")
             return
 
         if item.mat.smc_size:

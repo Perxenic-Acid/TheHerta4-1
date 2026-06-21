@@ -97,6 +97,7 @@ class Combiner(bpy.types.Operator):
 
         scn.smc_save_path = self.directory
         sized_structure = get_size(scn, self.structure)
+        self._reported_texture_diagnostics = set()
         self._report_texture_diagnostics(sized_structure)
         self.structure = pack(sized_structure, scn.smc_packer_type)
 
@@ -113,6 +114,7 @@ class Combiner(bpy.types.Operator):
             return {"FINISHED"}
 
         atlases = get_atlas(scn, self.structure, atlas_size)
+        self._report_texture_diagnostics(self.structure)
         align_uvs(scn, self.structure, atlas_size, size)
         comb_mats = get_comb_mats(scn, atlases, self.mats_uv)
         assign_comb_mats(scn, self.data, comb_mats)
@@ -220,17 +222,29 @@ class Combiner(bpy.types.Operator):
     def _report_texture_diagnostics(self, structure) -> None:
         """Report materials that will fall back to color-only output."""
         diagnostics = collect_texture_diagnostics(structure)
-        if not diagnostics:
+        reported = getattr(self, "_reported_texture_diagnostics", set())
+        new_diagnostics = [
+            message for message in diagnostics if message not in reported
+        ]
+        if not new_diagnostics:
             return
 
-        for message in diagnostics[:5]:
+        for message in new_diagnostics[:5]:
+            print("SSMT TextureCombiner:", message)
             self.report({"WARNING"}, message)
+            reported.add(message)
 
-        remaining = len(diagnostics) - 5
+        remaining = len(new_diagnostics) - 5
         if remaining > 0:
+            print(
+                "SSMT TextureCombiner: {} more material diagnostics hidden".format(
+                    remaining
+                )
+            )
             self.report(
                 {"WARNING"},
                 "还有 {} 个材质会按纯色处理，请在材质设置中查看详情。".format(
                     remaining
                 ),
             )
+        self._reported_texture_diagnostics = reported

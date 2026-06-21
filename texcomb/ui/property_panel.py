@@ -13,6 +13,8 @@ from bpy.props import IntProperty
 from .. import globs
 from ..utils.images import get_image_pack_issue
 from ..utils.materials import (
+    get_alpha_texture_image,
+    get_alpha_texture_issue,
     get_image_from_material,
     get_shader_type,
 )
@@ -110,6 +112,7 @@ class PropertyMenu(bpy.types.Operator):
                 box_col,
                 "请检查 Image Texture 是否连接到 Base Color/Color，且 Material Output 是否为当前输出。",
             )
+            self._show_alpha_status(box_col, item.mat)
             box_col.separator()
             self._show_diffuse_color(box_col, item)
 
@@ -199,6 +202,11 @@ class PropertyMenu(bpy.types.Operator):
         image: bpy.types.Image,
     ) -> None:
         """Show warnings for images that will not be used at their raw size."""
+        col.label(
+            text="主贴图会以 RGBA 写入图集；若图片含 Alpha 会保留。",
+            icon="INFO",
+        )
+
         pack_issue = get_image_pack_issue(image)
         if pack_issue:
             self._show_warning(
@@ -219,6 +227,27 @@ class PropertyMenu(bpy.types.Operator):
                         *limited_size
                     ),
                 )
+
+        self._show_alpha_status(col, mat)
+
+    def _show_alpha_status(
+        self, col: bpy.types.UILayout, mat: bpy.types.Material
+    ) -> None:
+        """Show alpha texture status for the material."""
+        alpha_issue = get_alpha_texture_issue(mat)
+        if alpha_issue:
+            self._show_warning(
+                col,
+                "Alpha 通道不会参与合并: {}".format(alpha_issue),
+            )
+            return
+
+        alpha_image = get_alpha_texture_image(mat)
+        if alpha_image:
+            col.label(
+                text="Alpha 贴图: {}".format(alpha_image.name),
+                icon="IMAGE_DATA",
+            )
 
     @staticmethod
     def _show_warning(col: bpy.types.UILayout, text: str) -> None:

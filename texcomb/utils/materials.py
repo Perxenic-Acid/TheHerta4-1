@@ -13,7 +13,7 @@ import numpy as np
 
 from .. import globs
 from ..type_annotations import Diffuse, MatDict, MatDictItem
-from .images import get_image, get_packed_file
+from .images import get_image, get_image_pack_issue, get_packed_file
 from .textures import get_texture
 
 # Color space conversion constants (sRGB)
@@ -399,6 +399,80 @@ def get_alpha_texture(
     image_node, output_name = image_info
     packed_file = get_packed_file(image_node.image)
     return (packed_file, output_name) if packed_file else None
+
+
+def get_alpha_texture_image(
+    mat: bpy.types.Material,
+) -> Optional[bpy.types.Image]:
+    """Return the image connected to Principled BSDF Alpha, if any."""
+    image_info = _get_alpha_texture_image_info(mat)
+    if not image_info:
+        return None
+
+    image_node, _output_name = image_info
+    return image_node.image
+
+
+def get_alpha_texture_issue(
+    mat: bpy.types.Material, validate_pack: bool = False
+) -> Optional[str]:
+    """Return why a linked alpha texture cannot be used, if applicable."""
+    alpha_socket = _get_alpha_socket(mat)
+    if not alpha_socket or not alpha_socket.links:
+        return None
+
+    image_info = _get_alpha_texture_image_info(mat)
+    if not image_info:
+        return "Alpha 输入已连接，但没有找到可读取的 Image Texture。"
+
+    image_node, _output_name = image_info
+    pack_issue = get_image_pack_issue(image_node.image)
+    if pack_issue:
+        return "Alpha 贴图 '{}' 无法打包：{}".format(
+            image_node.image.name, pack_issue
+        )
+
+    if validate_pack and not get_packed_file(image_node.image):
+        return "Alpha 贴图 '{}' 打包失败。".format(image_node.image.name)
+
+    return None
+
+
+def _get_alpha_socket(
+    mat: bpy.types.Material,
+) -> Optional[bpy.types.NodeSocket]:
+    """Return the supported shader alpha socket, if present."""
+    if not mat.node_tree or not mat.node_tree.nodes:
+        return None
+
+    shader_type = get_shader_type(mat)
+    if not shader_type or "principled" not in shader_type:
+        return None
+
+    shader_node = next(
+        (
+            node
+            for node in mat.node_tree.nodes
+            if node.bl_idname == "ShaderNodeBsdfPrincipled"
+        ),
+        None,
+    )
+    if not shader_node or "Alpha" not in shader_node.inputs:
+        return None
+
+    return shader_node.inputs["Alpha"]
+
+
+def _get_alpha_texture_image_info(
+    mat: bpy.types.Material,
+) -> Optional[Tuple[bpy.types.Node, str]]:
+    """Return the image node connected to the supported alpha socket."""
+    alpha_socket = _get_alpha_socket(mat)
+    if not alpha_socket or not alpha_socket.links:
+        return None
+
+    return _check_socket_for_image_with_output(alpha_socket)
+
 
 
 def sort_materials(

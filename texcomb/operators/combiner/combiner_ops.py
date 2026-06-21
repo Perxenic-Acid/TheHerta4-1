@@ -46,6 +46,7 @@ from ...type_annotations import (
 from ...utils.images import get_image, get_image_pack_issue, get_packed_file
 from ...utils.materials import (
     get_alpha_texture,
+    get_alpha_texture_issue,
     get_diffuse,
     get_gfx_textures,
     get_image_from_material,
@@ -250,6 +251,7 @@ def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
                 "normal_map": None,
                 "emission": None,
                 "alpha": None,
+                "alpha_diagnostic": "",
                 "diagnostic": "",
             },
             "dup": [],
@@ -297,6 +299,9 @@ def get_size(scn: Scene, data: Structure) -> Dict:
         img = _get_image(mat)
         packed_file = get_packed_file(img)
         item["gfx"]["diagnostic"] = ""
+        item["gfx"]["alpha_diagnostic"] = (
+            get_alpha_texture_issue(mat, validate_pack=True) or ""
+        )
         max_x, max_y = _get_max_uv_coordinates(item["uv"])
         item["gfx"]["uv_size"] = (np.clip(max_x, 1, 25), np.clip(max_y, 1, 25))
 
@@ -327,6 +332,13 @@ def collect_texture_diagnostics(data: Structure) -> List[str]:
         diagnostic = item["gfx"].get("diagnostic")
         if diagnostic:
             messages.append(diagnostic)
+        alpha_diagnostic = item["gfx"].get("alpha_diagnostic")
+        if alpha_diagnostic:
+            messages.append(
+                "材质 '{}' 的 Alpha 未参与合并：{}".format(
+                    mat.name, alpha_diagnostic
+                )
+            )
     return messages
 
 
@@ -716,17 +728,20 @@ def _apply_alpha_texture(
         return img
 
     packed_file, output_name = alpha_texture
-    source_img = Image.open(io.BytesIO(packed_file.data)).convert("RGBA")
-    alpha_img = (
-        source_img.getchannel("A")
-        if output_name == "Alpha"
-        else source_img.convert("L")
-    )
-    if alpha_img.size != size:
-        alpha_img = alpha_img.resize(size, resampling)
-    if max(item["gfx"]["uv_size"], default=0) > 1:
-        alpha_img = _get_uv_image(item, alpha_img, size)
-    img.putalpha(alpha_img)
+    try:
+        source_img = Image.open(io.BytesIO(packed_file.data)).convert("RGBA")
+        alpha_img = (
+            source_img.getchannel("A")
+            if output_name == "Alpha"
+            else source_img.convert("L")
+        )
+        if alpha_img.size != size:
+            alpha_img = alpha_img.resize(size, resampling)
+        if max(item["gfx"]["uv_size"], default=0) > 1:
+            alpha_img = _get_uv_image(item, alpha_img, size)
+        img.putalpha(alpha_img)
+    except Exception as e:
+        item["gfx"]["alpha_diagnostic"] = "Alpha 贴图应用失败: {}".format(e)
     return img
 
 
