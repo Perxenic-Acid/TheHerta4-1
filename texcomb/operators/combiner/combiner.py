@@ -22,6 +22,7 @@ from .combiner_ops import (
     calculate_adjusted_size,
     clear_empty_mats,
     clear_mats,
+    collect_texture_diagnostics,
     get_atlas,
     get_atlas_size,
     get_comb_mats,
@@ -95,9 +96,9 @@ class Combiner(bpy.types.Operator):
             return self._return_with_message("ERROR", "未选择保存目录")
 
         scn.smc_save_path = self.directory
-        self.structure = pack(
-            get_size(scn, self.structure), scn.smc_packer_type
-        )
+        sized_structure = get_size(scn, self.structure)
+        self._report_texture_diagnostics(sized_structure)
+        self.structure = pack(sized_structure, scn.smc_packer_type)
 
         size = get_atlas_size(self.structure)
         atlas_size = calculate_adjusted_size(scn, size)
@@ -215,3 +216,21 @@ class Combiner(bpy.types.Operator):
         bpy.ops.smc.refresh_ob_data()
         self.report({message_type}, message)
         return {"FINISHED"}
+
+    def _report_texture_diagnostics(self, structure) -> None:
+        """Report materials that will fall back to color-only output."""
+        diagnostics = collect_texture_diagnostics(structure)
+        if not diagnostics:
+            return
+
+        for message in diagnostics[:5]:
+            self.report({"WARNING"}, message)
+
+        remaining = len(diagnostics) - 5
+        if remaining > 0:
+            self.report(
+                {"WARNING"},
+                "还有 {} 个材质会按纯色处理，请在材质设置中查看详情。".format(
+                    remaining
+                ),
+            )

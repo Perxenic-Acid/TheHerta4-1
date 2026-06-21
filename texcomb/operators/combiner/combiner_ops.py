@@ -43,7 +43,7 @@ from ...type_annotations import (
     Structure,
     StructureItem,
 )
-from ...utils.images import get_image, get_packed_file
+from ...utils.images import get_image, get_image_pack_issue, get_packed_file
 from ...utils.materials import (
     get_alpha_texture,
     get_diffuse,
@@ -250,6 +250,7 @@ def get_structure(scn: Scene, data: SMCObData, mats_uv: MatsUV) -> Structure:
                 "normal_map": None,
                 "emission": None,
                 "alpha": None,
+                "diagnostic": "",
             },
             "dup": [],
             "ob": [],
@@ -295,6 +296,7 @@ def get_size(scn: Scene, data: Structure) -> Dict:
     for mat, item in data.items():
         img = _get_image(mat)
         packed_file = get_packed_file(img)
+        item["gfx"]["diagnostic"] = ""
         max_x, max_y = _get_max_uv_coordinates(item["uv"])
         item["gfx"]["uv_size"] = (np.clip(max_x, 1, 25), np.clip(max_y, 1, 25))
 
@@ -310,11 +312,42 @@ def get_size(scn: Scene, data: Structure) -> Dict:
             )
         else:
             item["gfx"]["size"] = (scn.smc_diffuse_size + scn.smc_gaps,) * 2
+            item["gfx"]["diagnostic"] = _get_texture_fallback_message(mat, img)
 
         if scn.smc_uniform_size:
             item["gfx"]["size"] = (scn.smc_uniform_size_value,) * 2
 
     return OrderedDict(sorted(data.items(), key=_size_sorting, reverse=True))
+
+
+def collect_texture_diagnostics(data: Structure) -> List[str]:
+    """Collect texture fallback diagnostics from prepared material data."""
+    messages = []
+    for mat, item in data.items():
+        diagnostic = item["gfx"].get("diagnostic")
+        if diagnostic:
+            messages.append(diagnostic)
+    return messages
+
+
+def _get_texture_fallback_message(
+    mat: bpy.types.Material, img: Optional[bpy.types.Image]
+) -> str:
+    """Explain why a material will be treated as color-only."""
+    if not img:
+        return (
+            "材质 '{}' 未找到连接到当前输出的主贴图，将按纯色材质处理。"
+        ).format(mat.name)
+
+    pack_issue = get_image_pack_issue(img)
+    if pack_issue:
+        return "材质 '{}' 的贴图 '{}' 无法打包，将按纯色处理：{}".format(
+            mat.name, img.name, pack_issue
+        )
+
+    return "材质 '{}' 的贴图 '{}' 打包失败，将按纯色材质处理。".format(
+        mat.name, img.name
+    )
 
 
 def _size_sorting(

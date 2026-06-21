@@ -18,6 +18,8 @@ from .globs import (
     CombineListTypes,
     is_blender_modern,
 )
+from .utils.images import get_image_pack_issue
+from .utils.materials import get_image_from_material
 
 
 class SMC_UL_Combine_List(bpy.types.UIList):
@@ -139,6 +141,7 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         preview_id = self._get_material_preview_id(item)
         row.label(text="", icon_value=preview_id)
         row.prop(item.mat, "name", text="", emboss=False)
+        self._draw_texture_status(row, item)
 
         self._draw_layer_control(row, item)
         self._draw_settings_control(row, index)
@@ -174,6 +177,21 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         col = layout.column(align=True)
         col.scale_x = 0.4
         col.prop(item, "layer", text="")
+
+    @staticmethod
+    def _draw_texture_status(layout: bpy.types.UILayout, item: Any) -> None:
+        """Render a compact texture status label for material rows."""
+        image = get_image_from_material(item.mat)
+        if not image:
+            layout.label(text="无主贴图", icon="ERROR")
+            return
+
+        if get_image_pack_issue(image):
+            layout.label(text="贴图异常", icon="ERROR")
+            return
+
+        if item.mat.smc_size:
+            layout.label(text="尺寸限制", icon="INFO")
 
     @staticmethod
     def _draw_toggle_control(

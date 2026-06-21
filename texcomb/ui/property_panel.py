@@ -11,6 +11,7 @@ import bpy
 from bpy.props import IntProperty
 
 from .. import globs
+from ..utils.images import get_image_pack_issue
 from ..utils.materials import (
     get_image_from_material,
     get_shader_type,
@@ -92,6 +93,7 @@ class PropertyMenu(bpy.types.Operator):
         box_col = col.box().column()
         if image:
             self._show_image_size_row(box_col, image)
+            self._show_image_warnings(box_col, item.mat, image)
             box_col.separator()
             self._show_diffuse_color(box_col, item, image)
             box_col.separator()
@@ -99,6 +101,14 @@ class PropertyMenu(bpy.types.Operator):
         else:
             self._show_size_row(
                 box_col, "仅纯色", 0, (scn.smc_diffuse_size,) * 2
+            )
+            self._show_warning(
+                box_col,
+                "未找到连接到当前材质输出的主贴图，合并时会按纯色材质处理。",
+            )
+            self._show_warning(
+                box_col,
+                "请检查 Image Texture 是否连接到 Base Color/Color，且 Material Output 是否为当前输出。",
             )
             box_col.separator()
             self._show_diffuse_color(box_col, item)
@@ -181,6 +191,40 @@ class PropertyMenu(bpy.types.Operator):
         size_col = row.column(align=True)
         size_col.alignment = "RIGHT"
         size_col.label(text="尺寸: {}x{}px".format(*size))
+
+    def _show_image_warnings(
+        self,
+        col: bpy.types.UILayout,
+        mat: bpy.types.Material,
+        image: bpy.types.Image,
+    ) -> None:
+        """Show warnings for images that will not be used at their raw size."""
+        pack_issue = get_image_pack_issue(image)
+        if pack_issue:
+            self._show_warning(
+                col,
+                "贴图无法读取/打包，合并时会按纯色材质处理。",
+            )
+            self._show_warning(col, pack_issue)
+
+        if mat.smc_size:
+            limited_size = (
+                min(mat.smc_size_width, image.size[0]),
+                min(mat.smc_size_height, image.size[1]),
+            )
+            if limited_size != tuple(image.size):
+                self._show_warning(
+                    col,
+                    "已启用材质自定义尺寸，合并时会限制为 {}x{}px。".format(
+                        *limited_size
+                    ),
+                )
+
+    @staticmethod
+    def _show_warning(col: bpy.types.UILayout, text: str) -> None:
+        """Display a concise warning label."""
+        warning_col = col.column(align=True)
+        warning_col.label(text=text, icon="ERROR")
 
     def _show_diffuse_color(
         self,

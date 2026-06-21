@@ -36,8 +36,33 @@ def get_packed_file(
         The image's packed file data or None if unavailable.
     """
     if image and not image.packed_file and _get_image_path(image):
-        image.pack()
+        try:
+            image.pack()
+        except RuntimeError:
+            return None
     return image.packed_file if image and image.packed_file else None
+
+
+def get_image_pack_issue(image: Optional[bpy.types.Image]) -> Optional[str]:
+    """Return why an image cannot provide packed pixel data, if known."""
+    if not image:
+        return "未找到连接到当前材质输出的主贴图。"
+
+    if image.packed_file:
+        return None
+
+    filepath = getattr(image, "filepath", "")
+    if not filepath:
+        return "贴图没有文件路径，可能是未保存或运行时生成的图像。"
+
+    path = os.path.abspath(bpy.path.abspath(filepath))
+    if path.lower().endswith((".spa", ".sph")):
+        return "当前贴图格式不参与打包: {}".format(os.path.basename(path))
+
+    if not os.path.isfile(path):
+        return "贴图文件不存在或路径不可访问: {}".format(path)
+
+    return None
 
 
 def _get_image_path(img: Optional[bpy.types.Image]) -> Optional[str]:
