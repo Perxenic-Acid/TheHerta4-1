@@ -32,6 +32,7 @@ _TRANSLATIONS_ZH_TO_EN_BASE = {
     "形态键名称": "Shape Key Name",
     "按键": "Key",
     "按键名称": "Key Name",
+    "变量别名": "Variable Alias",
     "名称": "Name",
     "备注": "Comment",
     "输出": "Output",

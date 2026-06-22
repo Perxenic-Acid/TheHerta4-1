@@ -1,6 +1,7 @@
 ﻿
 import bpy
 import copy
+import re
 
 from ..utils.log_utils import LOG
 from ..utils.vertexgroup_utils import VertexGroupUtils
@@ -18,6 +19,7 @@ from ..blueprint.blueprint_node_obj import SSMTNode_Object_Group, SSMTNode_Switc
 
 class BluePrintModel:
 
+    _KEY_ALIAS_PATTERN = re.compile(r"^[A-Za-z0-9]+$")
     
     def __init__(self, tree=None, context=None):
         # 全局按键名称和按键属性字典
@@ -41,6 +43,32 @@ class BluePrintModel:
 
         print("BluePrintModel: 输出节点连接的节点数量: " + str(len(BlueprintExportHelper.get_connected_nodes(output_node))))
         self.parse_current_node(output_node, [])
+
+    @classmethod
+    def _normalize_switch_key_alias(cls, switch_node: bpy.types.Node) -> str:
+        alias = str(getattr(switch_node, "key_alias", "") or "").strip()
+        if alias == "":
+            return ""
+        if cls._KEY_ALIAS_PATTERN.fullmatch(alias) is None:
+            raise ValueError("按键切换节点的变量别名只能包含英文字母和数字: " + alias)
+        return "$" + alias
+
+    def _allocate_switch_key_name(self, switch_node: bpy.types.Node) -> tuple[str, bool]:
+        key_alias = self._normalize_switch_key_alias(switch_node)
+        if key_alias:
+            key_name = key_alias
+            if key_name in self.keyname_mkey_dict:
+                raise ValueError("按键切换节点的变量名重复: " + key_name)
+            return key_name, False
+
+        key_name = "$swapkey" + str(GlobalConfig.global_key_index)
+        while key_name in self.keyname_mkey_dict:
+            GlobalConfig.global_key_index = GlobalConfig.global_key_index + 1
+            key_name = "$swapkey" + str(GlobalConfig.global_key_index)
+
+        if key_name in self.keyname_mkey_dict:
+            raise ValueError("按键切换节点的变量名重复: " + key_name)
+        return key_name, True
 
     def parse_current_node(self, current_node:bpy.types.Node, chain_key_list:list[M_Key]):
         for unknown_node in BlueprintExportHelper.get_connected_nodes(current_node):
@@ -93,7 +121,7 @@ class BluePrintModel:
                 # 如果有 > 1 个有效分支端口，则必须创建 Key，哪怕某些端口是空的（代表空分支）
                 m_key = M_Key()
                 current_add_key_index = len(self.keyname_mkey_dict.keys())
-                m_key.key_name = "$swapkey" + str(GlobalConfig.global_key_index)
+                m_key.key_name, uses_auto_key_name = self._allocate_switch_key_name(unknown_node)
 
                 # 值列表就是分支索引的列表 [0, 1, 2, ...]
                 m_key.value_list = list(range(len(valid_input_sockets)))
@@ -108,7 +136,7 @@ class BluePrintModel:
                 self.keyname_mkey_dict[m_key.key_name] = m_key
 
                 # 更新全局key索引
-                if len(self.keyname_mkey_dict.keys()) > current_add_key_index:
+                if uses_auto_key_name and len(self.keyname_mkey_dict.keys()) > current_add_key_index:
                     GlobalConfig.global_key_index = GlobalConfig.global_key_index + 1
 
                 # 逐个处理每个分支节点（包括空分支）

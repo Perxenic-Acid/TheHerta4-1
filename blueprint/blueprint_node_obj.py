@@ -482,12 +482,23 @@ class SSMTNode_SwitchKey(SSMTNodeBase):
     bl_icon = 'GROUP'
 
     def update_key_name(self, context):
-        self.update_node_width([self.key_name, self.comment])
+        self.update_node_width([self.key_name, self.key_alias, self.comment])
+
+    def update_key_alias(self, context):
+        sanitized_alias = "".join(
+            char for char in str(self.key_alias or "")
+            if char.isascii() and char.isalnum()
+        )
+        if self.key_alias != sanitized_alias:
+            self.key_alias = sanitized_alias
+            return
+        self.update_node_width([self.key_name, self.key_alias, self.comment])
     
     def update_comment(self, context):
-        self.update_node_width([self.key_name, self.comment])
+        self.update_node_width([self.key_name, self.key_alias, self.comment])
     
     key_name: bpy.props.StringProperty(name="按键名称", default="", update=update_key_name) # type: ignore
+    key_alias: bpy.props.StringProperty(name="变量别名", description="只允许英文字母和数字，用于生成 ini 变量名", default="", update=update_key_alias) # type: ignore
     comment: bpy.props.StringProperty(name="备注", description="备注信息，会以注释形式生成到配置表中", default="", update=update_comment) # type: ignore
     
     def init(self, context):
@@ -503,6 +514,7 @@ class SSMTNode_SwitchKey(SSMTNodeBase):
         row.prop(self, "key_name", text=iface_("按键"))
         row.operator("wm.url_open", text="", icon='HELP').url = "https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes"
         
+        layout.prop(self, "key_alias", text=iface_("变量别名"))
         layout.prop(self, "comment", text=iface_("备注"))
         
         row = layout.row(align=True)
