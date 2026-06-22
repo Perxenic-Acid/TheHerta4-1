@@ -3,6 +3,7 @@ from .draw_call_model import DrawCallModel
 
 from ..utils.export_utils import ExportUtils
 from ..utils.obj_utils import ObjUtils
+from ..utils.shapekey_utils import ShapeKeyUtils
 from ..utils.collection_utils import CollectionUtils
 from ..utils.json_utils import JsonUtils
 from ..common.global_config import LogicName
@@ -126,6 +127,7 @@ class SubMeshModel:
                 name=source_obj.name + "_temp",
                 collection= temp_collection
             )
+            ShapeKeyUtils.reset_all_shapekey_values(temp_obj)
 
             self._normalize_temp_obj_for_export(temp_obj)
 

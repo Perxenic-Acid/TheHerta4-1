@@ -508,3 +508,15 @@ class ShapeKeyUtils:
                     # 如果不是当前正在处理的形态键，则归零
                     if key_block.name != current_shapekey_name:
                         key_block.value = 0.0
+
+    @staticmethod
+    def reset_all_shapekey_values(obj):
+        if not obj or getattr(obj, "type", None) != 'MESH':
+            return
+
+        shape_keys = getattr(getattr(obj, "data", None), "shape_keys", None)
+        if not shape_keys:
+            return
+
+        for key_block in shape_keys.key_blocks:
+            key_block.value = 0.0

@@ -75,7 +75,7 @@ class ExportUtils:
     ) -> ObjElementContext:
         resolved_obj = obj or ObjUtils.get_obj_by_name(name=obj_name)
 
-        ShapeKeyUtils.reset_shapekey_values(resolved_obj)
+        ShapeKeyUtils.reset_all_shapekey_values(resolved_obj)
 
         mesh = ObjUtils.get_mesh_evaluate_from_obj(obj=resolved_obj)
         if len(mesh.polygons) > 0:
@@ -238,7 +238,7 @@ class ExportUtils:
                     d3d11_game_type=d3d11_game_type,
                 )
         finally:
-            ShapeKeyUtils.reset_shapekey_values(obj)
+            ShapeKeyUtils.reset_all_shapekey_values(obj)
             TimerUtils.End(f"Processing {len(shape_keys)} ShapeKeys for {obj.name}")
 
         return shape_key_buffer_dict
@@ -394,7 +394,7 @@ class ExportUtils:
                 if vector_parts:
                     shape_key_category_buffer_dict[shapekey.name]["Vector"] = numpy.concatenate(vector_parts, axis=1).reshape(-1)
         finally:
-            ShapeKeyUtils.reset_shapekey_values(obj)
+            ShapeKeyUtils.reset_all_shapekey_values(obj)
 
         return shape_key_category_buffer_dict
 

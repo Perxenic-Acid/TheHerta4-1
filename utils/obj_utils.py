@@ -585,7 +585,7 @@ class ObjUtils:
             shape_key_values[kb.name] = kb.value
         
         from .shapekey_utils import ShapeKeyUtils
-        ShapeKeyUtils.reset_shapekey_values(obj)
+        ShapeKeyUtils.reset_all_shapekey_values(obj)
         
         modifier_names = [mod.name for mod in obj.modifiers]
         if modifier_names:
