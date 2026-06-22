@@ -52,6 +52,7 @@
 | ⚡ **Honkai Impact 3rd** | `HIMI` | Unity |
 | 🌌 **Honkai: Star Rail** | `SRMI` | Unity |
 | 🌃 **Zenless Zone Zero** | `ZZMI` | Unity |
+| 🌃 **Zenless Zone Zero DX12** | `ZZMIDX12` | Unity |
 | 🌊 **Wuthering Waves** | `WWMI` | Unreal |
 | �️ **Arknights: Endfield** (明日方舟终末地) | `EFMI` | Unity |
 

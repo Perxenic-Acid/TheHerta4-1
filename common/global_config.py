@@ -25,6 +25,7 @@ class LogicName:
     HIMI = "HIMI"
     SRMI = "SRMI"
     ZZMI = "ZZMI"
+    ZZMIDX12 = "ZZMIDX12"
     WWMI = "WWMI"
     EFMI = "EFMI"
 
@@ -46,6 +47,10 @@ class LogicName:
     # 预留位置
     APMI = "APMI" # 还在内测的蓝色星原，已在测试服中测试过，完美支持3Dmigoto，预计发布就会被XXMI收录
     NEMI = "NEMI" # 还在内测的异环，已在测试服中测试过，完美支持3Dmigoto，预计发布就会被XXMI收录
+
+    @classmethod
+    def is_zzmi_family(cls, logic_name: str) -> bool:
+        return logic_name in {cls.ZZMI, cls.ZZMIDX12}
 
 
 # 全局配置类，使用字段默认为全局可访问的唯一静态变量的特性，来实现全局变量

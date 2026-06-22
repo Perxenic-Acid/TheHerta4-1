@@ -219,7 +219,7 @@ class MeshCreateHelper:
             obj.scale = (0.01, 0.01, 0.01)
 
         print("导入模型完成: " + logic_name)
-        if logic_name == LogicName.ZZMI or logic_name == LogicName.Naraka:
+        if LogicName.is_zzmi_family(logic_name) or logic_name == LogicName.Naraka:
             obj.rotation_euler[0] = 0
             obj.rotation_euler[1] = 0
             obj.rotation_euler[2] = 0
@@ -707,7 +707,7 @@ class MeshCreateHelper:
             MeshCreateHelper.create_identity_v_normal_map(node_tree, bsdf, normal_path)
             return
 
-        if logic_name != LogicName.ZZMI and logic_name != LogicName.GIMI:
+        if not LogicName.is_zzmi_family(logic_name) and logic_name != LogicName.GIMI:
             MeshCreateHelper.create_standard_normal_map(node_tree, bsdf, normal_path)
             return
 

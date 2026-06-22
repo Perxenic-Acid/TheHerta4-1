@@ -109,3 +109,4 @@ class ExportZZMI(ExportUnity):
 
 
 ModModelZZMI = ExportZZMI
+ModModelZZMIDX12 = ExportZZMI

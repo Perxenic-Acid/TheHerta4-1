@@ -73,7 +73,7 @@ def generate_mod_from_tree(tree, context, report_callback):
     elif GlobalConfig.logic_name == LogicName.SRMI:
         export_srmi = ExportSRMI(blueprint_model=blueprint_model)
         export_srmi.export()
-    elif GlobalConfig.logic_name == LogicName.ZZMI:
+    elif LogicName.is_zzmi_family(GlobalConfig.logic_name):
         export_zzmi = ExportZZMI(blueprint_model=blueprint_model)
         export_zzmi.export()
     elif GlobalConfig.logic_name == LogicName.WWMI:
