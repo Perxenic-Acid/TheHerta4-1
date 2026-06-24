@@ -19,6 +19,7 @@ from ..games.wwmi import ExportWWMI
 from ..games.ntemi import ExportNTEMI
 from ..games.yysls import ExportYYSLS
 from ..games.zzmi import ExportZZMI
+from ..games.zzmidx12 import ExportZZMIDX12
 
 from ..model.blueprint_model import BluePrintModel
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
@@ -73,7 +74,10 @@ def generate_mod_from_tree(tree, context, report_callback):
     elif GlobalConfig.logic_name == LogicName.SRMI:
         export_srmi = ExportSRMI(blueprint_model=blueprint_model)
         export_srmi.export()
-    elif LogicName.is_zzmi_family(GlobalConfig.logic_name):
+    elif GlobalConfig.logic_name == LogicName.ZZMIDX12:
+        export_zzmidx12 = ExportZZMIDX12(blueprint_model=blueprint_model)
+        export_zzmidx12.export()
+    elif GlobalConfig.logic_name == LogicName.ZZMI:
         export_zzmi = ExportZZMI(blueprint_model=blueprint_model)
         export_zzmi.export()
     elif GlobalConfig.logic_name == LogicName.WWMI:

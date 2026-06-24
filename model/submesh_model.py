@@ -28,6 +28,8 @@ class SubMeshModel:
     match_draw_ib:str = field(init=False, default="")
     match_first_index:int = field(init=False, default=-1)
     match_index_count:int = field(init=False, default=-1)
+    match_cs:str = field(init=False, default="")
+    match_uav_bytes:int = field(init=False, default=0)
     submesh_name:str = field(init=False, default="")
 
     # 调用组合obj并计算ib和vb得到这些属性
@@ -104,6 +106,8 @@ class SubMeshModel:
 
         submesh_json_path = SSMTWorkSpace.check_and_get_submesh_json_path(self.submesh_name)
         submesh_json = SubmeshJson(submesh_json_path)
+        self.match_cs = submesh_json.MatchCS
+        self.match_uav_bytes = submesh_json.MatchUAVBytes
         self.d3d11_game_type = D3D11GameType.from_submesh_json_dict(
             submesh_json.JsonDict, submesh_json_path
         )
