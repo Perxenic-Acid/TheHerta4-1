@@ -1,4 +1,5 @@
-﻿import os
+﻿import math
+import os
 
 from ..common.global_config import GlobalConfig
 from ..common.global_properties import GlobalProperties
@@ -37,40 +38,48 @@ class ExportZZMIDX12:
 
         texture_override_vb_section = M_IniSection(M_SectionType.TextureOverrideVB)
         texture_override_vb_section.append("; " + draw_ib)
+
+        match_cs = self.get_blend_match_cs(drawib_model)
+        draw_number = drawib_model.draw_number
+        vb_idx = 1
+
         for category_name in d3d11_game_type.OrderedCategoryNameList:
             category_hash = drawib_model.category_hash_dict.get(category_name, "")
             texture_override_vb_name_suffix = "VB_" + draw_ib + "_" + drawib_model.draw_ib_alias + "_" + category_name
             texture_override_vb_section.append("[TextureOverride_" + texture_override_vb_name_suffix + "]")
             texture_override_vb_section.append("hash = " + category_hash)
 
-            for original_category_name, draw_category_name in d3d11_game_type.CategoryDrawCategoryDict.items():
-                if category_name != draw_category_name:
-                    continue
-                category_original_slot = d3d11_game_type.CategoryExtractSlotDict[original_category_name]
-                texture_override_vb_section.append(category_original_slot + " = Resource" + draw_ib + original_category_name)
-            
-            # ZZMI DX12
-            # For Blend category,we add 
-            # match_cs = 93db774c5ca9a3ea
-            # match_uav_bytes = 628600
-            # read from SubmeshJson
-            draw_category_name = d3d11_game_type.CategoryDrawCategoryDict.get("Blend", None)
-            if draw_category_name is not None and category_name == draw_category_name:
-                match_cs = self.get_blend_match_cs(drawib_model)
-                match_uav_bytes = self.get_blend_match_uav_bytes(drawib_model)
+            if category_name == "Position":
+                # DX12: Position section is the compute shader dispatch hub
                 if match_cs:
-                    texture_override_vb_section.append("match_cs = " + match_cs)
-                if match_uav_bytes > 0:
-                    texture_override_vb_section.append("match_uav_bytes = " + str(match_uav_bytes))
+                    texture_override_vb_section.append("cs_hash = " + match_cs)
+                # match_cs_tN_hash = hash of the Nth non-Blend VB category
+                non_blend_categories = [c for c in d3d11_game_type.OrderedCategoryNameList if c != "Blend"]
+                for i, nb_cat in enumerate(non_blend_categories):
+                    nb_hash = drawib_model.category_hash_dict.get(nb_cat, "")
+                    texture_override_vb_section.append("match_cs_t" + str(i) + "_hash = " + nb_hash)
+                texture_override_vb_section.append("cs-t0 = Resource" + draw_ib + "Position")
+                if "Blend" in d3d11_game_type.OrderedCategoryNameList:
+                    texture_override_vb_section.append("cs-t2 = Resource" + draw_ib + "Blend")
                 texture_override_vb_section.append("handling = skip")
-                texture_override_vb_section.append("draw = " + str(drawib_model.draw_number) + ", 0")
+                texture_override_vb_section.append("dispatch = " + str(math.ceil(draw_number / 64)) + ",1,1")
 
-
-            if category_name == d3d11_game_type.CategoryDrawCategoryDict["Position"]:
                 if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
                     texture_override_vb_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
                     if GlobalProperties.generate_branch_mod_gui():
                         texture_override_vb_section.append("$ActiveCharacter = 1")
+
+            elif category_name == "Blend":
+                # DX12: Blend already bound via Position's cs-t2, hash-only section
+                pass
+
+            else:
+                # DX12: non-Position, non-Blend categories use vb<N> bindings
+                for original_category_name, draw_category_name in d3d11_game_type.CategoryDrawCategoryDict.items():
+                    if category_name != draw_category_name:
+                        continue
+                    texture_override_vb_section.append("vb" + str(vb_idx) + " = Resource" + draw_ib + original_category_name)
+                vb_idx += 1
 
             texture_override_vb_section.new_line()
 
