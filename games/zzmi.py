@@ -53,6 +53,12 @@ class ExportZZMI:
                 texture_override_vb_section.append("[TextureOverride_" + texture_override_vb_name_suffix + "]")
                 texture_override_vb_section.append("hash = " + category_hash)
                 texture_override_vb_section.append("handling = skip")
+
+                # 无条件激活按键变量，否则部分情况下可能会不生效
+                if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
+                    texture_override_vb_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
+                    if GlobalProperties.generate_branch_mod_gui():
+                        texture_override_vb_section.append("$ActiveCharacter = 1")
                 texture_override_vb_section.append("if DRAW_TYPE == 2 || DRAW_TYPE == 4")
 
                 texcoord_category_slot = d3d11_game_type.CategoryExtractSlotDict["Texcoord"]
@@ -68,10 +74,7 @@ class ExportZZMI:
                 texture_override_vb_section.append("  " + category_slot + " = Resource" + draw_ib + category_name)
                 texture_override_vb_section.append("  " + "draw = " + str(drawib_model.draw_number) + ", 0")
 
-                if len(self.blueprint_model.keyname_mkey_dict.keys()) != 0:
-                    texture_override_vb_section.append("$active" + str(GlobalConfig.generated_mod_number) + " = 1")
-                    if GlobalProperties.generate_branch_mod_gui():
-                        texture_override_vb_section.append("$ActiveCharacter = 1")
+
 
                 texture_override_vb_section.append("endif")
                 texture_override_vb_section.new_line()
