@@ -19,6 +19,7 @@ from .blueprint import blueprint_node_shapekey
 from .blueprint import blueprint_node_panel
 
 from .blueprint import blueprint_node_texture
+from .blueprint import blueprint_file_drop
 
 from .ui import ui_func_export
 
@@ -156,6 +157,7 @@ def _register_steps():
     yield blueprint_node_panel.register
 
     yield blueprint_node_texture.register
+    yield blueprint_file_drop.register
 
     # 贴图合并工具 (texcomb)
     yield texcomb.register
@@ -173,6 +175,7 @@ def unregister():
 
     steps = [
         texcomb.unregister,
+        blueprint_file_drop.unregister,
         blueprint_node_texture.unregister,
         blueprint_node_panel.unregister,
         blueprint_node_shapekey.unregister,
