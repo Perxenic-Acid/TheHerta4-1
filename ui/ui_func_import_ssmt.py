@@ -13,7 +13,7 @@ from bpy_extras.io_utils import ImportHelper
 from ..utils.json_utils import JsonUtils
 from ..utils.collection_utils import CollectionUtils, CollectionColor
 from ..utils.timer_utils import TimerUtils
-from ..utils.translate_utils import rpt_
+from ..utils.translate_utils import iface_, rpt_
 
 from ..common.global_config import GlobalConfig
 from ..common.m_texture_helper import M_TextureHelper
@@ -106,7 +106,6 @@ def _node_world_location(node):
 
 def _build_texture_nodes(
     tree,
-    group_node,
     oldfoldername_node_dict: dict,
     oldfoldername_jsonpath_dict: dict,
     oldfoldername_group_dict: dict,
@@ -122,11 +121,17 @@ def _build_texture_nodes(
     同一 Hash 的贴图对象复用同一个节点。
     贴图节点归属于"第一次使用它"（首个 Slot 标记）的 submesh 所在的分组 Frame；
     没有 Slot 标记的纯 Hash 贴图则归属于它第一个出现的分组 Frame。
+
+    Hash 风格的贴图会连到一个独立的 Hash 贴图分组节点（与物体分组并列）。
+
+    返回 (贴图节点列表, Hash 贴图分组节点)；
+    Hash 贴图分组节点按需懒创建，没有 Hash 贴图时为 None。
     """
     if group_frame_dict is None:
         group_frame_dict = {}
     if tex_home_group is None:
         tex_home_group = {}
+    hash_group_node = None
     texture_node_by_hash: dict[str, bpy.types.Node] = {}
     hash_linked_node_names: set[str] = set()
     slot_link_done: set[tuple] = set()
@@ -190,12 +195,15 @@ def _build_texture_nodes(
                 texture_node_by_hash[mark_hash] = tex_node
 
             if mark_type == 'Hash':
-                # Hash 风格：连接 Hash 出口到 Group，生成独立 [TextureOverride_<hash>] 段
+                # Hash 风格：连接 Hash 出口到独立的 Hash 贴图分组节点，生成独立 [TextureOverride_<hash>] 段
                 if tex_node.name in hash_linked_node_names:
                     continue
-                if group_node.inputs[-1].is_linked:
-                    group_node.inputs.new('SSMTSocketObject', f"Input {len(group_node.inputs) + 1}")
-                tree.links.new(tex_node.outputs["Hash"], group_node.inputs[-1])
+                if hash_group_node is None:
+                    hash_group_node = tree.nodes.new('SSMTNode_Object_Group')
+                    hash_group_node.label = "Hash Texture Group"
+                if hash_group_node.inputs[-1].is_linked:
+                    hash_group_node.inputs.new('SSMTSocketObject', iface_("输入 {count}").format(count=len(hash_group_node.inputs) + 1))
+                tree.links.new(tex_node.outputs["Hash"], hash_group_node.inputs[-1])
                 hash_linked_node_names.add(tex_node.name)
             else:
                 # Slot / SharedSlot 风格：连接 Slot 出口到对应 Object Info 节点的槽位
@@ -208,7 +216,16 @@ def _build_texture_nodes(
                 slot_link_done.add(link_key)
                 obj_info_node.link_texture_node(tex_node, _parse_mark_slot_index(mark_slot))
 
-    return list(texture_node_by_hash.values())
+    return list(texture_node_by_hash.values()), hash_group_node
+
+
+def _link_group_to_output(tree, group_node, output_node):
+    """把分组节点连到 Result_Output 的下一个空闲输入口，没有空闲口时先补充。"""
+    if group_node is None or len(group_node.outputs) == 0:
+        return
+    if len(output_node.inputs) == 0 or output_node.inputs[-1].is_linked:
+        output_node.inputs.new('SSMTSocketObject', iface_("组 {count}").format(count=len(output_node.inputs) + 1))
+    tree.links.new(group_node.outputs[0], output_node.inputs[-1])
 
 def _create_and_layout_obj_info_nodes(tree, group_node, foldername_imported_obj_dict, ws_model, oldfoldername_jsonpath_hint=None):
     """创建 Object Info 节点、连接到 Group，并按 Submesh 分组布局。
@@ -556,9 +573,8 @@ def ImprotFromWorkSpaceFull(self, context):
 
         # 3.5 根据各 Submesh 的贴图标记元数据自动创建并连接 Texture 节点
         # 只导入用户在 SSMT 中明确标记的贴图；风格由每条标记的 MarkType 决定
-        _build_texture_nodes(
+        _, hash_group_node = _build_texture_nodes(
             tree=tree,
-            group_node=group_node,
             oldfoldername_node_dict=oldfoldername_node_dict,
             oldfoldername_jsonpath_dict=oldfoldername_jsonpath_dict,
             oldfoldername_group_dict=oldfoldername_group_dict,
@@ -568,25 +584,33 @@ def ImprotFromWorkSpaceFull(self, context):
             tex_home_group=tex_home_group,
         )
 
-        # 4. 放置 Group 和 Output 节点
+        # 4. 放置 Group 和 Output 节点（Hash 贴图分组与物体分组并列排放）
         group_node.location = (max_node_right + 560.0, -200.0)
+        group_node.label = "网格体总组"
+        if hash_group_node is not None:
+            hash_group_node.location = (max_node_right + 560.0, -1000.0)
+            hash_group_node.label = "Hash 风格贴图总组"
 
         output_node = tree.nodes.new('SSMTNode_Result_Output')
         output_node.location = (max_node_right + 1040.0, -200.0)
         output_node.label = "Generate Mod"
         
-        # 连接 Group 到 Output
-        if len(output_node.inputs) > 0 and len(group_node.outputs) > 0:
-            tree.links.new(group_node.outputs[0], output_node.inputs[0])
+        # 两个并列的分组节点分别直接连到 Output
+        _link_group_to_output(tree, group_node, output_node)
+        _link_group_to_output(tree, hash_group_node, output_node)
 
         if hasattr(group_node, "update"):
             group_node.update()
+        if hash_group_node is not None and hasattr(hash_group_node, "update"):
+            hash_group_node.update()
 
         BlueprintExportHelper.set_runtime_blueprint_tree(tree)
 
         global_properties = getattr(getattr(context, "scene", None), "global_properties", None)
         if global_properties:
             global_properties.selected_blueprint_name = tree.name
+
+        BlueprintExportHelper.reveal_tree_in_node_editors(context, tree)
 
         print(f"Blueprint {tree_name} updated with imported objects.")
         
@@ -851,10 +875,10 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
             tree, group_node, foldername_imported_obj_dict, ws_model,
             oldfoldername_jsonpath_hint=oldfoldername_jsonpath_dict)
 
+        hash_group_node = None
         if oldfoldername_jsonpath_dict:
-            _build_texture_nodes(
+            _, hash_group_node = _build_texture_nodes(
                 tree=tree,
-                group_node=group_node,
                 oldfoldername_node_dict=oldfoldername_node_dict,
                 oldfoldername_jsonpath_dict=oldfoldername_jsonpath_dict,
                 oldfoldername_group_dict=oldfoldername_group_dict,
@@ -864,23 +888,30 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
                 tex_home_group=tex_home_group,
             )
 
+        # Hash 贴图分组与物体分组并列排放
         group_node.location = (max_node_right + 560.0, -200.0)
+        if hash_group_node is not None:
+            hash_group_node.location = (max_node_right + 560.0, 60.0)
 
         output_node = tree.nodes.new('SSMTNode_Result_Output')
         output_node.location = (max_node_right + 1040.0, -200.0)
         output_node.label = "Generate Mod"
 
-        if len(output_node.inputs) > 0 and len(group_node.outputs) > 0:
-            tree.links.new(group_node.outputs[0], output_node.inputs[0])
+        _link_group_to_output(tree, group_node, output_node)
+        _link_group_to_output(tree, hash_group_node, output_node)
 
         if hasattr(group_node, "update"):
             group_node.update()
+        if hash_group_node is not None and hasattr(hash_group_node, "update"):
+            hash_group_node.update()
 
         BlueprintExportHelper.set_runtime_blueprint_tree(tree)
 
         global_properties = getattr(getattr(context, "scene", None), "global_properties", None)
         if global_properties:
             global_properties.selected_blueprint_name = tree.name
+
+        BlueprintExportHelper.reveal_tree_in_node_editors(context, tree)
 
         print(f"Blueprint {tree_name} updated with imported objects.")
     except Exception as e:

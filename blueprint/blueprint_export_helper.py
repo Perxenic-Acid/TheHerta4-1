@@ -80,6 +80,34 @@ class BlueprintExportHelper:
             BlueprintExportHelper.runtime_blueprint_tree_name = tree.name
 
     @staticmethod
+    def reveal_tree_in_node_editors(context, tree):
+        '''让所有已打开的 SSMT 蓝图节点编辑器切换到指定的蓝图树。'''
+        if not BlueprintExportHelper._is_valid_blueprint_tree(tree):
+            return
+
+        window_manager = getattr(context, "window_manager", None) if context else None
+        if not window_manager:
+            window_manager = getattr(bpy.context, "window_manager", None)
+        if not window_manager:
+            return
+
+        for window in window_manager.windows:
+            for area in window.screen.areas:
+                if area.type != 'NODE_EDITOR':
+                    continue
+                switched = False
+                for space in area.spaces:
+                    if space.type != 'NODE_EDITOR':
+                        continue
+                    if getattr(space, "tree_type", '') != 'SSMTBlueprintTreeType':
+                        continue
+                    if getattr(space, "node_tree", None) != tree:
+                        space.node_tree = tree
+                    switched = True
+                if switched:
+                    area.tag_redraw()
+
+    @staticmethod
     def _get_blueprint_tree_from_context(context):
         if not context:
             return None
