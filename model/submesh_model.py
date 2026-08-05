@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass, field
+from dataclasses import dataclass, field
 from .draw_call_model import DrawCallModel
 
 from ..utils.export_utils import ExportUtils
@@ -49,6 +49,24 @@ class SubMeshModel:
     index_vertex_id_dict:dict = field(init=False,repr=False,default_factory=dict)
     shape_key_buffer_dict:dict = field(init=False,repr=False,default_factory=dict)
     ntemi_bone_palette:list = field(init=False,repr=False,default_factory=list)
+
+    def get_slot_texture_node_list(self) -> list[tuple]:
+        """聚合该 SubMesh 下所有 DrawCallModel 的 slot texture 节点。
+
+        返回列表元素为 (slot_item, texture_node)，其中 slot_item 是
+        SSMTTextureSlotItem 的引用，可通过 effective_slot_key 获取生成键名。
+        """
+        result = []
+        seen = set()
+        for drawcall_model in self.drawcall_model_list:
+            for slot_item, texture_node in getattr(drawcall_model, "slot_texture_node_list", []):
+                key = (id(slot_item), id(texture_node))
+                if key in seen:
+                    continue
+                seen.add(key)
+                result.append((slot_item, texture_node))
+        return result
+
 
     def __post_init__(self):
 

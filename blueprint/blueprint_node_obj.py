@@ -310,6 +310,54 @@ def draw_view3d_header(self, context):
         self.layout.label(text=iface_("请在3D视图中点击选择一个物体..."), icon='EYEDROPPER')
 
 
+class SSMTTextureSlotItem(bpy.types.PropertyGroup):
+    """Object Info 节点上每个 texture slot 输入的配置项"""
+    slot_index: bpy.props.IntProperty(
+        name="Slot Index",
+        description="贴图槽位编号",
+        default=0,
+        min=0,
+        max=127,
+    )  # type: ignore
+
+    # 槽位输出类型：默认 ps-t，也支持工具包管理形态（如 ZZMI）或自定义。
+    slot_type: bpy.props.EnumProperty(
+        name="Slot Type",
+        description="该槽位在生成 INI 时使用的键名形态",
+        items=[
+            ('PS_T', 'ps-t', '普通 3Dmigoto 像素着色器槽位（ps-t0, ps-t1...）'),
+            ('ZZMI_DIFFUSE', 'ZZMI Diffuse', 'Resource\\ZZMI\\Diffuse'),
+            ('ZZMI_NORMALMAP', 'ZZMI NormalMap', 'Resource\\ZZMI\\NormalMap'),
+            ('ZZMI_LIGHTMAP', 'ZZMI LightMap', 'Resource\\ZZMI\\LightMap'),
+            ('ZZMI_MATERIALMAP', 'ZZMI MaterialMap', 'Resource\\ZZMI\\MaterialMap'),
+            ('RABBITFX_FXMAP', 'RabbitFX FXMap', 'Resource\\RabbitFX\\FXMap'),
+            ('CUSTOM', 'Custom', '手动填写槽位键名'),
+        ],
+        default='PS_T',
+    )  # type: ignore
+
+    custom_slot_key: bpy.props.StringProperty(
+        name="Custom Key",
+        description="Slot Type 为 Custom 时使用的完整键名，例如 ps-t3 或 Resource\\MyTool\\Diffuse",
+        default="",
+    )  # type: ignore
+
+    @property
+    def effective_slot_key(self) -> str:
+        """根据 slot_type 返回生成 INI 时使用的键名。"""
+        type_map = {
+            'PS_T': f"ps-t{self.slot_index}",
+            'ZZMI_DIFFUSE': r"Resource\ZZMI\Diffuse",
+            'ZZMI_NORMALMAP': r"Resource\ZZMI\NormalMap",
+            'ZZMI_LIGHTMAP': r"Resource\ZZMI\LightMap",
+            'ZZMI_MATERIALMAP': r"Resource\ZZMI\MaterialMap",
+            'RABBITFX_FXMAP': r"Resource\RabbitFX\FXMap",
+        }
+        if self.slot_type == 'CUSTOM':
+            return self.custom_slot_key.strip() or f"ps-t{self.slot_index}"
+        return type_map.get(self.slot_type, f"ps-t{self.slot_index}")
+
+
 class SSMTNode_Object_Info(SSMTNodeBase):
     '''Object Info Node'''
     bl_idname = 'SSMTNode_Object_Info'
@@ -388,8 +436,77 @@ class SSMTNode_Object_Info(SSMTNodeBase):
     index_count_display: bpy.props.StringProperty(name="IndexCount", default="") #type: ignore
     first_index_display: bpy.props.StringProperty(name="FirstIndex", default="") #type: ignore
 
+    texture_slot_items: bpy.props.CollectionProperty(type=SSMTTextureSlotItem)  # type: ignore
+
     def init(self, context):
         self.outputs.new('SSMTSocketObject', iface_("对象"))
+        self._add_texture_slot(slot_index=0)
+
+    def _get_texture_sockets(self):
+        return [sock for sock in self.inputs if getattr(sock, "bl_idname", "") == 'SSMTSocketTexture']
+
+    def _get_texture_socket_by_item_index(self, item_index):
+        texture_sockets = self._get_texture_sockets()
+        if 0 <= item_index < len(texture_sockets):
+            return texture_sockets[item_index]
+        return None
+
+    def _get_next_texture_slot_index(self):
+        existing = {item.slot_index for item in self.texture_slot_items}
+        idx = 0
+        while idx in existing:
+            idx += 1
+        return idx
+
+    def _add_texture_slot(self, slot_index=None):
+        if slot_index is None:
+            slot_index = self._get_next_texture_slot_index()
+        # socket 使用中性名称：槽位语义只在连接之后由对应的 slot item 决定
+        self.inputs.new('SSMTSocketTexture', iface_("贴图"))
+        item = self.texture_slot_items.add()
+        item.slot_index = slot_index
+
+
+    def update(self):
+        # 贴图槽位完全由连接驱动：末尾始终保持恰好一个未连接的空槽位
+        texture_sockets = self._get_texture_sockets()
+        if texture_sockets and texture_sockets[-1].is_linked:
+            self._add_texture_slot()
+            texture_sockets = self._get_texture_sockets()
+        while len(texture_sockets) > 1 and not texture_sockets[-1].is_linked and not texture_sockets[-2].is_linked:
+            self.inputs.remove(texture_sockets[-1])
+            texture_sockets = self._get_texture_sockets()
+        self._sync_texture_slot_items()
+
+    def _sync_texture_slot_items(self):
+        """保证 texture_slot_items 与贴图输入 socket 一一对应。"""
+        socket_count = len(self._get_texture_sockets())
+        while len(self.texture_slot_items) < socket_count:
+            item = self.texture_slot_items.add()
+            item.slot_index = self._get_next_texture_slot_index()
+        while len(self.texture_slot_items) > socket_count:
+            self.texture_slot_items.remove(len(self.texture_slot_items) - 1)
+
+    def link_texture_node(self, texture_node, slot_index: int):
+        """将 Texture 节点的 Slot 出口连接到第一个空闲贴图输入，并记录槽位号。"""
+        self._sync_texture_slot_items()
+        texture_sockets = self._get_texture_sockets()
+        target_socket = None
+        target_item_index = -1
+        for idx, socket in enumerate(texture_sockets):
+            if not socket.is_linked:
+                target_socket = socket
+                target_item_index = idx
+                break
+        if target_socket is None:
+            self._add_texture_slot()
+            texture_sockets = self._get_texture_sockets()
+            target_socket = texture_sockets[-1]
+            target_item_index = len(texture_sockets) - 1
+        item = self.texture_slot_items[target_item_index]
+        item.slot_index = slot_index
+        self.id_data.links.new(texture_node.outputs["Slot"], target_socket)
+        return item
 
     def draw_buttons(self, context, layout):
         tree = self.id_data if getattr(self, "id_data", None) and getattr(self.id_data, "bl_idname", "") == 'SSMTBlueprintTreeType' else None
@@ -415,6 +532,30 @@ class SSMTNode_Object_Info(SSMTNodeBase):
 
             if self.submesh_name and self.submesh_name not in BlueprintExportHelper.get_tree_submesh_names(tree=tree):
                 layout.label(text=iface_("当前 Submesh 不在列表中，导出时将回退到物体名解析"), icon='ERROR')
+
+        # 贴图槽位配置只在贴图连接之后才需要指定，因此仅展示已连接的槽位
+        texture_sockets = self._get_texture_sockets()
+        box = None
+        for idx, item in enumerate(self.texture_slot_items):
+            socket = texture_sockets[idx] if idx < len(texture_sockets) else None
+            if socket is None or not socket.is_linked:
+                continue
+            if box is None:
+                box = layout.box()
+                box.label(text=iface_("贴图槽位"), icon='IMAGE_DATA')
+            col = box.column(align=True)
+            row = col.row(align=True)
+            linked_node = socket.links[0].from_node if socket.links else None
+            linked_label = str(getattr(linked_node, "texture_hash", "") or getattr(linked_node, "label", "") or "")
+            row.label(text=linked_label, icon='IMAGE_DATA')
+            row.prop(item, "slot_type", text="")
+            if item.slot_type == 'PS_T':
+                row.prop(item, "slot_index", text="")
+            if item.slot_type == 'CUSTOM':
+                col.prop(item, "custom_slot_key", text=iface_("自定义键"))
+            col.label(text=iface_("生效键名: ") + item.effective_slot_key)
+
+
 
 
 class SSMTNode_Object_Group(SSMTNodeBase):
@@ -542,9 +683,6 @@ class SSMTNode_Result_Output(SSMTNodeBase):
             layout.prop(context.scene.global_properties, "ignore_muted_shape_keys")
             layout.prop(context.scene.global_properties, "apply_all_modifiers")
             layout.prop(context.scene.global_properties, "export_add_missing_vertex_groups")
-
-        layout.prop(context.scene.global_properties, 
-                    "forbid_auto_texture_ini",text=iface_("禁止自动贴图流程"))
 
         if GlobalConfig.logic_name != LogicName.GF2:
             layout.prop(context.scene.global_properties,
@@ -769,6 +907,7 @@ classes = (
     SSMT_OT_StartPickObject,
     SSMT_OT_PickObjectModal,
     SSMT_OT_View_Group_Objects,
+    SSMTTextureSlotItem,
     SSMTNode_Object_Info,
     SSMTNode_Object_Group,
     SSMTNode_Result_Output,

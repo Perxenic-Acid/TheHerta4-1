@@ -5,6 +5,7 @@
 import os
 import shutil
 import bpy
+import re
 
 # 用于解决 AttributeError: 'IMPORT_MESH_OT_migoto_raw_buffers_mmt' object has no attribute 'filepath'
 from bpy_extras.io_utils import ImportHelper
@@ -15,12 +16,429 @@ from ..utils.timer_utils import TimerUtils
 from ..utils.translate_utils import rpt_
 
 from ..common.global_config import GlobalConfig
+from ..common.m_texture_helper import M_TextureHelper
 from ..common.ssmt_import_helper import SSMTImportHelper
 from ..workspace.ssmt_workspace import SSMTWorkSpace, WorkSpaceModel
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
+from ..blueprint.blueprint_node_texture import SSMTNode_Texture
+import json
 
 
 # 全量导入逻辑
+
+
+def _parse_mark_slot_index(mark_slot: str) -> int:
+    """从 'ps-t3' 这类标记槽位字符串中解析 slot 索引，失败返回 0。"""
+    match = re.search(r"t(\d+)\s*$", str(mark_slot or "").strip().lower())
+    return int(match.group(1)) if match else 0
+
+
+def _parse_format_from_deduped_filename(deduped_filename: str) -> str:
+    """从 '3a482e27_3a482e27-BC7_UNORM.dds' 中提取 'BC7_UNORM'。"""
+    base_name = os.path.splitext(str(deduped_filename or ""))[0]
+    if "-" not in base_name:
+        return ""
+    format_str = base_name.rsplit("-", 1)[-1].strip()
+    # 部分工作空间写成 DXGI_FORMAT_BC7_UNORM_SRGB 形式，去掉前缀
+    if format_str.upper().startswith("DXGI_FORMAT_"):
+        format_str = format_str[len("DXGI_FORMAT_"):]
+    return format_str
+
+
+def _extract_texture_marks(submesh_json: dict) -> list:
+    """从 Submesh JSON 中提取贴图标记列表。
+
+    SSMT4 使用扁平的 TextureMarkUpInfoList；
+    部分旧数据只有按组件分组的 ComponentTextureMarkUpInfoListDict，
+    此时把所有组件的标记拍平返回（同 Hash 会在后续去重）。
+    """
+    if not isinstance(submesh_json, dict):
+        return []
+    mark_list = submesh_json.get("TextureMarkUpInfoList")
+    if isinstance(mark_list, list) and mark_list:
+        return mark_list
+    component_dict = submesh_json.get("ComponentTextureMarkUpInfoListDict")
+    if isinstance(component_dict, dict):
+        flattened = []
+        for component_key in sorted(component_dict.keys()):
+            component_marks = component_dict.get(component_key)
+            if isinstance(component_marks, list):
+                flattened.extend(component_marks)
+        return flattened
+    return mark_list if isinstance(mark_list, list) else []
+
+
+def _get_known_texture_formats() -> set:
+    """读取 Texture 节点格式枚举中的已知 DXGI 格式标识符。"""
+    try:
+        enum_items = SSMTNode_Texture.bl_rna.properties['texture_format'].enum_items
+        return {item.identifier for item in enum_items} - {'AUTO', 'CUSTOM'}
+    except Exception:
+        return set()
+
+
+def _apply_texture_format(tex_node, format_str: str):
+    """按枚举合法性填充节点目标格式，未知格式走 CUSTOM。"""
+    format_str = (format_str or "").strip()
+    if not format_str:
+        return
+    if format_str in _get_known_texture_formats():
+        tex_node.texture_format = format_str
+    else:
+        tex_node.texture_format = 'CUSTOM'
+        tex_node.texture_format_custom = format_str
+
+
+def _node_world_location(node):
+    """返回节点在编辑器中的绝对坐标。
+
+    节点 parent 到 Frame 后 location 变为相对父级的值，
+    需要沿父 Frame 链累加才能还原绝对坐标。
+    """
+    x, y = node.location.x, node.location.y
+    parent = node.parent
+    while parent is not None:
+        x += parent.location.x
+        y += parent.location.y
+        parent = parent.parent
+    return x, y
+
+
+def _build_texture_nodes(
+    tree,
+    group_node,
+    oldfoldername_node_dict: dict,
+    oldfoldername_jsonpath_dict: dict,
+    oldfoldername_group_dict: dict,
+    group_tex_cursors: dict,
+    tex_y_gap: float,
+    group_frame_dict: dict = None,
+    tex_home_group: dict = None,
+):
+    """根据各 Submesh JSON 中的 TextureMarkUpInfoList 构建 Texture 节点。
+
+    只有被用户在 SSMT 中明确标记过的贴图才会生成节点；
+    风格（Hash / Slot）完全由每条标记自身的 MarkType 决定；
+    同一 Hash 的贴图对象复用同一个节点。
+    贴图节点归属于"第一次使用它"（首个 Slot 标记）的 submesh 所在的分组 Frame；
+    没有 Slot 标记的纯 Hash 贴图则归属于它第一个出现的分组 Frame。
+    """
+    if group_frame_dict is None:
+        group_frame_dict = {}
+    if tex_home_group is None:
+        tex_home_group = {}
+    texture_node_by_hash: dict[str, bpy.types.Node] = {}
+    hash_linked_node_names: set[str] = set()
+    slot_link_done: set[tuple] = set()
+
+    for old_folder_name, json_path in oldfoldername_jsonpath_dict.items():
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                submesh_json = json.load(f)
+        except Exception as e:
+            print(f"[ImportTexture] 读取 Submesh JSON 失败: {json_path}, {e}")
+            continue
+
+        mark_list = _extract_texture_marks(submesh_json)
+        if not mark_list:
+            continue
+
+        for mark in mark_list:
+            if not isinstance(mark, dict):
+                continue
+            mark_hash = str(mark.get("MarkHash", "") or "").strip()
+            if not mark_hash:
+                continue
+            mark_name = str(mark.get("MarkName", "") or "").strip()
+            mark_type = str(mark.get("MarkType", "") or "").strip()
+            mark_slot = str(mark.get("MarkSlot", "") or "").strip()
+            mark_filename = str(mark.get("MarkFileName", "") or "").strip()
+            mark_deduped_filename = str(mark.get("MarkDedupedFileName", "") or "").strip()
+
+            tex_node = texture_node_by_hash.get(mark_hash)
+            if tex_node is None:
+                tex_node = tree.nodes.new('SSMTNode_Texture')
+                # 归属分组：优先"第一次使用它"（首个 Slot 标记）的 submesh 分组，
+                # 否则取它第一个出现的分组
+                group_key = tex_home_group.get(mark_hash) or oldfoldername_group_dict.get(old_folder_name, ("", ""))
+                cursor = group_tex_cursors.setdefault(group_key, [0.0, 0.0])
+                tex_node.location = (cursor[0], cursor[1])
+                cursor[1] -= tex_y_gap
+                # 挂到归属分组的 Frame 里
+                frame = group_frame_dict.get(group_key)
+                if frame is not None:
+                    abs_x, abs_y = tex_node.location.x, tex_node.location.y
+                    # Frame 可能已并入 DrawIB 二级 Frame，此时 frame.location
+                    # 是相对二级 Frame 的值，必须换算回绝对坐标再计算相对位置
+                    frame_abs_x, frame_abs_y = _node_world_location(frame)
+                    tex_node.parent = frame
+                    tex_node.location = (abs_x - frame_abs_x, abs_y - frame_abs_y)
+                tex_node.texture_hash = mark_hash
+                tex_node.mark_name = mark_name
+                if mark_filename:
+                    tex_node.texture_filename = mark_filename
+                    candidate_path = os.path.join(os.path.dirname(json_path), mark_filename)
+                    if os.path.isfile(candidate_path):
+                        tex_node.texture_filepath = candidate_path
+
+                # 优先使用 SSMT 元数据里的格式，其次回退到解析源 DDS 文件头
+                format_str = _parse_format_from_deduped_filename(mark_deduped_filename)
+                if not format_str and tex_node.texture_filepath:
+                    format_str = M_TextureHelper.detect_dds_format(tex_node.texture_filepath)
+                _apply_texture_format(tex_node, format_str)
+
+                texture_node_by_hash[mark_hash] = tex_node
+
+            if mark_type == 'Hash':
+                # Hash 风格：连接 Hash 出口到 Group，生成独立 [TextureOverride_<hash>] 段
+                if tex_node.name in hash_linked_node_names:
+                    continue
+                if group_node.inputs[-1].is_linked:
+                    group_node.inputs.new('SSMTSocketObject', f"Input {len(group_node.inputs) + 1}")
+                tree.links.new(tex_node.outputs["Hash"], group_node.inputs[-1])
+                hash_linked_node_names.add(tex_node.name)
+            else:
+                # Slot / SharedSlot 风格：连接 Slot 出口到对应 Object Info 节点的槽位
+                obj_info_node = oldfoldername_node_dict.get(old_folder_name)
+                if obj_info_node is None:
+                    continue
+                link_key = (old_folder_name, mark_hash, mark_slot)
+                if link_key in slot_link_done:
+                    continue
+                slot_link_done.add(link_key)
+                obj_info_node.link_texture_node(tex_node, _parse_mark_slot_index(mark_slot))
+
+    return list(texture_node_by_hash.values())
+
+def _create_and_layout_obj_info_nodes(tree, group_node, foldername_imported_obj_dict, ws_model, oldfoldername_jsonpath_hint=None):
+    """创建 Object Info 节点、连接到 Group，并按 Submesh 分组布局。
+
+    每个 Submesh（导入的 mesh）独占一个分组：占一列对，左侧贴图列
+    （留出预览空间），右侧一个 Mesh Info 节点；列对横向排列，
+    每行最多 MAX_GROUP_COLS_PER_ROW 组后换行。
+
+    Mesh Info 节点会随贴图槽位连接数量被撑高，因此换行时按预估的
+    实际高度推进，避免与下一行的节点叠在一起。
+
+    每个分组同时创建一个 NodeFrame，把该 Submesh 的 Mesh Info 节点与
+    贴图节点框在一起，便于观察；贴图节点由 _build_texture_nodes 负责挂进 Frame。
+    归属于同一 IB hash 的 Submesh Frame 会再并入一个 DrawIB 级的二级 Frame。
+
+    返回 (oldfoldername_node_dict, oldfoldername_group_dict, group_tex_cursors,
+          max_node_right, tex_y_gap, group_frame_dict, tex_home_group)。
+    """
+    if oldfoldername_jsonpath_hint is None:
+        oldfoldername_jsonpath_hint = {}
+    # old_folder_name -> Object Info 节点（贴图标记的 Slot 连接目标）
+    oldfoldername_node_dict: dict[str, bpy.types.Node] = {}
+    # old_folder_name -> 分组 key（新格式 submesh 名称）
+    oldfoldername_group_dict: dict[str, str] = {}
+    group_order: list[str] = []
+    group_nodes: dict[str, list] = {}
+    # 分组 key -> NodeFrame 标签（mesh 名 + DrawIB 别名）
+    group_frame_labels: dict[str, str] = {}
+    # DrawIB 二级分组：(lod, draw_ib) -> 该 IB hash 下的 submesh 分组 key 列表
+    outer_order: list[tuple] = []
+    outer_groups: dict[tuple, list] = {}
+
+    for new_submesh_name, (imported_obj, display_name) in foldername_imported_obj_dict.items():
+        if imported_obj.type != 'MESH':
+            continue
+
+        # 通过 WorkSpaceModel 解析新格式名称获取 component 编号
+        parsed = ws_model.parse_new_format_name(new_submesh_name)
+        component_str = str(parsed["component"]) if parsed else "0"
+
+        # 创建节点
+        node = tree.nodes.new('SSMTNode_Object_Info')
+
+        # 填充属性
+        node.object_name = imported_obj.name
+        node.original_object_name = imported_obj.name
+        node.component = component_str
+        node.submesh_name = display_name
+        node.label = imported_obj.name
+
+        old_folder_name = ""
+        if parsed:
+            old_folder_name = ws_model.get_old_folder_name(
+                parsed.get("lod", ""),
+                parsed.get("draw_ib", ""),
+                parsed.get("component", 0),
+            )
+        if old_folder_name:
+            oldfoldername_node_dict[old_folder_name] = node
+
+        # 分组粒度为 Submesh：每个 mesh 一个分组 / 一个 Frame
+        group_key = new_submesh_name
+        if group_key not in group_nodes:
+            group_nodes[group_key] = []
+            group_order.append(group_key)
+        group_nodes[group_key].append(node)
+        if old_folder_name:
+            oldfoldername_group_dict[old_folder_name] = group_key
+
+        group_frame_labels[group_key] = imported_obj.name or new_submesh_name
+
+        outer_key = (parsed.get("lod", ""), parsed.get("draw_ib", "")) if parsed else ("", "")
+        if outer_key not in outer_groups:
+            outer_groups[outer_key] = []
+            outer_order.append(outer_key)
+        outer_groups[outer_key].append(group_key)
+
+        # 如果 Group 最后一个插槽已被占用，手动扩展一个
+        if group_node.inputs[-1].is_linked:
+            group_node.inputs.new('SSMTSocketObject', f"Input {len(group_node.inputs) + 1}")
+        tree.links.new(node.outputs[0], group_node.inputs[-1])
+
+    # 分组布局
+    OBJ_X_OFFSET = 560.0
+    TEX_Y_GAP = 460.0
+    GROUP_X_GAP = 1120.0
+    ROW_Y_GAP = 320.0
+    MAX_GROUP_COLS_PER_ROW = 3
+    # Mesh Info 节点高度预估：基础高度 + 每个贴图槽位连接的撑高。
+    # 节点 UI 由 socket 行（约 22px/行）与 draw_buttons 行（约 20px/行）构成，
+    # 每个已连接槽位约增加 1 行 socket + 3 行槽位配置按钮。
+    OBJ_BASE_HEIGHT = 220.0
+    OBJ_SLOT_LINK_HEIGHT = 100.0
+
+    # 预统计每组贴图节点数量，用于估算行高（贴图列需要预览空间）
+    group_tex_counts: dict[str, int] = {}
+    # 预统计每组 Mesh Info 节点的贴图槽位连接数（MarkType 非 Hash 的标记，
+    # 去重规则与 _build_texture_nodes 的 slot_link_done 一致），用于估算节点撑高
+    group_slot_link_counts: dict[str, int] = {}
+    seen_mark_hashes: set[str] = set()
+    seen_slot_links: set[tuple] = set()
+    # 每个贴图 hash 的首个出现分组与首个 Slot 标记分组（"第一次使用它"的 submesh），
+    # 用于决定贴图节点归属哪个分组的 Frame
+    tex_first_group: dict[str, str] = {}
+    tex_first_slot_group: dict[str, str] = {}
+    for old_folder_name, json_path in oldfoldername_jsonpath_hint.items():
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                submesh_json = json.load(f)
+        except Exception:
+            continue
+        mark_list = _extract_texture_marks(submesh_json)
+        group_key = oldfoldername_group_dict.get(old_folder_name, ("", ""))
+        for mark in mark_list:
+            if not isinstance(mark, dict):
+                continue
+            mark_hash = str(mark.get("MarkHash", "") or "").strip()
+            if not mark_hash:
+                continue
+            if mark_hash not in tex_first_group:
+                tex_first_group[mark_hash] = group_key
+            if mark_hash not in seen_mark_hashes:
+                seen_mark_hashes.add(mark_hash)
+                group_tex_counts[group_key] = group_tex_counts.get(group_key, 0) + 1
+            mark_type = str(mark.get("MarkType", "") or "").strip()
+            if mark_type != 'Hash':
+                mark_slot = str(mark.get("MarkSlot", "") or "").strip()
+                link_key = (old_folder_name, mark_hash, mark_slot)
+                if link_key not in seen_slot_links:
+                    seen_slot_links.add(link_key)
+                    group_slot_link_counts[group_key] = group_slot_link_counts.get(group_key, 0) + 1
+                if mark_hash not in tex_first_slot_group:
+                    tex_first_slot_group[mark_hash] = group_key
+
+    # 贴图归属分组：严格跟随"第一次使用它"（首个 Slot 标记）的 submesh；
+    # 没有 Slot 标记的纯 Hash 贴图跟随第一个出现的分组
+    tex_home_group = {
+        h: tex_first_slot_group.get(h) or first_group
+        for h, first_group in tex_first_group.items()
+    }
+
+    group_tex_cursors: dict[str, list] = {}
+    group_top_y: dict[str, float] = {}
+    max_node_right = 0.0
+    row_start_y = 0.0
+    row_max_height = 0.0
+    col_in_row = 0
+
+    for outer_key in outer_order:
+        submesh_keys = outer_groups[outer_key]
+        # 同一 DrawIB 的 submesh 在一行内连续排列，二级 Frame 才不会罩住别组：
+        # 当前行剩余列放不下整组时先换行
+        if 0 < col_in_row and len(submesh_keys) > MAX_GROUP_COLS_PER_ROW - col_in_row:
+            col_in_row = 0
+            row_start_y -= (row_max_height + ROW_Y_GAP)
+            row_max_height = 0.0
+        spanned_multiple_rows = False
+        for group_key in submesh_keys:
+            if col_in_row >= MAX_GROUP_COLS_PER_ROW:
+                col_in_row = 0
+                row_start_y -= (row_max_height + ROW_Y_GAP)
+                row_max_height = 0.0
+                spanned_multiple_rows = True
+            base_x = col_in_row * GROUP_X_GAP
+            col_in_row += 1
+
+            y = row_start_y
+            for node in group_nodes[group_key]:
+                node.location = (base_x + OBJ_X_OFFSET, y)
+                slot_link_count = group_slot_link_counts.get(group_key, 0)
+                y -= OBJ_BASE_HEIGHT + slot_link_count * OBJ_SLOT_LINK_HEIGHT
+
+            # Mesh Info 节点会被贴图槽位连接撑高，按预估实际高度计入行高，避免与下一行重叠
+            obj_height = row_start_y - y
+            tex_height = group_tex_counts.get(group_key, 0) * TEX_Y_GAP
+            row_max_height = max(row_max_height, obj_height, tex_height)
+            max_node_right = max(max_node_right, base_x + OBJ_X_OFFSET)
+
+            group_tex_cursors[group_key] = [base_x, row_start_y]
+            group_top_y[group_key] = row_start_y
+        # 跨行大组（超过一行宽）的二级 Frame 是覆盖多行的矩形，
+        # 其最后一行的剩余列不能再放别组，否则会被框住
+        if spanned_multiple_rows:
+            col_in_row = MAX_GROUP_COLS_PER_ROW
+
+    # 为每个分组创建 Frame，并把组内 Mesh Info 节点挂进去
+    FRAME_PAD = 40.0
+    group_frame_dict: dict[str, bpy.types.Node] = {}
+    for group_key in group_order:
+        frame = tree.nodes.new('NodeFrame')
+        frame_label = group_frame_labels.get(group_key, "") or str(group_key) or "Ungrouped"
+        frame.label = frame_label
+        frame.name = "Frame_" + (frame_label.replace(" ", "_") or "Ungrouped")
+        frame.location = (group_tex_cursors[group_key][0] - FRAME_PAD,
+                          group_top_y[group_key] + FRAME_PAD)
+        group_frame_dict[group_key] = frame
+
+        for node in group_nodes[group_key]:
+            abs_x, abs_y = node.location.x, node.location.y
+            node.parent = frame
+            node.location = (abs_x - frame.location.x, abs_y - frame.location.y)
+
+    # 为每个 DrawIB 创建二级 Frame，把同 IB hash 的 Submesh Frame 并进去。
+    # 布局阶段已保证同组 submesh 连续排列且跨行大组独占其所有行，
+    # 因此二级 Frame 的矩形范围不会罩住其他分组。
+    # Frame 尺寸由 Blender 按子节点自动贴合，这里只需给出大致的左上角位置。
+    OUTER_FRAME_PAD = 40.0
+    for outer_key in outer_order:
+        lod_name, draw_ib = outer_key
+        label_parts = [part for part in (lod_name, draw_ib) if part]
+        outer_label = ".".join(label_parts) if label_parts else "Ungrouped"
+        alias = getattr(ws_model, "drawib_aliases", {}).get(draw_ib, "")
+        if alias:
+            outer_label += f" ({alias})"
+        outer_frame = tree.nodes.new('NodeFrame')
+        outer_frame.label = outer_label
+        outer_frame.name = "Frame_" + (outer_label.replace(" ", "_") or "Ungrouped")
+        first_key = outer_groups[outer_key][0]
+        outer_frame.location = (group_tex_cursors[first_key][0] - FRAME_PAD - OUTER_FRAME_PAD,
+                                group_top_y[first_key] + FRAME_PAD + OUTER_FRAME_PAD)
+        for group_key in outer_groups[outer_key]:
+            inner_frame = group_frame_dict[group_key]
+            abs_x, abs_y = inner_frame.location.x, inner_frame.location.y
+            inner_frame.parent = outer_frame
+            inner_frame.location = (abs_x - outer_frame.location.x, abs_y - outer_frame.location.y)
+
+    return (oldfoldername_node_dict, oldfoldername_group_dict, group_tex_cursors,
+            max_node_right, TEX_Y_GAP, group_frame_dict, tex_home_group)
+
+
 def ImprotFromWorkSpaceFull(self, context):
     
     # 创建 WorkSpaceModel 统一管理所有映射
@@ -36,6 +454,8 @@ def ImprotFromWorkSpaceFull(self, context):
     # key: 新格式 submesh_name（如 "LOD0.94517393-0"）, value: gametype_name
     foldername_gametypename_dict = {}
     foldername_imported_obj_dict = {}
+    # old_folder_name -> 实际用于导入的 Submesh JSON 路径（贴图标记元数据来源）
+    oldfoldername_jsonpath_dict = {}
     all_submesh_display_names = []
     successful_import_count = 0
 
@@ -87,6 +507,7 @@ def ImprotFromWorkSpaceFull(self, context):
                             successful_import_count += 1
 
                         foldername_gametypename_dict[new_submesh_name] = gametype_name
+                        oldfoldername_jsonpath_dict[old_folder_name] = json_file_path
                         self.report({'INFO'}, "成功导入 " + new_submesh_name + " 的数据类型: " + gametype_name)
                     except Exception as e:
                         print(f"Failed to import from {import_folder_path}: {e}")
@@ -122,63 +543,36 @@ def ImprotFromWorkSpaceFull(self, context):
         tree.use_fake_user = True
         BlueprintExportHelper.set_tree_submesh_names(all_submesh_display_names, tree=tree)
         
-        # 创建 Frame 框，包裹所有 Object Info 节点和 Group 节点
-        frame = tree.nodes.new('NodeFrame')
-        frame.label = "原始模型"
-        frame.use_custom_color = True
-        frame.color = (0.2, 0.35, 0.2)  # 深绿色调
-
         # 创建 Group 节点 (并在循环中连接)
         group_node = tree.nodes.new('SSMTNode_Object_Group')
         group_node.label = "Default Group"
-        group_node.parent = frame
         
-        # 3. 遍历导入的对象并创建对应节点
-        current_x = 0
-        current_y = 0
-        y_gap = 200
-        count = 0
-        min_y = 0
+        # 3. 创建 Object Info 节点并按 Submesh 分组布局（同 IB hash 并入二级 Frame）
+        (oldfoldername_node_dict, oldfoldername_group_dict,
+         group_tex_cursors, max_node_right, TEX_Y_GAP,
+         group_frame_dict, tex_home_group) = _create_and_layout_obj_info_nodes(
+            tree, group_node, foldername_imported_obj_dict, ws_model,
+            oldfoldername_jsonpath_hint=oldfoldername_jsonpath_dict)
 
-        for new_submesh_name, (imported_obj, display_name) in foldername_imported_obj_dict.items():
-            if imported_obj.type != 'MESH':
-                continue
+        # 3.5 根据各 Submesh 的贴图标记元数据自动创建并连接 Texture 节点
+        # 只导入用户在 SSMT 中明确标记的贴图；风格由每条标记的 MarkType 决定
+        _build_texture_nodes(
+            tree=tree,
+            group_node=group_node,
+            oldfoldername_node_dict=oldfoldername_node_dict,
+            oldfoldername_jsonpath_dict=oldfoldername_jsonpath_dict,
+            oldfoldername_group_dict=oldfoldername_group_dict,
+            group_tex_cursors=group_tex_cursors,
+            tex_y_gap=TEX_Y_GAP,
+            group_frame_dict=group_frame_dict,
+            tex_home_group=tex_home_group,
+        )
 
-            # 通过 WorkSpaceModel 解析新格式名称获取 component 编号
-            parsed = ws_model.parse_new_format_name(new_submesh_name)
-            component_str = str(parsed["component"]) if parsed else "0"
-
-            # 创建节点
-            node = tree.nodes.new('SSMTNode_Object_Info')
-            node.location = (current_x, current_y)
-            node.parent = frame
-
-            # 填充属性
-            node.object_name = imported_obj.name
-            node.original_object_name = imported_obj.name
-            node.component = component_str
-            node.submesh_name = display_name
-
-            node.label = imported_obj.name
-
-            # 如果 Group 最后一个插槽已被占用，手动扩展一个
-            if group_node.inputs[-1].is_linked:
-                group_node.inputs.new('SSMTSocketObject', f"Input {len(group_node.inputs) + 1}")
-
-            tree.links.new(node.outputs[0], group_node.inputs[-1])
-
-            count += 1
-            current_y -= y_gap
-            min_y = min(min_y, current_y)
-
-        
         # 4. 放置 Group 和 Output 节点
-        final_center_y = min_y / 2 if count <= 5 else -200
-
-        group_node.location = (current_x + 400, final_center_y)
+        group_node.location = (max_node_right + 560.0, -200.0)
 
         output_node = tree.nodes.new('SSMTNode_Result_Output')
-        output_node.location = (current_x + 800, final_center_y)
+        output_node.location = (max_node_right + 1040.0, -200.0)
         output_node.label = "Generate Mod"
         
         # 连接 Group 到 Output
@@ -187,9 +581,6 @@ def ImprotFromWorkSpaceFull(self, context):
 
         if hasattr(group_node, "update"):
             group_node.update()
-        # 刷新 Frame 尺寸以包裹所有子节点
-        if hasattr(frame, "update"):
-            frame.update()
 
         BlueprintExportHelper.set_runtime_blueprint_tree(tree)
 
@@ -327,6 +718,8 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
 
     foldername_gametypename_dict = {}
     foldername_imported_obj_dict = {}
+    # old_folder_name -> 实际用于导入的 Submesh JSON 路径（贴图标记元数据来源）
+    oldfoldername_jsonpath_dict = {}
     all_submesh_display_names = []
     successful_import_count = 0
 
@@ -392,6 +785,7 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
                         successful_import_count += 1
 
                     foldername_gametypename_dict[new_submesh_name] = gametype_name
+                    oldfoldername_jsonpath_dict[submesh_folder_name] = json_file_path
                     self.report({'INFO'}, "成功导入 " + new_submesh_name + " 的数据类型: " + gametype_name)
 
                     # 如果是 __AUTO__ 模式且第一次成功，锁定该类型供后续使用
@@ -421,10 +815,10 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
     CollectionUtils.select_collection_objects(workspace_collection)
 
     # 生成蓝图
-    _generate_blueprint_for_imported_objects(context, foldername_imported_obj_dict, all_submesh_display_names)
+    _generate_blueprint_for_imported_objects(context, foldername_imported_obj_dict, all_submesh_display_names, oldfoldername_jsonpath_dict)
 
 
-def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_dict, all_submesh_display_names):
+def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_dict, all_submesh_display_names, oldfoldername_jsonpath_dict=None):
     '''更新已存在的蓝图节点（不新建），若没有已有蓝图则跳过。'''
     tree_name = GlobalConfig.get_workspace_name()
     if not tree_name:
@@ -446,57 +840,34 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
         tree.use_fake_user = True
         BlueprintExportHelper.set_tree_submesh_names(all_submesh_display_names, tree=tree)
 
-        # 创建 Frame 框，包裹所有 Object Info 节点和 Group 节点
-        frame = tree.nodes.new('NodeFrame')
-        frame.label = "原始模型"
-        frame.use_custom_color = True
-        frame.color = (0.2, 0.35, 0.2)  # 深绿色调
-
         group_node = tree.nodes.new('SSMTNode_Object_Group')
         group_node.label = "Default Group"
-        group_node.parent = frame
-
-        current_x = 0
-        current_y = 0
-        y_gap = 200
-        count = 0
-        min_y = 0
 
         ws_model = WorkSpaceModel()
 
-        for new_submesh_name, (imported_obj, display_name) in foldername_imported_obj_dict.items():
-            if imported_obj.type != 'MESH':
-                continue
+        (oldfoldername_node_dict, oldfoldername_group_dict,
+         group_tex_cursors, max_node_right, TEX_Y_GAP,
+         group_frame_dict, tex_home_group) = _create_and_layout_obj_info_nodes(
+            tree, group_node, foldername_imported_obj_dict, ws_model,
+            oldfoldername_jsonpath_hint=oldfoldername_jsonpath_dict)
 
-            # 通过 WorkSpaceModel 解析新格式名称获取 component 编号
-            parsed = ws_model.parse_new_format_name(new_submesh_name)
-            component_str = str(parsed["component"]) if parsed else "0"
+        if oldfoldername_jsonpath_dict:
+            _build_texture_nodes(
+                tree=tree,
+                group_node=group_node,
+                oldfoldername_node_dict=oldfoldername_node_dict,
+                oldfoldername_jsonpath_dict=oldfoldername_jsonpath_dict,
+                oldfoldername_group_dict=oldfoldername_group_dict,
+                group_tex_cursors=group_tex_cursors,
+                tex_y_gap=TEX_Y_GAP,
+                group_frame_dict=group_frame_dict,
+                tex_home_group=tex_home_group,
+            )
 
-            node = tree.nodes.new('SSMTNode_Object_Info')
-            node.location = (current_x, current_y)
-            node.parent = frame
-
-            node.object_name = imported_obj.name
-            node.original_object_name = imported_obj.name
-            node.component = component_str
-            node.submesh_name = display_name
-
-            node.label = imported_obj.name
-
-            if group_node.inputs[-1].is_linked:
-                group_node.inputs.new('SSMTSocketObject', f"Input {len(group_node.inputs) + 1}")
-
-            tree.links.new(node.outputs[0], group_node.inputs[-1])
-
-            count += 1
-            current_y -= y_gap
-            min_y = min(min_y, current_y)
-
-        final_center_y = min_y / 2 if count <= 5 else -200
-        group_node.location = (current_x + 400, final_center_y)
+        group_node.location = (max_node_right + 560.0, -200.0)
 
         output_node = tree.nodes.new('SSMTNode_Result_Output')
-        output_node.location = (current_x + 800, final_center_y)
+        output_node.location = (max_node_right + 1040.0, -200.0)
         output_node.label = "Generate Mod"
 
         if len(output_node.inputs) > 0 and len(group_node.outputs) > 0:
@@ -504,8 +875,6 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
 
         if hasattr(group_node, "update"):
             group_node.update()
-        if hasattr(frame, "update"):
-            frame.update()
 
         BlueprintExportHelper.set_runtime_blueprint_tree(tree)
 
