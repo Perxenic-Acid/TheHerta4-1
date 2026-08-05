@@ -165,6 +165,43 @@ class M_IniHelper:
             drawindexed_str_list.append("")
 
         return drawindexed_str_list
+
+    @staticmethod
+    def append_drawindexed_with_slot_lines(
+        section,
+        ordered_draw_obj_model_list: list[DrawCallModel],
+        slot_line_provider,
+        obj_name_draw_offset_dict: dict[str, int] | None = None,
+    ):
+        """按 condition 分组输出 drawindexed，并在每次 drawindexed 前插入 slot 行。
+
+        slot_line_provider(draw_call_model) 应返回需要在 drawindexed 前输出的 INI 行列表。
+        """
+        condition_str_obj_model_list_dict: dict[str, list[DrawCallModel]] = {}
+        for obj_model in ordered_draw_obj_model_list:
+            condition_str = obj_model.get_condition_str()
+            obj_model_list = condition_str_obj_model_list_dict.get(condition_str, [])
+            obj_model_list.append(obj_model)
+            condition_str_obj_model_list_dict[condition_str] = obj_model_list
+
+        for condition_str, obj_model_list in condition_str_obj_model_list_dict.items():
+            if condition_str != "":
+                section.append("if " + condition_str)
+                for obj_model in obj_model_list:
+                    display_name = str(getattr(obj_model, 'obj_name', '') or getattr(obj_model, 'display_name', '') or '')
+                    section.append("  ; [mesh:" + display_name + "] [vertex_count:" + str(obj_model.vertex_count) + "]")
+                    for line in slot_line_provider(obj_model):
+                        section.append("  " + line)
+                    section.append("  " + obj_model.get_drawindexed_str(obj_name_draw_offset_dict))
+                section.append("endif")
+            else:
+                for obj_model in obj_model_list:
+                    display_name = str(getattr(obj_model, 'obj_name', '') or getattr(obj_model, 'display_name', '') or '')
+                    section.append("; [mesh:" + display_name + "] [vertex_count:" + str(obj_model.vertex_count) + "]")
+                    for line in slot_line_provider(obj_model):
+                        section.append(line)
+                    section.append(obj_model.get_drawindexed_str(obj_name_draw_offset_dict))
+            section.append("")
     
     @staticmethod
     def get_drawindexed_instanced_str_list(

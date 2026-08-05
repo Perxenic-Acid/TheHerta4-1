@@ -27,6 +27,19 @@ class SSMTSocketObject(NodeSocket):
         layout.label(text=text)
 
 # 1. 定义自定义节点树类型
+
+
+class SSMTSocketTexture(NodeSocket):
+    '''Custom Socket for Texture Slot'''
+    bl_idname = 'SSMTSocketTexture'
+    bl_label = '贴图插槽'
+
+    def draw_color(self, context, node):
+        return (0.8, 0.4, 0.9, 1.0)  # Purple/Magenta
+
+    def draw(self, context, layout, node, text):
+        layout.label(text=text)
+
 class SSMTBlueprintTree(NodeTree):
     '''SSMT Mod Logic Blueprint'''
     bl_idname = 'SSMTBlueprintTreeType'
@@ -432,6 +445,7 @@ def register():
     bpy.utils.register_class(SSMTSubmeshListItem)
     bpy.utils.register_class(SSMTBlueprintTree)
     bpy.utils.register_class(SSMTSocketObject)
+    bpy.utils.register_class(SSMTSocketTexture)
     bpy.utils.register_class(THEHERTA3_OT_OpenPersistentBlueprint)
     bpy.utils.register_class(THEHERTA3_OT_DeletePersistentBlueprint)
     bpy.utils.register_class(THEHERTA3_OT_RenamePersistentBlueprint)
@@ -447,6 +461,7 @@ def unregister():
     bpy.utils.unregister_class(THEHERTA3_OT_RenamePersistentBlueprint)
     bpy.utils.unregister_class(THEHERTA3_OT_DeletePersistentBlueprint)
     bpy.utils.unregister_class(SSMTSocketObject)
+    bpy.utils.unregister_class(SSMTSocketTexture)
     bpy.utils.unregister_class(THEHERTA3_OT_OpenPersistentBlueprint)
     bpy.utils.unregister_class(SSMTBlueprintTree)
     bpy.utils.unregister_class(SSMTSubmeshListItem)

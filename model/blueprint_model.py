@@ -1,4 +1,4 @@
-﻿
+
 import bpy
 import copy
 import re
@@ -16,6 +16,8 @@ from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 
 from ..blueprint.blueprint_node_obj import SSMTNode_Object_Group, SSMTNode_SwitchKey, SSMTNode_Object_Info, SSMTNode_Result_Output
 
+from ..blueprint.blueprint_node_texture import SSMTNode_Texture
+
 
 class BluePrintModel:
 
@@ -27,6 +29,9 @@ class BluePrintModel:
 
         # 全局obj_model列表，主要是obj_model里装了每个obj的生效条件。
         self.ordered_draw_obj_data_model_list:list[DrawCallModel] = [] 
+
+        # 通过 Hash 出口参与蓝图链路的 Texture 节点
+        self.hash_texture_node_list:list[bpy.types.Node] = []
 
         # UniComponent 拆分产生的临时物体，导出后需清理
         self._unico_temp_objects: list[bpy.types.Object] = []
@@ -203,8 +208,26 @@ class BluePrintModel:
                     obj_model.display_name = unknown_node.original_object_name
 
                 obj_model.work_key_list = copy.deepcopy(chain_key_list)
+
+                # 收集通过 Slot 出口连接上来的 Texture 节点
+                for idx, item in enumerate(getattr(unknown_node, 'texture_slot_items', [])):
+                    socket = unknown_node._get_texture_socket_by_item_index(idx)
+                    if socket is None or not socket.is_linked:
+                        continue
+                    for link in socket.links:
+                        texture_node = link.from_node
+                        if getattr(texture_node, "bl_idname", "") == SSMTNode_Texture.bl_idname:
+                            # 携带 slot item，导出时按 effective_slot_key 生成键名
+                            obj_model.slot_texture_node_list.append((item, texture_node))
                 
                 self.ordered_draw_obj_data_model_list.append(obj_model)
+
+        elif unknown_node.bl_idname == SSMTNode_Texture.bl_idname:
+            # Texture 节点：如果 Hash 出口（物体口）被连入链路，则作为全局 hash 贴图处理
+            hash_socket = unknown_node.outputs.get("Hash")
+            if hash_socket and hash_socket.is_linked:
+                if unknown_node not in self.hash_texture_node_list:
+                    self.hash_texture_node_list.append(unknown_node)
 
     def _unico_split_object(
         self,

@@ -18,6 +18,8 @@ from .blueprint import blueprint_node_menu
 from .blueprint import blueprint_node_shapekey
 from .blueprint import blueprint_node_panel
 
+from .blueprint import blueprint_node_texture
+
 from .ui import ui_func_export
 
 # 自动更新功能
@@ -114,60 +116,86 @@ class HertaUpdatePreference(bpy.types.AddonPreferences):
         addon_updater_ops.update_settings_ui(self, context)
 
 def register():
+    # 逐模块容错注册：历史上曾出现单个节点类注册失败导致 register 中断、
+    # 侧栏面板全部丢失的问题；这里保证一个模块失败不影响其它模块，
+    # 失败信息打印到控制台便于排查。
+    for step in _register_steps():
+        try:
+            step()
+        except Exception:
+            import traceback
+            print(f"[TheHerta4] register step failed: {getattr(step, '__module__', step)}")
+            traceback.print_exc()
+
+
+def _register_steps():
     # 1. Configs
-    global_properties.register()
-    translate_utils.register()
-    
+    yield global_properties.register
+    yield translate_utils.register
+
     # 2. Addon Updater (local classes)
-    addon_updater_ops.register(bl_info)
-    bpy.utils.register_class(UpdaterPanel)
-    bpy.utils.register_class(HertaUpdatePreference)
+    def _register_updater():
+        addon_updater_ops.register(bl_info)
+        bpy.utils.register_class(UpdaterPanel)
+        bpy.utils.register_class(HertaUpdatePreference)
+    yield _register_updater
 
     # 3. UI Panels & Logic
-    blueprint_node_base.register()
-    ui_panel_basic.register()
-    ui_panel_model.register()
-    ui_panel_sword.register()
-    ui_func_import_ssmt.register()
-    ui_panel_fast_texture.register()
+    yield blueprint_node_base.register
+    yield ui_panel_basic.register
+    yield ui_panel_model.register
+    yield ui_panel_sword.register
+    yield ui_func_import_ssmt.register
+    yield ui_panel_fast_texture.register
 
     # 蓝图系统
-    blueprint_node_obj.register()
-    ui_func_export.register()
-    blueprint_node_menu.register()
-    blueprint_node_shapekey.register()
-    blueprint_node_panel.register()
+    yield blueprint_node_obj.register
+    yield ui_func_export.register
+    yield blueprint_node_menu.register
+    yield blueprint_node_shapekey.register
+    yield blueprint_node_panel.register
+
+    yield blueprint_node_texture.register
 
     # 贴图合并工具 (texcomb)
-    texcomb.register()
+    yield texcomb.register
 
 
 def unregister():
-    # 贴图合并工具 (texcomb)
-    texcomb.unregister()
+    # 按 register 的逆序注销，避免类型依赖问题
+    # 逐步容错：之前会话可能处于半注册状态（例如某类从未注册成功），
+    # 直接注销会抛 RuntimeError 并中断后续所有注销，导致下次启用时
+    # “already registered” 连锁失败、面板消失。
+    def _unregister_updater():
+        bpy.utils.unregister_class(HertaUpdatePreference)
+        bpy.utils.unregister_class(UpdaterPanel)
+        addon_updater_ops.unregister()
 
-    # 蓝图系统
-    blueprint_node_obj.unregister()
-    ui_func_export.unregister()
-    blueprint_node_menu.unregister()
-    blueprint_node_shapekey.unregister()
-    blueprint_node_panel.unregister()
-    blueprint_node_base.unregister()
-
-    ui_panel_fast_texture.unregister()
-    ui_func_import_ssmt.unregister()
-    ui_panel_sword.unregister()
-    ui_panel_model.unregister()
-    ui_panel_basic.unregister()
-
-    # 2. Addon Updater (local classes)
-    bpy.utils.unregister_class(HertaUpdatePreference)
-    bpy.utils.unregister_class(UpdaterPanel)
-    addon_updater_ops.unregister()
-
-    # 1. Configs
-    translate_utils.unregister()
-    global_properties.unregister()
+    steps = [
+        texcomb.unregister,
+        blueprint_node_texture.unregister,
+        blueprint_node_panel.unregister,
+        blueprint_node_shapekey.unregister,
+        blueprint_node_menu.unregister,
+        ui_func_export.unregister,
+        blueprint_node_obj.unregister,
+        ui_panel_fast_texture.unregister,
+        ui_func_import_ssmt.unregister,
+        ui_panel_sword.unregister,
+        ui_panel_model.unregister,
+        ui_panel_basic.unregister,
+        blueprint_node_base.unregister,
+        _unregister_updater,
+        translate_utils.unregister,
+        global_properties.unregister,
+    ]
+    for step in steps:
+        try:
+            step()
+        except Exception:
+            import traceback
+            print(f"[TheHerta4] unregister step failed: {getattr(step, '__module__', step)}")
+            traceback.print_exc()
 
 
 

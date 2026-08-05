@@ -19,6 +19,9 @@ class DrawCallModel:
     # 生效条件，在BlueprintModel解析的时候得到
     work_key_list:list[M_Key] = field(init=False,repr=False,default_factory=list)
 
+    # 通过蓝图 Texture 节点的 Slot 出口连接上来的贴图
+    slot_texture_node_list:list = field(init=False,repr=False,default_factory=list)
+
     # 在SubMeshModel层级计算得到这些属性，用于ini写出
     index_count:int = field(init=False,repr=False,default=0)
     vertex_count:int = field(init=False,repr=False,default=0)

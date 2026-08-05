@@ -839,7 +839,8 @@ class SSMTWorkSpace:
 
         deduped_filename_drawcall_index_list_dict = {}
         for trianglelist_deduped_filename,deduped_kv_dict in trianglelist_deduped_filename_json_dict.items():
-            deduped_filename:str = deduped_kv_dict["FALogDedupedFileName"]
+            deduped_filename:str = deduped_kv_dict.get("FALogDedupedFileName", "")
+            json_format:str = deduped_kv_dict.get("Format", "")
             draw_call_index:str = trianglelist_deduped_filename[0:6]
 
             drawcall_index_list = deduped_filename_drawcall_index_list_dict.get(deduped_filename,[])
@@ -887,9 +888,7 @@ class SSMTWorkSpace:
             except Exception:
                 fmt = ""
 
-            format = fmt
-
-            print(format)
+            format = json_format if json_format else fmt
 
             for draw_call_index in drawcall_index_list:
                 matched_component_count = drawcall_component_count_dict.get(draw_call_index,"")

@@ -761,6 +761,7 @@ def draw_node_add_menu(self, context):
     
     layout = self.layout
     layout.operator("node.add_node", text=iface_("物体信息"), icon='OBJECT_DATAMODE').type = "SSMTNode_Object_Info"
+    layout.operator("node.add_node", text=iface_("贴图"), icon='IMAGE_DATA').type = "SSMTNode_Texture"
     layout.operator("node.add_node", text=iface_("分组"), icon='GROUP').type = "SSMTNode_Object_Group"
     layout.operator("node.add_node", text=iface_("生成Mod"), icon='EXPORT').type = "SSMTNode_Result_Output"
     layout.operator("node.add_node", text=iface_("按键切换"), icon='GROUP').type = "SSMTNode_SwitchKey"

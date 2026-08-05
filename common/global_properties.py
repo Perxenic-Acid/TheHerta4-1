@@ -64,12 +64,6 @@ class GlobalProperties(bpy.types.PropertyGroup):
         default=True,
     ) # type: ignore
 
-    forbid_auto_texture_ini: bpy.props.BoolProperty(
-        name="禁止自动贴图流程",
-        description="生成Mod时禁止生成贴图相关ini部分",
-        default=False,
-    ) # type: ignore
-
     generate_branch_mod_gui: bpy.props.BoolProperty(
         name="生成分支切换Mod面板(测试版)",
         description="生成Mod时，生成一个基于当前集合架构的分支Mod面板，可在游戏中按住Ctrl + Alt呼出，仍在测试改进中",
@@ -189,8 +183,9 @@ class GlobalProperties(bpy.types.PropertyGroup):
         return cls._instance().gimi_use_orfix
 
     @classmethod
-    def forbid_auto_texture_ini(cls):
-        return cls._instance().forbid_auto_texture_ini
+    def forbid_auto_texture_ini(cls) -> bool:
+        """旧自动贴图流程已移除，保留该方法仅作兼容性垫片，始终返回 False。"""
+        return False
 
     @classmethod
     def generate_branch_mod_gui(cls):
