@@ -26,9 +26,12 @@ class TextureMetadataResolver:
         '''
         查找目标目录下，满足指定后缀和前缀的贴图文件
         '''
+        normalized_prefix = str(texture_prefix).casefold()
+        normalized_suffix = str(texture_suffix).casefold()
         for root, dirs, files in os.walk(directory):
             for file in files:
-                if file.endswith(texture_suffix) and file.startswith(texture_prefix):
+                normalized_file = file.casefold()
+                if normalized_file.endswith(normalized_suffix) and normalized_file.startswith(normalized_prefix):
                     texture_path = os.path.join(root, file)
                     return texture_path
         return None

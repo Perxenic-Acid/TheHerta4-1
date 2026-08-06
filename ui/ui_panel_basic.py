@@ -130,6 +130,11 @@ class PanelBasicInformation(bpy.types.Panel):
         # 决定导入时是否调用法线贴图
         layout.prop(global_properties, "use_normal_map")
 
+        if GlobalConfig.logic_name == LogicName.GIMI or str(GlobalConfig.gamename).strip().casefold() in {
+            "gimi", "genshinimpact", "原神",
+        }:
+            layout.prop(global_properties, "gimi_high_fidelity_rendering")
+
 
 
 

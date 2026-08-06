@@ -956,7 +956,11 @@ classes = (
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    for tree in bpy.data.node_groups:
+    # During Blender registration bpy.data can still be _RestrictData, which
+    # does not expose node_groups.  Existing blueprints are refreshed later
+    # when normal data access is available.
+    node_groups = getattr(getattr(bpy, 'data', None), 'node_groups', ())
+    for tree in node_groups:
         if getattr(tree, 'bl_idname', '') != 'SSMTBlueprintTreeType':
             continue
         for node in tree.nodes:
