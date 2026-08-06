@@ -94,6 +94,36 @@ class GIMIHighFidelityMaterial:
         return light_object, camera_object
 
     @classmethod
+    def _bind_virtual_sun_drivers(cls, group):
+        """Bind every virtual-sun group input to the scene helper object."""
+        light_object = bpy.data.objects.get(cls.VIRTUAL_SUN_NAME)
+        if light_object is None:
+            return
+
+        for node in group.nodes:
+            if node.bl_idname != 'ShaderNodeGroup' or node.name != 'evaluate_virtual_sun':
+                continue
+            socket = node.inputs.get('Sun Rotation')
+            if socket is None:
+                continue
+            socket.default_value = light_object.rotation_euler
+            for axis in range(3):
+                try:
+                    socket.driver_remove('default_value', axis)
+                except (RuntimeError, TypeError):
+                    pass
+                driver = socket.driver_add('default_value', axis).driver
+                driver.type = 'SCRIPTED'
+                driver.expression = 'rotation'
+                for variable in list(driver.variables):
+                    driver.variables.remove(variable)
+                variable = driver.variables.new()
+                variable.name = 'rotation'
+                variable.type = 'SINGLE_PROP'
+                variable.targets[0].id = light_object
+                variable.targets[0].data_path = f'rotation_euler[{axis}]'
+
+    @classmethod
     def _configure_preview_compositor(cls):
         """Install the requested Bloom compositor and viewport preview flags."""
         scene = bpy.context.scene
@@ -407,6 +437,19 @@ class GIMIHighFidelityMaterial:
             [('NodeSocketColor', 'Body Ramp Color')],
         )
         if len(group.nodes) > 2:
+            # Shared groups survive re-imports; restore the tuned shadow value
+            # instead of retaining a brighter value from an older material.
+            shadow_value = next(
+                (node for node in group.nodes
+                 if node.bl_idname == 'ShaderNodeHueSaturation'
+                 and node.name.startswith('Darken Shadow Ramp')),
+                None,
+            )
+            if shadow_value is not None:
+                shadow_value.inputs['Hue'].default_value = 0.5
+                shadow_value.inputs['Saturation'].default_value = 1.0
+                shadow_value.inputs['Value'].default_value = 0.97
+                shadow_value.inputs['Fac'].default_value = 1.0
             return group
         nodes, links = group.nodes, group.links
         curve = cls._node(group, 'ShaderNodeRGBCurve', 'CurveMap.Ramp.Combined', (-220, 0))
@@ -610,6 +653,7 @@ class GIMIHighFidelityMaterial:
             ],
         )
         if len(group.nodes) > 2:
+            cls._bind_virtual_sun_drivers(group)
             return group
         nodes, links = group.nodes, group.links
         group_in, group_out = nodes['Group Input'], nodes['Group Output']
@@ -621,16 +665,7 @@ class GIMIHighFidelityMaterial:
         virtual_sun = cls._node(group, 'ShaderNodeGroup', 'evaluate_virtual_sun', (-820, -100))
         virtual_sun.node_tree = cls._virtual_sun_group()
         links.new(decoded_normal.outputs['Normal'], virtual_sun.inputs['Surface Normal'])
-        light_object = bpy.data.objects.get(cls.VIRTUAL_SUN_NAME)
-        if light_object is not None:
-            virtual_sun.inputs['Sun Rotation'].default_value = light_object.rotation_euler
-            for axis in range(3):
-                driver = virtual_sun.inputs['Sun Rotation'].driver_add('default_value', axis).driver
-                variable = driver.variables.new()
-                variable.name = 'rotation'
-                variable.targets[0].id = light_object
-                variable.targets[0].data_path = f'rotation_euler[{axis}]'
-                driver.expression = 'rotation'
+        cls._bind_virtual_sun_drivers(group)
         lightmap_separate = cls._node(group, 'ShaderNodeSeparateColor', 'LightMap Channels', (-1040, -300))
         links.new(group_in.outputs['LightMap Color'], lightmap_separate.inputs['Color'])
         links.new(lightmap_separate.outputs['Green'], virtual_sun.inputs['Light Gain'])
@@ -712,6 +747,7 @@ class GIMIHighFidelityMaterial:
             [('NodeSocketVector', 'Ramp UV'), ('NodeSocketVector', 'MatCap UV')],
         )
         if len(group.nodes) > 2:
+            cls._bind_virtual_sun_drivers(group)
             return group
         nodes, links = group.nodes, group.links
         group_in, group_out = nodes['Group Input'], nodes['Group Output']
@@ -721,16 +757,7 @@ class GIMIHighFidelityMaterial:
         virtual_sun = cls._node(group, 'ShaderNodeGroup', 'evaluate_virtual_sun', (-620, 40))
         virtual_sun.node_tree = cls._virtual_sun_group()
         links.new(decoded_normal.outputs['Normal'], virtual_sun.inputs['Surface Normal'])
-        light_object = bpy.data.objects.get(cls.VIRTUAL_SUN_NAME)
-        if light_object is not None:
-            virtual_sun.inputs['Sun Rotation'].default_value = light_object.rotation_euler
-            for axis in range(3):
-                driver = virtual_sun.inputs['Sun Rotation'].driver_add('default_value', axis).driver
-                variable = driver.variables.new()
-                variable.name = 'rotation'
-                variable.targets[0].id = light_object
-                variable.targets[0].data_path = f'rotation_euler[{axis}]'
-                driver.expression = 'rotation'
+        cls._bind_virtual_sun_drivers(group)
         lightmap = cls._node(group, 'ShaderNodeSeparateColor', 'LightMap Channels', (-840, -130))
         links.new(group_in.outputs['LightMap Color'], lightmap.inputs['Color'])
         links.new(lightmap.outputs['Green'], virtual_sun.inputs['Light Gain'])
