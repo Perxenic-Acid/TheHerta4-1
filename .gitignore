@@ -5,3 +5,4 @@ theherta4_updater/
 test/
 references/
 .venv/
+tmp/
