@@ -60,6 +60,17 @@ class CollectionUtils:
         recurse_collection(collection)
 
     @staticmethod
+    def deselect_collection_objects(collection):
+        """Clear selection introduced by an import without touching other objects."""
+        objects = tuple(collection.all_objects)
+        for obj in objects:
+            obj.select_set(False)
+
+        active_object = bpy.context.view_layer.objects.active
+        if active_object in objects:
+            bpy.context.view_layer.objects.active = None
+
+    @staticmethod
     def find_layer_collection(view_layer, collection_name):
         def recursive_search(layer_collections, collection_name):
             for layer_collection in layer_collections:

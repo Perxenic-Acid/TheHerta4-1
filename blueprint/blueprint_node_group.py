@@ -46,7 +46,10 @@ def _tree_from_context(context):
     space = getattr(context, "space_data", None)
     if not isinstance(space, bpy.types.SpaceNodeEditor):
         return None
-    return getattr(space, "edit_tree", None) or getattr(space, "node_tree", None)
+    tree = getattr(space, "edit_tree", None) or getattr(space, "node_tree", None)
+    if getattr(tree, "bl_idname", "") != TREE_IDNAME:
+        return None
+    return tree
 
 
 def _navigation_key(space):
