@@ -20,8 +20,8 @@ class GIMIHighFidelityMaterial:
     separate builders and use the same small importer dispatch point.
     """
 
-    GROUP_PREFIX = "SSMT GIMI v7 "
-    SHADER_SCHEMA_VERSION = 7
+    GROUP_PREFIX = "SSMT GIMI v10 "
+    SHADER_SCHEMA_VERSION = 10
     PREVIEW_COLLECTION_NAME = "SSMT GIMI Preview"
     VIRTUAL_SUN_NAME = "虚拟日光"
     PREVIEW_CAMERA_NAME = "SSMT GIMI Preview Camera"
@@ -92,6 +92,81 @@ class GIMIHighFidelityMaterial:
             scene.camera = camera_object
 
         return light_object, camera_object
+
+    @classmethod
+    def _configure_preview_compositor(cls):
+        """Install the requested Bloom compositor and viewport preview flags."""
+        scene = bpy.context.scene
+        scene.use_nodes = True
+        tree = getattr(scene, 'compositing_node_group', None)
+        if tree is None:
+            tree = bpy.data.node_groups.new('SSMT GIMI Preview Compositor', 'CompositorNodeTree')
+            scene.compositing_node_group = tree
+
+        nodes, links = tree.nodes, tree.links
+
+        def get_or_create(node_type, name):
+            node = nodes.get(name)
+            if node is None or node.bl_idname != node_type:
+                if node is not None:
+                    nodes.remove(node)
+                node = nodes.new(node_type)
+                node.name = name
+                node.label = name
+            return node
+
+        if hasattr(tree, 'interface'):
+            output_sockets = [
+                item for item in tree.interface.items_tree
+                if getattr(item, 'item_type', None) == 'SOCKET'
+                and getattr(item, 'in_out', None) == 'OUTPUT'
+            ]
+            if not output_sockets:
+                tree.interface.new_socket(name='Image', in_out='OUTPUT', socket_type='NodeSocketColor')
+        elif not tree.outputs:
+            tree.outputs.new('NodeSocketColor', 'Image')
+
+        render_layers = get_or_create('CompositorNodeRLayers', 'Render Layers')
+        glare = get_or_create('CompositorNodeGlare', 'Glare')
+        composite = get_or_create('NodeGroupOutput', 'Group Outpit')
+        viewer = get_or_create('CompositorNodeViewer', 'Viewer')
+        render_layers.location = (-420, 60)
+        glare.location = (-120, 60)
+        composite.location = (220, 120)
+        viewer.location = (220, -40)
+
+        # Blender 5 exposes Goo's glare controls as typed input sockets.
+        glare.inputs['Type'].default_value = 'Bloom'
+        glare.inputs['Quality'].default_value = 'High'
+        glare.inputs['Threshold'].default_value = 1.0
+        glare.inputs['Smoothness'].default_value = 1.0
+        glare.inputs['Strength'].default_value = 0.298
+        glare.inputs['Saturation'].default_value = 1.0
+        glare.inputs['Tint'].default_value = (1.0, 0.23455, 0.19752, 1.0)
+        glare.inputs['Size'].default_value = 0.669
+
+        for link in list(links):
+            if link.to_node in (glare, composite, viewer):
+                links.remove(link)
+        links.new(render_layers.outputs['Image'], glare.inputs['Image'])
+        # The requested output1 is Blender's second Glare output.
+        links.new(glare.outputs[0], composite.inputs[0])
+        links.new(glare.outputs[0], viewer.inputs['Image'])
+        scene['SSMT:GIMICompositor'] = 'Bloom'
+
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type != 'VIEW_3D':
+                    continue
+                shading = area.spaces.active.shading
+                if hasattr(shading, 'use_compositor'):
+                    shading.use_compositor = 'ALWAYS'
+                shading.use_scene_lights = False
+                shading.use_scene_world = False
+                if hasattr(shading, 'use_scene_lights_render'):
+                    shading.use_scene_lights_render = False
+                if hasattr(shading, 'use_scene_world_render'):
+                    shading.use_scene_world_render = False
 
     @staticmethod
     def _socket(group, in_out: str, socket_type: str, name: str):
@@ -196,7 +271,7 @@ class GIMIHighFidelityMaterial:
     @classmethod
     def _virtual_sun_group(cls):
         group = cls._group(
-            "Evaluate Virtual Sun",
+            "NT虚拟日光",
             [
                 ('NodeSocketVector', 'Surface Normal'), ('NodeSocketFloat', 'Light Gain'),
                 ('NodeSocketVector', 'Sun Rotation'),
@@ -254,11 +329,12 @@ class GIMIHighFidelityMaterial:
 
     @classmethod
     def _grade_base_group(cls):
-        group = cls._group("Grade Base Color", [('NodeSocketColor', 'Base Color')], [('NodeSocketColor', 'Graded Color')])
+        group = cls._group("NT调色", [('NodeSocketColor', 'Base Color')], [('NodeSocketColor', 'Graded Color')])
         if len(group.nodes) > 2:
             return group
         nodes, links = group.nodes, group.links
-        curve = cls._node(group, 'ShaderNodeRGBCurve', 'Base RGB Curve', (-180, 0))
+        curve = cls._node(group, 'ShaderNodeRGBCurve', 'CurveMap.BaseColor.Combined', (-180, 0))
+        curve.label = 'CurveMap | NT调色 | Combined point (0.457726, 0.298387)'
         curve.mapping.initialize()
         curve.mapping.curves[3].points.new(0.457726, 0.298387)
         curve.mapping.update()
@@ -275,7 +351,7 @@ class GIMIHighFidelityMaterial:
     @classmethod
     def _body_ramp_coordinates_group(cls):
         group = cls._group(
-            "Body Ramp Coordinates",
+            "NTramp.clothes Coordinates",
             [('NodeSocketFloat', 'Half Lambert'), ('NodeSocketFloat', 'Material ID')],
             [('NodeSocketVector', 'Ramp UV'), ('NodeSocketFloat', 'Fully Lit Mask')],
         )
@@ -326,30 +402,37 @@ class GIMIHighFidelityMaterial:
     @classmethod
     def _body_ramp_shading_group(cls):
         group = cls._group(
-            "Sample Body Ramp",
+            "NTramp.clothes Color",
             [('NodeSocketColor', 'Ramp Color'), ('NodeSocketFloat', 'Fully Lit Mask')],
             [('NodeSocketColor', 'Body Ramp Color')],
         )
         if len(group.nodes) > 2:
             return group
         nodes, links = group.nodes, group.links
-        curve = cls._node(group, 'ShaderNodeRGBCurve', 'Ramp RGB Curve', (-220, 0))
+        curve = cls._node(group, 'ShaderNodeRGBCurve', 'CurveMap.Ramp.Combined', (-220, 0))
+        curve.label = 'CurveMap | NTramp.clothes | Combined point (0.499811, 0.378282)'
         curve.mapping.initialize()
         curve.mapping.curves[3].points.new(0.499811, 0.378282)
         curve.mapping.update()
+        shadow_value = cls._node(group, 'ShaderNodeHueSaturation', 'Darken Shadow Ramp 0.97', (-20, 0))
+        shadow_value.inputs['Hue'].default_value = 0.5
+        shadow_value.inputs['Saturation'].default_value = 1.0
+        shadow_value.inputs['Value'].default_value = 0.97
+        shadow_value.inputs['Fac'].default_value = 1.0
         mix = cls._node(group, 'ShaderNodeMixRGB', 'Fully Lit Daylight Color', (40, 0))
         mix.blend_type = 'MIX'
         mix.inputs[2].default_value = (0.85, 0.77519834, 0.765, 1.0)
         links.new(nodes['Group Input'].outputs['Ramp Color'], curve.inputs['Color'])
         links.new(nodes['Group Input'].outputs['Fully Lit Mask'], mix.inputs[0])
-        links.new(curve.outputs['Color'], mix.inputs[1])
+        links.new(curve.outputs['Color'], shadow_value.inputs['Color'])
+        links.new(shadow_value.outputs['Color'], mix.inputs[1])
         links.new(mix.outputs['Color'], nodes['Group Output'].inputs['Body Ramp Color'])
         return group
 
     @classmethod
     def _metal_matcap_group(cls):
         group = cls._group(
-            "Evaluate Metal MatCap",
+            "NT金属",
             [
                 ('NodeSocketColor', 'Base Color'), ('NodeSocketColor', 'LightMap'),
                 ('NodeSocketColor', 'MatCap Color'), ('NodeSocketVector', 'Surface Normal'),
@@ -387,21 +470,13 @@ class GIMIHighFidelityMaterial:
         color.inputs[0].default_value = 1.0
         links.new(group_in.outputs['LightMap'], lightmap.inputs['Color'])
         links.new(lightmap.outputs['Red'], mask.inputs[0])
-        try:
-            glossy = cls._node(group, 'ShaderNodeBsdfAnisotropic', 'Glossy BSDF', (-270, -80))
-            glossy.inputs['Color'].default_value = (0.8, 0.8, 0.8, 1.0)
-            glossy.inputs['Roughness'].default_value = 0.5
-            shader_to_rgb = cls._node(group, 'ShaderNodeShaderToRGB', 'Shader to RGB', (-80, -110))
-            links.new(group_in.outputs['Surface Normal'], glossy.inputs['Normal'])
-            links.new(glossy.outputs['BSDF'], shader_to_rgb.inputs['Shader'])
-            links.new(shader_to_rgb.outputs['Color'], masked_specular.inputs[0])
-        except RuntimeError:
-            # Shader to RGB is unavailable outside Eevee/Goo Engine.  Keep an
-            # explicit, named approximation only for those environments.
-            facing = cls._node(group, 'ShaderNodeLayerWeight', 'Fallback Glossy View Response', (-250, -80))
-            facing.inputs['Blend'].default_value = 0.5
-            links.new(group_in.outputs['Surface Normal'], facing.inputs['Normal'])
-            links.new(facing.outputs['Facing'], masked_specular.inputs[0])
+        glossy = cls._node(group, 'ShaderNodeBsdfAnisotropic', 'Glossy BSDF', (-270, -80))
+        glossy.inputs['Color'].default_value = (0.8, 0.8, 0.8, 1.0)
+        glossy.inputs['Roughness'].default_value = 0.5
+        shader_to_rgb = cls._node(group, 'ShaderNodeShaderToRGB', 'Shader to RGB', (-80, -110))
+        links.new(group_in.outputs['Surface Normal'], glossy.inputs['Normal'])
+        links.new(glossy.outputs['BSDF'], shader_to_rgb.inputs['Shader'])
+        links.new(shader_to_rgb.outputs['Color'], masked_specular.inputs[0])
         links.new(mask.outputs[0], masked_specular.inputs[1])
         links.new(masked_specular.outputs[0], specular_blue.inputs[0])
         links.new(lightmap.outputs['Blue'], specular_blue.inputs[1])
@@ -420,7 +495,7 @@ class GIMIHighFidelityMaterial:
     @classmethod
     def _special_emission_group(cls):
         group = cls._group(
-            "Evaluate Special Emission",
+            "NT神之眼颜色",
             [('NodeSocketColor', 'Graded Base'), ('NodeSocketFloat', 'Frame'), ('NodeSocketColor', 'Element Color')],
             [('NodeSocketColor', 'Emission Color')],
         )
@@ -456,7 +531,7 @@ class GIMIHighFidelityMaterial:
 
     @classmethod
     def _edge_light_group(cls):
-        group = cls._group("Apply Screen Space Edge Light", [('NodeSocketColor', 'Color')], [('NodeSocketColor', 'Edge Lit Color')])
+        group = cls._group("NT屏幕空间边缘光", [('NodeSocketColor', 'Color')], [('NodeSocketColor', 'Edge Lit Color')])
         if len(group.nodes) > 2:
             return group
         nodes, links = group.nodes, group.links
@@ -468,45 +543,48 @@ class GIMIHighFidelityMaterial:
         try:
             curvature = cls._node(group, 'ShaderNodeCurvature', 'Goo Engine Curvature', (520, 120))
         except RuntimeError:
-            layer_weight = cls._node(group, 'ShaderNodeLayerWeight', 'Fallback Viewport Rim Approximation', (-140, 100))
-            rim = cls._node(group, 'ShaderNodeMath', 'Fallback Rim > 0.05', (40, 100))
-            rim.operation = 'LESS_THAN'
-            rim.inputs[1].default_value = 0.95
-            links.new(layer_weight.outputs['Facing'], rim.inputs[0])
-        else:
-            camera = cls._node(group, 'ShaderNodeCameraData', 'Camera Data', (-560, 120))
-            abs_depth = cls._node(group, 'ShaderNodeMath', 'Abs View Z Depth', (-380, 120))
-            abs_depth.operation = 'ABSOLUTE'
-            depth = cls._node(group, 'ShaderNodeMath', 'Safe View Z Depth', (-210, 120))
-            depth.operation = 'MAXIMUM'
-            depth.inputs[1].default_value = 1.0e-6
-            inverse_square = cls._node(group, 'ShaderNodeMath', '1 / Depth Squared', (-20, 180))
-            inverse_square.operation = 'POWER'
-            inverse_square.inputs[1].default_value = -2.0
-            inverse = cls._node(group, 'ShaderNodeMath', '1 / Depth', (-20, 80))
-            inverse.operation = 'DIVIDE'
-            inverse.inputs[0].default_value = 1.0
-            farther_than_one = cls._node(group, 'ShaderNodeMath', 'Depth > 1', (150, 120))
-            farther_than_one.operation = 'GREATER_THAN'
-            farther_than_one.inputs[1].default_value = 1.0
-            thickness = cls._node(group, 'ShaderNodeMix', 'Depth Based Thickness', (320, 120))
-            thickness.data_type = 'FLOAT'
-            curvature.inputs['Samples'].default_value = 8.0
-            curvature.inputs['Sample Radius'].default_value = 0.2
-            curvature.inputs['Scale'].default_value = (1.0, 1.0, 0.0)
-            rim = cls._node(group, 'ShaderNodeMath', 'Scene Rim > 0.05', (720, 120))
-            rim.operation = 'GREATER_THAN'
-            rim.inputs[1].default_value = 0.05
-            links.new(camera.outputs['View Z Depth'], abs_depth.inputs[0])
-            links.new(abs_depth.outputs[0], depth.inputs[0])
-            links.new(depth.outputs[0], inverse_square.inputs[0])
-            links.new(depth.outputs[0], inverse.inputs[1])
-            links.new(depth.outputs[0], farther_than_one.inputs[0])
-            links.new(farther_than_one.outputs[0], thickness.inputs['Factor'])
-            links.new(inverse_square.outputs[0], thickness.inputs['A'])
-            links.new(inverse.outputs[0], thickness.inputs['B'])
-            links.new(thickness.outputs['Result'], curvature.inputs['Thickness'])
-            links.new(curvature.outputs['Scene Rim'], rim.inputs[0])
+            # Standard Blender has no Goo Curvature node.  The requested
+            # behavior here is a literal passthrough, not a rim approximation.
+            group.nodes.remove(bright)
+            links.new(nodes['Group Input'].outputs['Color'], nodes['Group Output'].inputs['Edge Lit Color'])
+            group['SSMT:GooCurvature'] = False
+            group['SSMT:EdgeLightMode'] = 'DIRECT_OUTPUT'
+            return group
+        group['SSMT:GooCurvature'] = True
+        group['SSMT:EdgeLightMode'] = 'CURVATURE'
+        camera = cls._node(group, 'ShaderNodeCameraData', 'Camera Data', (-560, 120))
+        abs_depth = cls._node(group, 'ShaderNodeMath', 'Abs View Z Depth', (-380, 120))
+        abs_depth.operation = 'ABSOLUTE'
+        depth = cls._node(group, 'ShaderNodeMath', 'Safe View Z Depth', (-210, 120))
+        depth.operation = 'MAXIMUM'
+        depth.inputs[1].default_value = 1.0e-6
+        inverse_square = cls._node(group, 'ShaderNodeMath', '1 / Depth Squared', (-20, 180))
+        inverse_square.operation = 'POWER'
+        inverse_square.inputs[1].default_value = -2.0
+        inverse = cls._node(group, 'ShaderNodeMath', '1 / Depth', (-20, 80))
+        inverse.operation = 'DIVIDE'
+        inverse.inputs[0].default_value = 1.0
+        farther_than_one = cls._node(group, 'ShaderNodeMath', 'Depth > 1', (150, 120))
+        farther_than_one.operation = 'GREATER_THAN'
+        farther_than_one.inputs[1].default_value = 1.0
+        thickness = cls._node(group, 'ShaderNodeMix', 'Depth Based Thickness', (320, 120))
+        thickness.data_type = 'FLOAT'
+        curvature.inputs['Samples'].default_value = 8.0
+        curvature.inputs['Sample Radius'].default_value = 0.2
+        curvature.inputs['Scale'].default_value = (1.0, 1.0, 0.0)
+        rim = cls._node(group, 'ShaderNodeMath', 'Scene Rim > 0.05', (720, 120))
+        rim.operation = 'GREATER_THAN'
+        rim.inputs[1].default_value = 0.05
+        links.new(camera.outputs['View Z Depth'], abs_depth.inputs[0])
+        links.new(abs_depth.outputs[0], depth.inputs[0])
+        links.new(depth.outputs[0], inverse_square.inputs[0])
+        links.new(depth.outputs[0], inverse.inputs[1])
+        links.new(depth.outputs[0], farther_than_one.inputs[0])
+        links.new(farther_than_one.outputs[0], thickness.inputs['Factor'])
+        links.new(inverse_square.outputs[0], thickness.inputs['A'])
+        links.new(inverse.outputs[0], thickness.inputs['B'])
+        links.new(thickness.outputs['Result'], curvature.inputs['Thickness'])
+        links.new(curvature.outputs['Scene Rim'], rim.inputs[0])
         mix = cls._node(group, 'ShaderNodeMixRGB', 'Apply Edge Light', (230, 0))
         links.new(nodes['Group Input'].outputs['Color'], bright.inputs['Color'])
         links.new(rim.outputs[0], mix.inputs[0])
@@ -563,6 +641,7 @@ class GIMIHighFidelityMaterial:
         nodes, links = material.node_tree.nodes, material.node_tree.links
         nodes.clear()
         light_object, _ = cls._ensure_preview_objects()
+        cls._configure_preview_compositor()
         body_ramp_path = cls.find_optional_texture(directory, ('bodyramp', 'body_ramp', 'rampmap'))
         metal_map_path = cls.find_optional_texture(directory, ('metalmap', 'metal_map', 'matcap'))
         if body_ramp_path is None:
