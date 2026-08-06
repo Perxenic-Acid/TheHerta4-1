@@ -762,6 +762,7 @@ def draw_node_add_menu(self, context):
     layout = self.layout
     layout.operator("node.add_node", text=iface_("物体信息"), icon='OBJECT_DATAMODE').type = "SSMTNode_Object_Info"
     layout.operator("node.add_node", text=iface_("贴图"), icon='IMAGE_DATA').type = "SSMTNode_Texture"
+    layout.operator("node.add_node", text="CustomShader", icon='NODE_COMPOSITING').type = "SSMTNode_CustomShader"
     layout.operator("node.add_node", text=iface_("分组"), icon='GROUP').type = "SSMTNode_Object_Group"
     layout.operator("node.add_node", text=iface_("生成Mod"), icon='EXPORT').type = "SSMTNode_Result_Output"
     layout.operator("node.add_node", text=iface_("按键切换"), icon='GROUP').type = "SSMTNode_SwitchKey"
@@ -785,6 +786,7 @@ def draw_node_context_menu(self, context):
     
     layout = self.layout
     layout.separator()
+    layout.operator("ssmt.make_group", text="Make Group", icon='NODETREE')
     layout.operator("ssmt.align_nodes", text=iface_("矩阵对齐节点"), icon='GRID')
     layout.operator("ssmt.batch_connect_nodes", text=iface_("批量连接节点"), icon='LINKED')
     layout.operator("ssmt.refresh_blueprint_submesh_list", text=iface_("刷新 Submesh 列表"), icon='FILE_REFRESH')
@@ -808,8 +810,30 @@ def register():
     bpy.types.VIEW3D_MT_object_context_menu.append(draw_objects_context_menu_add)
     # 添加到节点编辑器右键菜单
     bpy.types.NODE_MT_context_menu.append(draw_node_context_menu)
+    wm = bpy.context.window_manager
+    keyconfig = wm.keyconfigs.addon
+    if keyconfig:
+        keymap = keyconfig.keymaps.new(name='Node Editor', space_type='NODE_EDITOR')
+        if not any(
+            item.idname == 'ssmt.make_group' and item.type == 'G' and item.ctrl
+            for item in keymap.keymap_items
+        ):
+            keymap.keymap_items.new('ssmt.make_group', 'G', 'PRESS', ctrl=True)
+        if not any(item.idname == 'ssmt.group_tab' and item.type == 'TAB' for item in keymap.keymap_items):
+            keymap.keymap_items.new('ssmt.group_tab', 'TAB', 'PRESS')
 
 def unregister():
+    wm = bpy.context.window_manager
+    keyconfig = wm.keyconfigs.addon
+    if keyconfig:
+        keymap = keyconfig.keymaps.get('Node Editor')
+        if keymap:
+            for item in list(keymap.keymap_items):
+                if (
+                    (item.idname == 'ssmt.make_group' and item.type == 'G' and item.ctrl)
+                    or (item.idname == 'ssmt.group_tab' and item.type == 'TAB')
+                ):
+                    keymap.keymap_items.remove(item)
     bpy.types.NODE_MT_context_menu.remove(draw_node_context_menu)
     bpy.types.NODE_MT_add.remove(draw_node_add_menu)
     bpy.types.VIEW3D_MT_object_context_menu.remove(draw_objects_context_menu_add)

@@ -6,3 +6,4 @@ test/
 references/
 .venv/
 tmp/
+tests/

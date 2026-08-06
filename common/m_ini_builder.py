@@ -27,6 +27,7 @@ class M_SectionType:
 
     CreditInfo = "CreditInfo"
     CommandList = "CommandList"
+    CustomShader = "CustomShader"
 
     # 跨IB相关Section类型
     CrossIBPresent = "CrossIBPresent"
@@ -68,11 +69,13 @@ class M_IniBuilder:
 
         # 用于控制是否是第一次出现这个名字的Section
         self.ini_section_name_set:set = set()
+        self._custom_shader_sections_appended = False
     
     def clear(self):
         self.line_list.clear()
         self.ini_section_list.clear()
         self.ini_section_name_set.clear()
+        self._custom_shader_sections_appended = False
 
     def __append_section_line(self,ini_section_type:M_SectionType):
         '''
@@ -103,6 +106,9 @@ class M_IniBuilder:
         '''
         不重新排序的版本，方便我们的ini格式和其它工具生成的ini格式进行对比。
         '''
+        from .m_custom_shader_helper import M_CustomShaderHelper
+        M_CustomShaderHelper.append_sections(self)
+
         current_section_name = None
         for ini_section in self.ini_section_list:
             section_name_exists = ini_section.SectionName == current_section_name
@@ -145,6 +151,9 @@ class M_IniBuilder:
         pass
 
     def save_to_file(self,config_ini_path:str):
+        from .m_custom_shader_helper import M_CustomShaderHelper
+        M_CustomShaderHelper.append_sections(self)
+
         self.__append_section_line(M_SectionType.CrossIBPresent)
         
         self.__append_section_line(M_SectionType.ResourceID)
@@ -191,6 +200,8 @@ class M_IniBuilder:
         self.__append_section_line(M_SectionType.VertexShaderCheck)
         
         self.__append_section_line(M_SectionType.CreditInfo)
+
+        self.__append_section_line(M_SectionType.CustomShader)
 
 
         # Add tools credit.

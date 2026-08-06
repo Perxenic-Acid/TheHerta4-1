@@ -17,7 +17,15 @@ from ..blueprint.blueprint_export_helper import BlueprintExportHelper
 from ..blueprint.blueprint_node_obj import SSMTNode_Object_Group, SSMTNode_SwitchKey, SSMTNode_Object_Info, SSMTNode_Result_Output
 
 from ..blueprint.blueprint_node_texture import SSMTNode_Texture
+from ..blueprint.blueprint_node_custom_shader import SSMTNode_CustomShader
+from ..blueprint.blueprint_node_group import (
+    GROUP_INPUT_IDNAME,
+    GROUP_NODE_IDNAME,
+    GROUP_OUTPUT_IDNAME,
+    _group_socket_for_interface,
+)
 from ..common.m_texture_helper import HashTextureBinding
+from ..common.m_custom_shader_helper import M_CustomShaderHelper
 
 
 class BluePrintModel:
@@ -25,6 +33,7 @@ class BluePrintModel:
     _KEY_ALIAS_PATTERN = re.compile(r"^[A-Za-z0-9]+$")
     
     def __init__(self, tree=None, context=None):
+        M_CustomShaderHelper.begin_export()
         # 全局按键名称和按键属性字典
         self.keyname_mkey_dict:dict[str,M_Key] = {} 
 
@@ -36,6 +45,7 @@ class BluePrintModel:
 
         # UniComponent 拆分产生的临时物体，导出后需清理
         self._unico_temp_objects: list[bpy.types.Object] = []
+        self._group_instance_stack: list[bpy.types.Node] = []
 
         # 从输出节点开始递归解析所有的节点
         tree = tree or BlueprintExportHelper.get_current_blueprint_tree(context=context)
@@ -77,8 +87,12 @@ class BluePrintModel:
         return key_name, True
 
     def parse_current_node(self, current_node:bpy.types.Node, chain_key_list:list[M_Key]):
-        for unknown_node in BlueprintExportHelper.get_connected_nodes(current_node):
-            self.parse_single_node(unknown_node, chain_key_list)
+        for input_socket in current_node.inputs:
+            for link in input_socket.links:
+                if link.from_node.bl_idname == GROUP_INPUT_IDNAME:
+                    self._parse_group_input(link.from_node, link.from_socket, chain_key_list)
+                else:
+                    self.parse_single_node(link.from_node, chain_key_list)
 
     def parse_single_node(self, unknown_node:bpy.types.Node, chain_key_list:list[M_Key]):
         '''
@@ -89,7 +103,10 @@ class BluePrintModel:
         if unknown_node.mute:
             return
 
-        if unknown_node.bl_idname == SSMTNode_Object_Group.bl_idname:
+        if unknown_node.bl_idname == GROUP_NODE_IDNAME:
+            self._parse_custom_group(unknown_node, chain_key_list)
+
+        elif unknown_node.bl_idname == SSMTNode_Object_Group.bl_idname:
             # 如果是单纯的分组节点，则不进行任何处理直接传递下去
             self.parse_current_node(unknown_node, chain_key_list)
 
@@ -175,6 +192,7 @@ class BluePrintModel:
 
         elif unknown_node.bl_idname == SSMTNode_Object_Info.bl_idname:
             obj = bpy.data.objects.get(unknown_node.object_name)
+            custom_shader_nodes = self._get_custom_shader_nodes(unknown_node)
 
             # 解析蓝图时提前过滤空网格，避免后续导出阶段触发全部顶点组已被锁定错误。
             if obj is None or obj.type != 'MESH' or obj.data is None or len(obj.data.vertices) == 0:
@@ -193,6 +211,7 @@ class BluePrintModel:
                         submesh_name=submesh_name,
                     )
                     obj_model.work_key_list = copy.deepcopy(chain_key_list)
+                    obj_model.custom_shader_node_list.extend(custom_shader_nodes)
                     self.ordered_draw_obj_data_model_list.append(obj_model)
                     self._unico_temp_objects.append(temp_obj)
                     LOG.info(f"BluePrintModel: UniComponent 拆分 '{unknown_node.object_name}' → "
@@ -220,6 +239,8 @@ class BluePrintModel:
                         if getattr(texture_node, "bl_idname", "") == SSMTNode_Texture.bl_idname:
                             # 携带 slot item，导出时按 effective_slot_key 生成键名
                             obj_model.slot_texture_node_list.append((item, texture_node))
+
+                obj_model.custom_shader_node_list.extend(custom_shader_nodes)
                 
                 self.ordered_draw_obj_data_model_list.append(obj_model)
 
@@ -238,6 +259,62 @@ class BluePrintModel:
                     for item in self.hash_texture_node_list
                 ):
                     self.hash_texture_node_list.append(hash_binding)
+
+    def _parse_custom_group(self, group_node: bpy.types.Node, chain_key_list: list[M_Key]):
+        """Expand an SSMT group through its Group Output nodes."""
+        group_tree = getattr(group_node, "node_tree", None)
+        if group_tree is None:
+            return
+        self._group_instance_stack.append(group_node)
+        try:
+            for output_node in group_tree.nodes:
+                if getattr(output_node, "bl_idname", "") == GROUP_OUTPUT_IDNAME:
+                    self.parse_current_node(output_node, chain_key_list)
+        finally:
+            self._group_instance_stack.pop()
+
+    def _parse_group_input(
+        self,
+        group_input: bpy.types.Node,
+        output_socket: bpy.types.NodeSocket,
+        chain_key_list: list[M_Key],
+    ):
+        """Resolve an inner Group Input socket to its caller's linked input."""
+        if not self._group_instance_stack:
+            return
+        group_node = self._group_instance_stack[-1]
+        interface_items = [
+            item for item in group_node.node_tree.interface.items_tree
+            if getattr(item, "item_type", "") == "SOCKET" and item.in_out == "INPUT"
+        ]
+        try:
+            index = list(group_input.outputs).index(output_socket)
+        except ValueError:
+            return
+        parent_socket = (
+            _group_socket_for_interface(group_node, group_node.node_tree, interface_items[index], "INPUT")
+            if index < len(interface_items) else None
+        )
+        if parent_socket is None:
+            return
+        for link in parent_socket.links:
+            self.parse_single_node(link.from_node, chain_key_list)
+
+    @staticmethod
+    def _get_custom_shader_nodes(object_node):
+        result = []
+        for socket in getattr(object_node, 'inputs', []):
+            if getattr(socket, 'bl_idname', '') != 'SSMTSocketCustomShader' or not socket.is_linked:
+                continue
+            for link in socket.links:
+                node = link.from_node
+                if (
+                    getattr(node, 'bl_idname', '') == SSMTNode_CustomShader.bl_idname
+                    and not getattr(node, 'mute', False)
+                    and node not in result
+                ):
+                    result.append(node)
+        return result
 
     def _unico_split_object(
         self,
