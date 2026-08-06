@@ -54,8 +54,7 @@ def get_workspace_preview_texture_folder(lod_name: str = ""):
     GlobalConfig.read_from_main_json_ssmt4()
 
     workspace_folder_path = GlobalConfig.path_workspace_folder()
-    use_jpg_folder = bpy.app.version <= (4, 2, 0)
-    folder_name = "DedupedTextures_jpg" if use_jpg_folder else "DedupedTextures"
+    folder_name = "DedupedTextures"
 
     # 如果指定了 LOD，在 LOD 目录下查找
     if lod_name:

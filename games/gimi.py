@@ -85,16 +85,10 @@ class ExportGIMI:
             def _slot_provider(obj_model):
                 return M_TextureHelper.get_slot_texture_lines_for_drawcall(obj_model)
 
-            def _normal_exists_in_lines(lines):
-                for line in lines:
-                    if "normal" in (line.split("=")[1].lower() if "=" in line else ""):
-                        return True
-                return False
-
             def _slot_provider_with_orfix(obj_model):
                 lines = _slot_provider(obj_model)
                 if GlobalProperties.gimi_use_orfix() and lines:
-                    if _normal_exists_in_lines(lines):
+                    if M_TextureHelper.drawcall_has_normal_map(obj_model):
                         lines.append(r"run = CommandList\global\ORFix\ORFix")
                     else:
                         lines.append(r"run = CommandList\global\ORFix\NNFix")

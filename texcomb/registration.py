@@ -98,19 +98,11 @@ def make_annotations(cls: BlClasses) -> BlClasses:
     Returns:
         The processed class with properties converted to annotations.
     """
-    if globs.is_blender_legacy:
-        return cls
-
-    if bpy.app.version >= (2, 93, 0):
-        bl_props = {
-            k: v
-            for k, v in cls.__dict__.items()
-            if isinstance(v, bpy.props._PropertyDeferred)
-        }
-    else:
-        bl_props = {
-            k: v for k, v in cls.__dict__.items() if isinstance(v, tuple)
-        }
+    bl_props = {
+        k: v
+        for k, v in cls.__dict__.items()
+        if isinstance(v, bpy.props._PropertyDeferred)
+    }
 
     if bl_props:
         if "__annotations__" not in cls.__dict__:

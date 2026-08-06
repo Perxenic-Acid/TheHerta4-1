@@ -36,7 +36,7 @@ importlib.reload(addon_updater_ops)
 bl_info = {
     "name": "TheHerta4",
     "description": "Blender Plugin of SSMT4",
-    "blender": (3, 6, 0),
+    "blender": (5, 2, 0),
     "version": (4, 1, 37),
     "location": "View3D",
     "category": "Generic"

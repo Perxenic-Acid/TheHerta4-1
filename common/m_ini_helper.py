@@ -2,7 +2,9 @@
 import shutil
 
 from .m_ini_builder import *
+from .m_control_flow import M_ControlFlow
 from .m_key import M_Key
+from .texture_naming import default_texture_resource_name
 from ..model.draw_call_model import DrawCallModel
 from ..model.drawib_model import DrawIBModel
 from ..utils.json_utils import JsonUtils
@@ -173,35 +175,13 @@ class M_IniHelper:
         slot_line_provider,
         obj_name_draw_offset_dict: dict[str, int] | None = None,
     ):
-        """按 condition 分组输出 drawindexed，并在每次 drawindexed 前插入 slot 行。
-
-        slot_line_provider(draw_call_model) 应返回需要在 drawindexed 前输出的 INI 行列表。
-        """
-        condition_str_obj_model_list_dict: dict[str, list[DrawCallModel]] = {}
-        for obj_model in ordered_draw_obj_model_list:
-            condition_str = obj_model.get_condition_str()
-            obj_model_list = condition_str_obj_model_list_dict.get(condition_str, [])
-            obj_model_list.append(obj_model)
-            condition_str_obj_model_list_dict[condition_str] = obj_model_list
-
-        for condition_str, obj_model_list in condition_str_obj_model_list_dict.items():
-            if condition_str != "":
-                section.append("if " + condition_str)
-                for obj_model in obj_model_list:
-                    display_name = str(getattr(obj_model, 'obj_name', '') or getattr(obj_model, 'display_name', '') or '')
-                    section.append("  ; [mesh:" + display_name + "] [vertex_count:" + str(obj_model.vertex_count) + "]")
-                    for line in slot_line_provider(obj_model):
-                        section.append("  " + line)
-                    section.append("  " + obj_model.get_drawindexed_str(obj_name_draw_offset_dict))
-                section.append("endif")
-            else:
-                for obj_model in obj_model_list:
-                    display_name = str(getattr(obj_model, 'obj_name', '') or getattr(obj_model, 'display_name', '') or '')
-                    section.append("; [mesh:" + display_name + "] [vertex_count:" + str(obj_model.vertex_count) + "]")
-                    for line in slot_line_provider(obj_model):
-                        section.append(line)
-                    section.append(obj_model.get_drawindexed_str(obj_name_draw_offset_dict))
-            section.append("")
+        """按条件输出 drawindexed，并在每次 drawindexed 前插入 Slot 行。"""
+        M_ControlFlow.append_drawindexed_with_slot_lines(
+            section=section,
+            ordered_draw_obj_model_list=ordered_draw_obj_model_list,
+            slot_line_provider=slot_line_provider,
+            obj_name_draw_offset_dict=obj_name_draw_offset_dict,
+        )
     
     @staticmethod
     def get_drawindexed_instanced_str_list(
@@ -324,6 +304,10 @@ class M_IniHelper:
                         + texture_markup_info.mark_name
                         + ".dds"
                     )
+                    hash_style_resource_name = default_texture_resource_name(
+                        texture_markup_info.mark_hash,
+                        texture_markup_info.mark_name,
+                    )
 
                     # ── 组装目标路径 ──
                     target_texture_file_path = (
@@ -336,7 +320,7 @@ class M_IniHelper:
                         M_SectionType.ResourceAndTextureOverride_Texture,
                     )
                     resource_texture_section.append(
-                        "[Resource_Texture_" + texture_markup_info.mark_hash + "]",
+                        "[" + hash_style_resource_name + "]",
                     )
                     resource_texture_section.append(
                         "filename = Textures/" + hash_style_texture_filename,
@@ -353,7 +337,7 @@ class M_IniHelper:
                     )
                     resource_texture_section.append("match_priority = 0")
                     resource_texture_section.append(
-                        "this = Resource_Texture_" + texture_markup_info.mark_hash,
+                        "this = " + hash_style_resource_name,
                     )
                     resource_texture_section.new_line()
                     ini_builder.append_section(resource_texture_section)

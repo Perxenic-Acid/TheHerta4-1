@@ -38,12 +38,9 @@ class ObjBufferHelper:
             d3d11_element = d3d11_game_type.ElementNameD3D11ElementDict[d3d11_element_name]
             # 校验并补全所有COLOR的存在
             if d3d11_element_name.startswith(D3D11Semantic.COLOR):
-                color_coll = obj.data.color_attributes if hasattr(obj.data, 'color_attributes') else obj.data.vertex_colors
+                color_coll = obj.data.color_attributes
                 if d3d11_element_name not in color_coll:
-                    if hasattr(obj.data, 'color_attributes'):
-                        obj.data.color_attributes.new(name=d3d11_element_name, type='BYTE_COLOR', domain='CORNER')
-                    else:
-                        obj.data.vertex_colors.new(name=d3d11_element_name)
+                    obj.data.color_attributes.new(name=d3d11_element_name, type='BYTE_COLOR', domain='CORNER')
                     print("当前obj ["+ obj.name +"] 缺少游戏渲染所需的COLOR: ["+  D3D11Semantic.COLOR + "]，已自动补全")
             
             # 校验TEXCOORD是否存在
@@ -291,11 +288,8 @@ class ObjBufferHelper:
 
     @staticmethod
     def _parse_color(mesh, mesh_loops_length, d3d11_element_name, d3d11_element):
-        # 优先使用 color_attributes（Blender 3.2+），兼容旧版 vertex_colors
-        if hasattr(mesh, 'color_attributes') and d3d11_element_name in mesh.color_attributes:
+        if d3d11_element_name in mesh.color_attributes:
             color_data = mesh.color_attributes[d3d11_element_name].data
-        elif d3d11_element_name in mesh.vertex_colors:
-            color_data = mesh.vertex_colors[d3d11_element_name].data
         else:
             color_data = None
 
@@ -1232,4 +1226,3 @@ class ObjBufferHelper:
             ib = flipped_indices
 
         return ib, category_buffer_dict,index_loop_id_dict
-      

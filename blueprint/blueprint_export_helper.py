@@ -9,10 +9,16 @@ class BlueprintExportHelper:
 
     # 运行时记录当前操作对应的蓝图树，避免按钮触发后丢失上下文
     runtime_blueprint_tree_name = ""
+    _workspace_tree_sync_timer_registered = False
+    _node_editor_tree_type_by_space = {}
 
     @staticmethod
     def _is_valid_blueprint_tree(tree):
-        return tree is not None and getattr(tree, "bl_idname", "") == 'SSMTBlueprintTreeType'
+        return (
+            tree is not None
+            and getattr(tree, "bl_idname", "") == 'SSMTBlueprintTreeType'
+            and getattr(tree, "users", 0) > 0
+        )
 
     @staticmethod
     def get_all_blueprint_trees():
@@ -134,6 +140,68 @@ class BlueprintExportHelper:
                         return node_tree
 
         return None
+
+    @staticmethod
+    def _bind_workspace_tree_to_space(space):
+        """当区域刚切换到 SSMT 树类型时绑定工作空间同名蓝图。"""
+        if getattr(space, "tree_type", "") != 'SSMTBlueprintTreeType':
+            return None
+        workspace_name = str(GlobalConfig.get_workspace_name() or "").strip()
+        if not workspace_name:
+            return None
+        tree = bpy.data.node_groups.get(workspace_name)
+        if not BlueprintExportHelper._is_valid_blueprint_tree(tree):
+            return None
+        if getattr(space, "node_tree", None) != tree:
+            space.node_tree = tree
+        BlueprintExportHelper.set_runtime_blueprint_tree(tree)
+        return tree
+
+    @staticmethod
+    def _sync_workspace_tree_timer():
+        """仅在区域切换到 SSMT 蓝图类型时绑定工作空间蓝图一次。"""
+        current_tree_type_by_space = {}
+        for window in getattr(bpy.context.window_manager, "windows", []):
+            for area in getattr(window.screen, "areas", []):
+                if area.type != 'NODE_EDITOR':
+                    continue
+                for space in getattr(area, "spaces", []):
+                    if space.type != 'NODE_EDITOR':
+                        continue
+                    space_id = space.as_pointer()
+                    current_tree_type = getattr(space, "tree_type", "")
+                    previous_tree_type = BlueprintExportHelper._node_editor_tree_type_by_space.get(space_id)
+                    current_tree_type_by_space[space_id] = current_tree_type
+                    if (
+                        current_tree_type == 'SSMTBlueprintTreeType'
+                        and previous_tree_type != 'SSMTBlueprintTreeType'
+                        and getattr(space, "node_tree", None) is None
+                    ):
+                        BlueprintExportHelper._bind_workspace_tree_to_space(space)
+        BlueprintExportHelper._node_editor_tree_type_by_space = current_tree_type_by_space
+        return 0.5
+
+    @staticmethod
+    def register_workspace_tree_sync_timer():
+        if BlueprintExportHelper._workspace_tree_sync_timer_registered:
+            return
+        bpy.app.timers.register(
+            BlueprintExportHelper._sync_workspace_tree_timer,
+            first_interval=0.1,
+            persistent=True,
+        )
+        BlueprintExportHelper._workspace_tree_sync_timer_registered = True
+
+    @staticmethod
+    def unregister_workspace_tree_sync_timer():
+        if not BlueprintExportHelper._workspace_tree_sync_timer_registered:
+            return
+        try:
+            bpy.app.timers.unregister(BlueprintExportHelper._sync_workspace_tree_timer)
+        except (ReferenceError, ValueError):
+            pass
+        BlueprintExportHelper._workspace_tree_sync_timer_registered = False
+        BlueprintExportHelper._node_editor_tree_type_by_space.clear()
     
     @staticmethod
     def get_current_blueprint_tree(context=None):

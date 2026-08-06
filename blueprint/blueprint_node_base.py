@@ -452,9 +452,13 @@ def register():
     bpy.utils.register_class(SSMT_PT_FrameProperties)
     bpy.utils.register_class(SSMT_OT_ApplyFramePropertiesToAll)
     SSMTBlueprintTree.ssmt_submesh_items = bpy.props.CollectionProperty(type=SSMTSubmeshListItem) # type: ignore[attr-defined]
+    from .blueprint_export_helper import BlueprintExportHelper
+    BlueprintExportHelper.register_workspace_tree_sync_timer()
 
 
 def unregister():
+    from .blueprint_export_helper import BlueprintExportHelper
+    BlueprintExportHelper.unregister_workspace_tree_sync_timer()
     del SSMTBlueprintTree.ssmt_submesh_items
     bpy.utils.unregister_class(SSMT_OT_ApplyFramePropertiesToAll)
     bpy.utils.unregister_class(SSMT_PT_FrameProperties)

@@ -1,17 +1,20 @@
-import unittest
 import sys
 import types
+import unittest
 
-sys.modules["bpy"] = types.SimpleNamespace(
-    context=types.SimpleNamespace(scene=types.SimpleNamespace()),
-    props=types.SimpleNamespace(
-        BoolProperty=lambda **kwargs: None,
-        EnumProperty=lambda **kwargs: None,
-        PointerProperty=lambda **kwargs: None,
-        StringProperty=lambda **kwargs: None,
-    ),
-    types=types.SimpleNamespace(PropertyGroup=object, Scene=type("Scene", (), {})),
-)
+try:
+    import bpy  # noqa: F401
+except ImportError:
+    sys.modules["bpy"] = types.SimpleNamespace(
+        context=types.SimpleNamespace(scene=types.SimpleNamespace()),
+        props=types.SimpleNamespace(
+            BoolProperty=lambda **kwargs: None,
+            EnumProperty=lambda **kwargs: None,
+            PointerProperty=lambda **kwargs: None,
+            StringProperty=lambda **kwargs: None,
+        ),
+        types=types.SimpleNamespace(PropertyGroup=object, Scene=type("Scene", (), {})),
+    )
 from common.global_config import LogicName
 
 

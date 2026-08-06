@@ -189,22 +189,20 @@ class SSMT_OT_BlueprintFileDrop(bpy.types.Operator):
         return {'FINISHED'}
 
 
-# bpy.types.FileHandler 自 Blender 4.0 起可用，旧版本仅注册操作符、不接管拖放。
 classes = [SSMT_OT_BlueprintFileDrop]
 
-if hasattr(bpy.types, "FileHandler"):
-    class SSMT_FH_BlueprintFileDrop(bpy.types.FileHandler):
-        '''接管操作系统拖入 SSMT 蓝图编辑器的文件'''
-        bl_idname = "SSMT_FH_BlueprintFileDrop"
-        bl_label = "拖放文件到SSMT蓝图"
-        bl_import_operator = "ssmt.blueprint_file_drop"
-        bl_file_extensions = ".dds;.png;.ib;.buf;.txt"
+class SSMT_FH_BlueprintFileDrop(bpy.types.FileHandler):
+    '''接管操作系统拖入 SSMT 蓝图编辑器的文件'''
+    bl_idname = "SSMT_FH_BlueprintFileDrop"
+    bl_label = "拖放文件到SSMT蓝图"
+    bl_import_operator = "ssmt.blueprint_file_drop"
+    bl_file_extensions = ".dds;.png;.ib;.buf;.txt"
 
-        @classmethod
-        def poll_drop(cls, context):
-            return is_ssmt_blueprint_context(context)
+    @classmethod
+    def poll_drop(cls, context):
+        return is_ssmt_blueprint_context(context)
 
-    classes.append(SSMT_FH_BlueprintFileDrop)
+classes.append(SSMT_FH_BlueprintFileDrop)
 
 
 def register():

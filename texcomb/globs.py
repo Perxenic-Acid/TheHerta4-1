@@ -68,10 +68,10 @@ def refresh_pil_availability() -> bool:
         # 如果刷新过程出错，保持原样
         return pil_available
 
-is_blender_legacy = bpy.app.version < (2, 80, 0)
-is_blender_modern = bpy.app.version >= (2, 80, 0)
-is_blender_2_92_plus = bpy.app.version >= (2, 92, 0)
-is_blender_3_plus = bpy.app.version >= (3, 0, 0)
+is_blender_legacy = False
+is_blender_modern = True
+is_blender_2_92_plus = True
+is_blender_3_plus = True
 
 ICON_OBJECT = "META_CUBE" if is_blender_modern else "VIEW3D"
 ICON_PROPERTIES = "PREFERENCES" if is_blender_modern else "SCRIPT"

@@ -106,16 +106,10 @@ class MeshCreateHelper:
                 else:
                     colors_flat[:, 0] = data[loop_vertex_indices].astype(numpy.float32)
 
-                if hasattr(mesh, 'color_attributes'):
-                    # Blender 3.2+ 原生 API，Blender 5.1 也适用
-                    # WWMI/EFMI 使用 FLOAT_COLOR，其他游戏使用 BYTE_COLOR
-                    color_type = 'FLOAT_COLOR' if logic_name in (LogicName.WWMI, LogicName.EFMI) else 'BYTE_COLOR'
-                    color_attr = mesh.color_attributes.new(name=element.ElementName, type=color_type, domain='CORNER')
-                    color_attr.data.foreach_set('color', colors_flat.ravel())
-                else:
-                    # Blender 3.2 以下的旧式 API
-                    mesh.vertex_colors.new(name=element.ElementName)
-                    mesh.vertex_colors[element.ElementName].data.foreach_set('color', colors_flat.ravel())
+                # WWMI/EFMI 使用 FLOAT_COLOR，其他游戏使用 BYTE_COLOR。
+                color_type = 'FLOAT_COLOR' if logic_name in (LogicName.WWMI, LogicName.EFMI) else 'BYTE_COLOR'
+                color_attr = mesh.color_attributes.new(name=element.ElementName, type=color_type, domain='CORNER')
+                color_attr.data.foreach_set('color', colors_flat.ravel())
             elif element.SemanticName == "BLENDINDICES":
                 if data.ndim == 1:
                     blend_indices[element.SemanticIndex] = numpy.array([(x,) for x in data])
