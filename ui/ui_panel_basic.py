@@ -130,6 +130,18 @@ class PanelBasicInformation(bpy.types.Panel):
         # 决定导入时是否调用法线贴图
         layout.prop(global_properties, "use_normal_map")
 
+        if GlobalConfig.logic_name == LogicName.GIMI or str(GlobalConfig.gamename).strip().casefold() in {
+            "gimi", "genshinimpact", "原神",
+        }:
+            layout.prop(global_properties, "gimi_high_fidelity_rendering")
+            if global_properties.gimi_high_fidelity_rendering:
+                outline = layout.column(align=True)
+                outline.prop(global_properties, "gimi_body_outline_enabled")
+                outline.prop(global_properties, "gimi_body_outline_width_ratio")
+                row = outline.row(align=True)
+                row.operator("ssmt.build_gimi_body_outline", icon='MOD_SOLIDIFY')
+                row.operator("ssmt.remove_gimi_body_outline", text="", icon='X')
+
 
 
 

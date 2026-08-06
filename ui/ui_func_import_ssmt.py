@@ -456,6 +456,24 @@ def _create_and_layout_obj_info_nodes(tree, group_node, foldername_imported_obj_
             max_node_right, TEX_Y_GAP, group_frame_dict, tex_home_group)
 
 
+def _clear_blueprint_node_selection(tree):
+    """Leave generated blueprints ready for inspection, without a selected graph."""
+    for node in tree.nodes:
+        node.select = False
+    tree.nodes.active = None
+
+
+def _deselect_imported_objects(imported_objects):
+    """Clear the importer-created selection while preserving prior scene selection."""
+    objects = tuple(obj for obj, _ in imported_objects.values())
+    for obj in objects:
+        obj.select_set(False)
+
+    active_object = bpy.context.view_layer.objects.active
+    if active_object in objects:
+        bpy.context.view_layer.objects.active = None
+
+
 def ImprotFromWorkSpaceFull(self, context):
     
     # 创建 WorkSpaceModel 统一管理所有映射
@@ -540,8 +558,7 @@ def ImprotFromWorkSpaceFull(self, context):
     save_import_json_path = os.path.join(GlobalConfig.path_workspace_folder(), "Import.json")
     JsonUtils.SaveToFile(json_dict=foldername_gametypename_dict, filepath=save_import_json_path)
     
-    # 因为用户习惯了导入后就是全部选中的状态，所以默认选中所有导入的obj
-    CollectionUtils.select_collection_objects(workspace_collection)
+    _deselect_imported_objects(foldername_imported_obj_dict)
 
     # ==========================
     # 自动生成蓝图节点逻辑
@@ -611,6 +628,7 @@ def ImprotFromWorkSpaceFull(self, context):
             global_properties.selected_blueprint_name = tree.name
 
         BlueprintExportHelper.reveal_tree_in_node_editors(context, tree)
+        _clear_blueprint_node_selection(tree)
 
         print(f"Blueprint {tree_name} updated with imported objects.")
         
@@ -688,8 +706,7 @@ class SSMT4ImportRaw(bpy.types.Operator, ImportHelper):
                 json_file_path = os.path.join(dirname, json_file_name)
             SSMTImportHelper.create_mesh_from_json(json_file_path=json_file_path, import_collection=collection)
 
-        # Select all objects under collection (因为用户习惯了导入后就是全部选中的状态). 
-        CollectionUtils.select_collection_objects(collection)
+        CollectionUtils.deselect_collection_objects(collection)
 
         return {'FINISHED'}
 
@@ -836,7 +853,7 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
     existing_import_json.update(foldername_gametypename_dict)
     JsonUtils.SaveToFile(json_dict=existing_import_json, filepath=save_import_json_path)
 
-    CollectionUtils.select_collection_objects(workspace_collection)
+    _deselect_imported_objects(foldername_imported_obj_dict)
 
     # 生成蓝图
     _generate_blueprint_for_imported_objects(context, foldername_imported_obj_dict, all_submesh_display_names, oldfoldername_jsonpath_dict)
@@ -912,6 +929,7 @@ def _generate_blueprint_for_imported_objects(context, foldername_imported_obj_di
             global_properties.selected_blueprint_name = tree.name
 
         BlueprintExportHelper.reveal_tree_in_node_editors(context, tree)
+        _clear_blueprint_node_selection(tree)
 
         print(f"Blueprint {tree_name} updated with imported objects.")
     except Exception as e:

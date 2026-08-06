@@ -131,6 +131,26 @@ class GlobalProperties(bpy.types.PropertyGroup):
         default=False,
     ) # type: ignore
 
+    gimi_high_fidelity_rendering: bpy.props.BoolProperty(
+        name="原神高拟真渲染",
+        description="仅 GIMI / GenshinImpact / 原神工作空间可用。启用后导入角色会使用 LightMap、Body Ramp、MatCap 与边缘光节点组构建预览材质",
+        default=False,
+    ) # type: ignore
+
+    gimi_body_outline_enabled: bpy.props.BoolProperty(
+        name="GIMI Body 黑色描边",
+        description="高拟真 GIMI Body 导入时创建反向外壳黑色描边",
+        default=True,
+    ) # type: ignore
+
+    gimi_body_outline_width_ratio: bpy.props.FloatProperty(
+        name="GIMI 描边相对宽度",
+        default=0.0008,
+        min=0.00001,
+        max=0.01,
+        precision=6,
+    ) # type: ignore
+
     import_merged_vgmap: bpy.props.EnumProperty(
         name="顶点组模式",
         description="Merged: 导入融合后的统一顶点组 (Unreal的合并顶点组技术会用到)，一般鸣潮Mod选这个来降低制作Mod的复杂度\nPerComponent: 按每个组件独立的顶点组导入\nUniComponent: Merged导入，导出时自动拆分回组件级顶点组",
@@ -238,6 +258,18 @@ class GlobalProperties(bpy.types.PropertyGroup):
     @classmethod
     def use_normal_map(cls):
         return cls._instance().use_normal_map
+
+    @classmethod
+    def gimi_high_fidelity_rendering(cls):
+        return cls._instance().gimi_high_fidelity_rendering
+
+    @classmethod
+    def gimi_body_outline_enabled(cls):
+        return cls._instance().gimi_body_outline_enabled
+
+    @classmethod
+    def gimi_body_outline_width_ratio(cls):
+        return cls._instance().gimi_body_outline_width_ratio
 
     @classmethod
     def import_merged_vgmap(cls) -> str:

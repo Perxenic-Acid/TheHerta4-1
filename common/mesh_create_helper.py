@@ -16,6 +16,8 @@ from ..utils.vertexgroup_utils import VertexGroupUtils
 from .global_config import GlobalConfig
 from .global_properties import GlobalProperties
 from .global_config import LogicName
+from .gimi_high_fidelity_material import GIMIHighFidelityMaterial
+from .gimi_body_outline import GIMIBodyOutline, OutlineError
 from .d3d11_element import D3D11Element
 
 
@@ -519,15 +521,34 @@ class MeshCreateHelper:
 
         texture_prefix = mesh_name_split[0] + "-" + mesh_name_split[1] + "-"
 
-        texture_path = TextureMetadataResolver.find_texture(texture_prefix, "-DiffuseMap.jpg", directory)
-        if texture_path is None:
-            texture_path = TextureMetadataResolver.find_texture(texture_prefix, "-DiffuseMap.dds", directory)
-
-        normal_path = TextureMetadataResolver.find_texture(texture_prefix, "-NormalMap.jpg", directory)
-        if normal_path is None:
-            normal_path = TextureMetadataResolver.find_texture(texture_prefix, "-NormalMap.dds", directory)
+        texture_path = MeshCreateHelper._find_gimi_texture(texture_prefix, "-DiffuseMap", directory)
+        normal_path = MeshCreateHelper._find_gimi_texture(texture_prefix, "-NormalMap", directory)
 
         return texture_path, normal_path
+
+    @staticmethod
+    def get_gimi_lightmap_path(mesh_name: str, directory: str):
+        if "." in mesh_name:
+            mesh_name_split = str(mesh_name).split(".")[0].split("-")
+        else:
+            mesh_name_split = str(mesh_name).split("-")
+        if len(mesh_name_split) < 2:
+            return None
+        texture_prefix = mesh_name_split[0] + "-" + mesh_name_split[1] + "-"
+        return MeshCreateHelper._find_gimi_texture(texture_prefix, "-LightMap", directory)
+
+    @staticmethod
+    def _find_gimi_texture(texture_prefix: str, texture_stem: str, directory: str):
+        """Resolve GIMI maps across the formats emitted by different dumpers."""
+        # DDS/PNG/TGA preserve the alpha masks consumed by the GIMI shader.
+        # JPG remains a compatibility fallback for ordinary material imports.
+        for extension in (".dds", ".png", ".tga", ".jpg", ".jpeg"):
+            path = TextureMetadataResolver.find_texture(
+                texture_prefix, texture_stem + extension, directory
+            )
+            if path is not None:
+                return path
+        return None
 
     @staticmethod
     def get_material_output_node(nodes):
@@ -721,11 +742,41 @@ class MeshCreateHelper:
             logic_name = GlobalConfig.logic_name
         texture_path, normal_path = MeshCreateHelper.get_import_texture_paths(mesh_name, directory)
 
-        if texture_path is None:
+        high_fidelity_gimi = (
+            GlobalProperties.gimi_high_fidelity_rendering()
+            and GIMIHighFidelityMaterial.is_genshin_workspace(logic_name=logic_name)
+        )
+        if texture_path is None and not high_fidelity_gimi:
             return
 
         material = bpy.data.materials.new(name=material_name)
         material.use_nodes = True
+
+        if high_fidelity_gimi:
+            try:
+                GIMIHighFidelityMaterial.build_character(
+                    material=material,
+                    diffuse_path=texture_path,
+                    normal_path=normal_path,
+                    lightmap_path=MeshCreateHelper.get_gimi_lightmap_path(mesh_name, directory),
+                    directory=directory,
+                )
+                MeshCreateHelper.assign_material(obj, material)
+                # The current high-fidelity builder only targets Body/Clothes.
+                # Hash-named GIMI texture dumps carry no reliable Body token.
+                try:
+                    GIMIBodyOutline.ensure(
+                        obj,
+                        enabled=GlobalProperties.gimi_body_outline_enabled(),
+                        width_ratio=GlobalProperties.gimi_body_outline_width_ratio(),
+                    )
+                except OutlineError as error:
+                    print(f"[GIMI Outline] WARNING: {obj.name}: {error}")
+                return
+            except Exception as error:
+                # High-fidelity mode must never silently become a Principled
+                # material.  Preserve the error for the importer to report.
+                raise Fatal(f"GIMI 高拟真节点构建失败: {error}") from error
 
         bsdf = MeshCreateHelper.get_principled_bsdf_node(material)
         MeshCreateHelper.apply_diffuse_texture(
