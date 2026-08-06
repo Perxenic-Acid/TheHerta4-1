@@ -10,7 +10,7 @@
 [![GitHub license](https://img.shields.io/github/license/StarBobis/TheHerta4?style=flat&color=brightgreen)](https://github.com/StarBobis/TheHerta4/blob/main/LICENSE.txt)
 [![GitHub last commit](https://img.shields.io/github/last-commit/StarBobis/TheHerta4?style=flat&logo=git&color=orange)](https://github.com/StarBobis/TheHerta4/commits/main)
 [![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/StarBobis/TheHerta4/latest/total?style=flat&logo=github&color=blue&label=最新版下载量)](https://github.com/StarBobis/TheHerta4/releases/latest)
-[![Blender](https://img.shields.io/badge/Blender-4.5+-e67e22?style=flat&logo=blender&logoColor=white)](https://www.blender.org/)
+[![Blender](https://img.shields.io/badge/Blender-5.2%20LTS-e67e22?style=flat&logo=blender&logoColor=white)](https://www.blender.org/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![GitHub release](https://img.shields.io/github/v/release/StarBobis/TheHerta4?style=flat-square&logo=github)](https://github.com/StarBobis/TheHerta4/releases)
 [![VibeCoding With DeepSeek V4 Pro](https://img.shields.io/badge/VibeCoding_With-DeepSeek_V4_Pro-4D6BFE?style=flat&logo=deepseek&logoColor=white)](https://deepseek.com/)
@@ -21,8 +21,8 @@
 📦 **A Blender addon for SSMT4** — Import and export SSMT4 model format directly in Blender. Built for 3Dmigoto-based game modding.
 
 - 🔄 SSMT4 and TheHerta4 versions are almost always updated together. Please use the latest versions of both to avoid feature mismatches.
-- 🐞 **Blender 4.5 LTS** or newer is recommended. If you encounter any bugs, please submit an Issue.
-- 📦 **Requirements:** `fake-bpy-module-4.5`, `numpy`
+- 🐞 **Blender 5.2 LTS** is required. Older Blender versions are not supported.
+- 📦 **Requirements:** `fake-bpy-module-5.2`, `numpy`
 
 ---
 

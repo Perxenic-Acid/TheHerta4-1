@@ -441,6 +441,7 @@ class SSMTNode_Object_Info(SSMTNodeBase):
     def init(self, context):
         self.outputs.new('SSMTSocketObject', iface_("对象"))
         self._add_texture_slot(slot_index=0)
+        self._add_custom_shader_socket()
 
     def _get_texture_sockets(self):
         return [sock for sock in self.inputs if getattr(sock, "bl_idname", "") == 'SSMTSocketTexture']
@@ -450,6 +451,19 @@ class SSMTNode_Object_Info(SSMTNodeBase):
         if 0 <= item_index < len(texture_sockets):
             return texture_sockets[item_index]
         return None
+
+    def _get_custom_shader_sockets(self):
+        return [
+            sock for sock in self.inputs
+            if getattr(sock, 'bl_idname', '') == 'SSMTSocketCustomShader'
+        ]
+
+    def _add_custom_shader_socket(self):
+        self.inputs.new('SSMTSocketCustomShader', 'CustomShader')
+
+    def ensure_custom_shader_socket(self):
+        if not self._get_custom_shader_sockets():
+            self._add_custom_shader_socket()
 
     def _get_next_texture_slot_index(self):
         existing = {item.slot_index for item in self.texture_slot_items}
@@ -477,6 +491,19 @@ class SSMTNode_Object_Info(SSMTNodeBase):
             self.inputs.remove(texture_sockets[-1])
             texture_sockets = self._get_texture_sockets()
         self._sync_texture_slot_items()
+
+        self.ensure_custom_shader_socket()
+        custom_shader_sockets = self._get_custom_shader_sockets()
+        if custom_shader_sockets and custom_shader_sockets[-1].is_linked:
+            self._add_custom_shader_socket()
+            custom_shader_sockets = self._get_custom_shader_sockets()
+        while (
+            len(custom_shader_sockets) > 1
+            and not custom_shader_sockets[-1].is_linked
+            and not custom_shader_sockets[-2].is_linked
+        ):
+            self.inputs.remove(custom_shader_sockets[-1])
+            custom_shader_sockets = self._get_custom_shader_sockets()
 
     def _sync_texture_slot_items(self):
         """保证 texture_slot_items 与贴图输入 socket 一一对应。"""
@@ -554,6 +581,16 @@ class SSMTNode_Object_Info(SSMTNodeBase):
             if item.slot_type == 'CUSTOM':
                 col.prop(item, "custom_slot_key", text=iface_("自定义键"))
             col.label(text=iface_("生效键名: ") + item.effective_slot_key)
+
+        for socket in self._get_custom_shader_sockets():
+            if not socket.is_linked:
+                continue
+            linked_node = socket.links[0].from_node if socket.links else None
+            mark_name = str(getattr(linked_node, 'mark_name', '') or '').strip()
+            layout.label(
+                text='CustomShader ' + (mark_name or '?'),
+                icon='NODE_COMPOSITING',
+            )
 
 
 
@@ -919,6 +956,12 @@ classes = (
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    for tree in bpy.data.node_groups:
+        if getattr(tree, 'bl_idname', '') != 'SSMTBlueprintTreeType':
+            continue
+        for node in tree.nodes:
+            if getattr(node, 'bl_idname', '') == SSMTNode_Object_Info.bl_idname:
+                node.ensure_custom_shader_socket()
     bpy.types.VIEW3D_HT_header.append(draw_view3d_header)
 
 

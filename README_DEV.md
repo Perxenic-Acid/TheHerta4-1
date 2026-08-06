@@ -2,25 +2,12 @@
 - https://download.blender.org/release/
 
 # Change Log
-为了让工具保持与时俱进，支持3.6开始的所有版本，我们需要时刻关注Blender的API变化：
-- 4.4 to 4.5
-- https://docs.blender.org/api/4.5/change_log.html#change-log
-- 4.3 to 4.4
-- https://docs.blender.org/api/4.4/change_log.html#change-log
-- 4.2 to 4.3
-- https://docs.blender.org/api/4.3/change_log.html#change-log
-- 4.1 to 4.2
-- https://docs.blender.org/api/4.2/change_log.html#to-4-2
-- 4.0 to 4.1
-- https://docs.blender.org/api/4.1/change_log.html
-- 3.6 to 4.0 
-- https://docs.blender.org/api/4.0/change_log.html#change-log
+本项目以 Blender 5.2 LTS 为唯一支持版本；旧版本 API 不在兼容范围内。
+- https://docs.blender.org/api/5.2/change_log.html
 
 # Blender API手册
 - https://www.blender.org/support/
-- https://docs.blender.org/api/3.6/
-- https://docs.blender.org/api/4.2/
-- https://docs.blender.org/api/4.5/
+- https://docs.blender.org/api/5.2/
 
 # 开发必备插件
 - https://github.com/JacquesLucke/blender_vscode              (推荐，首选)
@@ -30,7 +17,7 @@
 
 在使用VSCode进行Blender插件开发中，会创建一个指向项目的软连接，路径大概如下：
 
-C:\Users\Administrator\AppData\Roaming\Blender Foundation\Blender\4.2\scripts\addons
+C:\Users\Administrator\AppData\Roaming\Blender Foundation\Blender\5.2\scripts\addons
 
 在插件架构发生大幅度变更时可能导致无法启动Blender，此时需要手动删掉插件缓存的这个软链接。
 

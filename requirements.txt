@@ -1,2 +1,2 @@
-fake-bpy-module-4.5
+fake-bpy-module-5.2
 numpy

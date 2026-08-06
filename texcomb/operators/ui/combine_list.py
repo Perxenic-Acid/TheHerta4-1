@@ -243,7 +243,7 @@ class MaterialListToggleOperator(bpy.types.Operator):
     bl_label = "切换选择"
     bl_description = "切换材质/物体的选中状态，控制是否参与合并"
 
-    list_id = IntProperty(name="列表索引", default=0)
+    list_id: IntProperty(name="列表索引", default=0)
 
     def execute(self, context: bpy.types.Context) -> Set[str]:
         """Main execution method for toggle operation.

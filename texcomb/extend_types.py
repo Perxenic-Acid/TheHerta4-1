@@ -91,25 +91,25 @@ class CombineListEntry(bpy.types.PropertyGroup):
     properties for tracking its selection state and grouping information.
     """
 
-    ob = PointerProperty(
+    ob: PointerProperty(
         name="物体",
         type=bpy.types.Object,
         description="包含材质的源物体",
     )
 
-    ob_id = IntProperty(
+    ob_id: IntProperty(
         name="物体ID",
         default=0,
         description="用于将材质分组到其父物体下的唯一标识符",
     )
 
-    mat = PointerProperty(
+    mat: PointerProperty(
         name="材质",
         type=bpy.types.Material,
         description="要合并的材质实例",
     )
 
-    layer = IntProperty(
+    layer: IntProperty(
         name="图层组",
         min=1,
         max=99,
@@ -119,13 +119,13 @@ class CombineListEntry(bpy.types.PropertyGroup):
         "用于创建多个材质关联到同一图集",
     )
 
-    used = BoolProperty(
+    used: BoolProperty(
         name="包含",
         default=True,
         description="将此元素包含在图集生成中",
     )
 
-    type = IntProperty(
+    type: IntProperty(
         name="条目类型",
         default=0,
         description="列表条目的类型（物体、材质或分隔符）",

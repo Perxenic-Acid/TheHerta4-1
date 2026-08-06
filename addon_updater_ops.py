@@ -82,21 +82,16 @@ UPDATER_DISPLAY_NAME = "TheHerta4"
 # -----------------------------------------------------------------------------
 
 def layout_split(layout, factor=0.0, align=False):
-    """Intermediate method for pre and post blender 2.8 split UI function"""
-    if not hasattr(bpy.app, "version") or bpy.app.version < (2, 80):
-        return layout.split(percentage=factor, align=align)
+    """Split a layout using Blender 5.2's factor API."""
     return layout.split(factor=factor, align=align)
 
 
 def get_user_preferences(context=None):
-    """Intermediate method for pre and post blender 2.8 grabbing preferences"""
+    """Return this add-on's Blender 5.2 preferences."""
     if not context:
         context = bpy.context
     prefs = None
-    if hasattr(context, "user_preferences"):
-        prefs = context.user_preferences.addons.get(__package__, None)
-    elif hasattr(context, "preferences"):
-        prefs = context.preferences.addons.get(__package__, None)
+    prefs = context.preferences.addons.get(__package__, None)
     if prefs:
         return prefs.preferences
     # To make the addon stable and non-exception prone, return None

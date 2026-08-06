@@ -56,15 +56,15 @@ class Combiner(bpy.types.Operator):
     bl_description = "将多个材质合并为纹理图集"
     bl_options = {"UNDO", "INTERNAL"}
 
-    directory = StringProperty(
+    directory: StringProperty(
         description="图集保存目录",
         maxlen=1024,
         default="",
         subtype="FILE_PATH",
         options={"HIDDEN"},
     )
-    filter_glob = StringProperty(default="", options={"HIDDEN"})
-    cats = BoolProperty(
+    filter_glob: StringProperty(default="", options={"HIDDEN"})
+    cats: BoolProperty(
         description="启用特殊的 Cats 工作流模式", default=False
     )
     data = None

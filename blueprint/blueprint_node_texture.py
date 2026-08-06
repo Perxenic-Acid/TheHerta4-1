@@ -8,16 +8,12 @@ import os
 import bpy
 
 from ..utils.translate_utils import iface_
+from ..common.texture_naming import default_texture_filename, default_texture_resource_name
 from .blueprint_node_base import SSMTNodeBase
 
 
-def _get_default_resource_name(texture_hash: str) -> str:
-    return "Resource_Texture_" + (texture_hash or "unnamed")
-
-
 def _get_default_texture_filename(texture_hash: str, mark_name: str) -> str:
-    name = mark_name.strip() or "texture"
-    return f"{texture_hash}_{name}.dds"
+    return default_texture_filename(texture_hash, mark_name)
 
 
 # 预览图 mtime 缓存：{预览路径: mtime}
@@ -47,13 +43,13 @@ class SSMTNode_Texture(SSMTNodeBase):
 
     resource_name: bpy.props.StringProperty(
         name="Resource Name",
-        description="留空时使用 Resource_Texture_<Hash>",
+        description="留空时使用 Resource_<MapType>_<Hash>",
         default="",
     )  # type: ignore
 
     texture_filename: bpy.props.StringProperty(
         name="文件名",
-        description="生成目录中的文件名，留空时使用 <Hash>_<MarkName>.dds",
+        description="生成目录中的文件名，留空时使用 <Hash>_<MapType>.dds",
         default="",
     )  # type: ignore
 
@@ -147,7 +143,7 @@ class SSMTNode_Texture(SSMTNodeBase):
 
     def get_resource_name(self) -> str:
         name = self.resource_name.strip()
-        return name if name else _get_default_resource_name(self.texture_hash)
+        return name if name else default_texture_resource_name(self.texture_hash, self.mark_name)
 
     def get_texture_filename(self) -> str:
         filename = self.texture_filename.strip()

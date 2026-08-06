@@ -40,6 +40,18 @@ class SSMTSocketTexture(NodeSocket):
     def draw(self, context, layout, node, text):
         layout.label(text=text)
 
+
+class SSMTSocketCustomShader(NodeSocket):
+    '''Custom Shader command list socket.'''
+    bl_idname = 'SSMTSocketCustomShader'
+    bl_label = 'CustomShader 插槽'
+
+    def draw_color(self, context, node):
+        return (0.95, 0.55, 0.15, 1.0)
+
+    def draw(self, context, layout, node, text):
+        layout.label(text=text)
+
 class SSMTBlueprintTree(NodeTree):
     '''SSMT Mod Logic Blueprint'''
     bl_idname = 'SSMTBlueprintTreeType'
@@ -446,17 +458,23 @@ def register():
     bpy.utils.register_class(SSMTBlueprintTree)
     bpy.utils.register_class(SSMTSocketObject)
     bpy.utils.register_class(SSMTSocketTexture)
+    bpy.utils.register_class(SSMTSocketCustomShader)
     bpy.utils.register_class(THEHERTA3_OT_OpenPersistentBlueprint)
     bpy.utils.register_class(THEHERTA3_OT_DeletePersistentBlueprint)
     bpy.utils.register_class(THEHERTA3_OT_RenamePersistentBlueprint)
     bpy.utils.register_class(SSMT_PT_FrameProperties)
     bpy.utils.register_class(SSMT_OT_ApplyFramePropertiesToAll)
     SSMTBlueprintTree.ssmt_submesh_items = bpy.props.CollectionProperty(type=SSMTSubmeshListItem) # type: ignore[attr-defined]
+    from .blueprint_export_helper import BlueprintExportHelper
+    BlueprintExportHelper.register_workspace_tree_sync_timer()
 
 
 def unregister():
+    from .blueprint_export_helper import BlueprintExportHelper
+    BlueprintExportHelper.unregister_workspace_tree_sync_timer()
     del SSMTBlueprintTree.ssmt_submesh_items
     bpy.utils.unregister_class(SSMT_OT_ApplyFramePropertiesToAll)
+    bpy.utils.unregister_class(SSMTSocketCustomShader)
     bpy.utils.unregister_class(SSMT_PT_FrameProperties)
     bpy.utils.unregister_class(THEHERTA3_OT_RenamePersistentBlueprint)
     bpy.utils.unregister_class(THEHERTA3_OT_DeletePersistentBlueprint)

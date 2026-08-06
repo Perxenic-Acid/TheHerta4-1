@@ -22,6 +22,9 @@ class DrawCallModel:
     # 通过蓝图 Texture 节点的 Slot 出口连接上来的贴图
     slot_texture_node_list:list = field(init=False,repr=False,default_factory=list)
 
+    # 通过 Object Info 的 CustomShader 输入连接上来的自定义命令列表
+    custom_shader_node_list:list = field(init=False,repr=False,default_factory=list)
+
     # 在SubMeshModel层级计算得到这些属性，用于ini写出
     index_count:int = field(init=False,repr=False,default=0)
     vertex_count:int = field(init=False,repr=False,default=0)
