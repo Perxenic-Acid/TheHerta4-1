@@ -17,6 +17,7 @@ from .global_config import GlobalConfig
 from .global_properties import GlobalProperties
 from .global_config import LogicName
 from .gimi_high_fidelity_material import GIMIHighFidelityMaterial
+from .gimi_body_outline import GIMIBodyOutline, OutlineError
 from .d3d11_element import D3D11Element
 
 
@@ -761,6 +762,16 @@ class MeshCreateHelper:
                     directory=directory,
                 )
                 MeshCreateHelper.assign_material(obj, material)
+                # The current high-fidelity builder only targets Body/Clothes.
+                # Hash-named GIMI texture dumps carry no reliable Body token.
+                try:
+                    GIMIBodyOutline.ensure(
+                        obj,
+                        enabled=GlobalProperties.gimi_body_outline_enabled(),
+                        width_ratio=GlobalProperties.gimi_body_outline_width_ratio(),
+                    )
+                except OutlineError as error:
+                    print(f"[GIMI Outline] WARNING: {obj.name}: {error}")
                 return
             except Exception as error:
                 # High-fidelity mode must never silently become a Principled

@@ -2,6 +2,7 @@ import bpy
 
 
 from .common import global_properties
+from .common import gimi_body_outline
 from .utils import translate_utils
 
 
@@ -134,6 +135,7 @@ def register():
 def _register_steps():
     # 1. Configs
     yield global_properties.register
+    yield gimi_body_outline.register
     yield translate_utils.register
 
     # 2. Addon Updater (local classes)
@@ -178,6 +180,7 @@ def unregister():
         addon_updater_ops.unregister()
 
     steps = [
+        gimi_body_outline.unregister,
         texcomb.unregister,
         blueprint_file_drop.unregister,
         blueprint_node_group.unregister,

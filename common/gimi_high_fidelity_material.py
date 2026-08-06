@@ -20,8 +20,8 @@ class GIMIHighFidelityMaterial:
     separate builders and use the same small importer dispatch point.
     """
 
-    GROUP_PREFIX = "SSMT GIMI v10 "
-    SHADER_SCHEMA_VERSION = 10
+    GROUP_PREFIX = "SSMT GIMI v12 "
+    SHADER_SCHEMA_VERSION = 12
     PREVIEW_COLLECTION_NAME = "SSMT GIMI Preview"
     VIRTUAL_SUN_NAME = "虚拟日光"
     PREVIEW_CAMERA_NAME = "SSMT GIMI Preview Camera"
@@ -149,7 +149,7 @@ class GIMIHighFidelityMaterial:
             if link.to_node in (glare, composite, viewer):
                 links.remove(link)
         links.new(render_layers.outputs['Image'], glare.inputs['Image'])
-        # The requested output1 is Blender's second Glare output.
+        # Use Blender's primary Glare image output for both compositor targets.
         links.new(glare.outputs[0], composite.inputs[0])
         links.new(glare.outputs[0], viewer.inputs['Image'])
         scene['SSMT:GIMICompositor'] = 'Bloom'
@@ -594,6 +594,166 @@ class GIMIHighFidelityMaterial:
         return group
 
     @classmethod
+    def _body_shader_group(cls):
+        """The shared Body/Clothes shader; component materials only sample maps."""
+        group = cls._group(
+            "NTclothes Body Master",
+            [
+                ('NodeSocketColor', 'Diffuse Color'), ('NodeSocketFloat', 'Diffuse Alpha'),
+                ('NodeSocketColor', 'Normal Color'), ('NodeSocketColor', 'LightMap Color'),
+                ('NodeSocketFloat', 'LightMap Alpha'), ('NodeSocketColor', 'Ramp Color'),
+                ('NodeSocketColor', 'Metal Color'),
+            ],
+            [
+                ('NodeSocketColor', 'Shader Color'), ('NodeSocketVector', 'Ramp UV'),
+                ('NodeSocketVector', 'MatCap UV'),
+            ],
+        )
+        if len(group.nodes) > 2:
+            return group
+        nodes, links = group.nodes, group.links
+        group_in, group_out = nodes['Group Input'], nodes['Group Output']
+
+        decoded_normal = cls._node(group, 'ShaderNodeGroup', 'decode_tangent_normal_rg', (-1040, -40))
+        decoded_normal.node_tree = cls._decode_normal_group()
+        links.new(group_in.outputs['Normal Color'], decoded_normal.inputs['Encoded RG'])
+
+        virtual_sun = cls._node(group, 'ShaderNodeGroup', 'evaluate_virtual_sun', (-820, -100))
+        virtual_sun.node_tree = cls._virtual_sun_group()
+        links.new(decoded_normal.outputs['Normal'], virtual_sun.inputs['Surface Normal'])
+        light_object = bpy.data.objects.get(cls.VIRTUAL_SUN_NAME)
+        if light_object is not None:
+            virtual_sun.inputs['Sun Rotation'].default_value = light_object.rotation_euler
+            for axis in range(3):
+                driver = virtual_sun.inputs['Sun Rotation'].driver_add('default_value', axis).driver
+                variable = driver.variables.new()
+                variable.name = 'rotation'
+                variable.targets[0].id = light_object
+                variable.targets[0].data_path = f'rotation_euler[{axis}]'
+                driver.expression = 'rotation'
+        lightmap_separate = cls._node(group, 'ShaderNodeSeparateColor', 'LightMap Channels', (-1040, -300))
+        links.new(group_in.outputs['LightMap Color'], lightmap_separate.inputs['Color'])
+        links.new(lightmap_separate.outputs['Green'], virtual_sun.inputs['Light Gain'])
+
+        grade = cls._node(group, 'ShaderNodeGroup', 'grade_base_color', (-820, 260))
+        grade.node_tree = cls._grade_base_group()
+        links.new(group_in.outputs['Diffuse Color'], grade.inputs['Base Color'])
+
+        body_uv = cls._node(group, 'ShaderNodeGroup', 'sample_body_ramp coordinates', (-600, -250))
+        body_uv.node_tree = cls._body_ramp_coordinates_group()
+        links.new(virtual_sun.outputs['Half Lambert'], body_uv.inputs['Half Lambert'])
+        links.new(group_in.outputs['LightMap Alpha'], body_uv.inputs['Material ID'])
+        links.new(body_uv.outputs['Ramp UV'], group_out.inputs['Ramp UV'])
+        body_shading = cls._node(group, 'ShaderNodeGroup', 'sample_body_ramp', (-360, -250))
+        body_shading.node_tree = cls._body_ramp_shading_group()
+        links.new(group_in.outputs['Ramp Color'], body_shading.inputs['Ramp Color'])
+        links.new(body_uv.outputs['Fully Lit Mask'], body_shading.inputs['Fully Lit Mask'])
+        nonmetal = cls._node(group, 'ShaderNodeMixRGB', 'GIMI Nonmetal Color', (-100, 230))
+        nonmetal.blend_type = 'MULTIPLY'
+        nonmetal.inputs[0].default_value = 1.0
+        links.new(grade.outputs['Graded Color'], nonmetal.inputs[1])
+        links.new(body_shading.outputs['Body Ramp Color'], nonmetal.inputs[2])
+
+        texcoord = cls._node(group, 'ShaderNodeTexCoord', 'GIMI Geometric Coordinates', (-820, -680))
+        normal_to_camera = cls._node(group, 'ShaderNodeVectorTransform', 'GIMI Object Normal to Camera', (-600, -680))
+        normal_to_camera.vector_type = 'NORMAL'
+        normal_to_camera.convert_from = 'OBJECT'
+        normal_to_camera.convert_to = 'CAMERA'
+        matcap_uv = cls._node(group, 'ShaderNodeVectorMath', 'GIMI MatCap UV', (-380, -680))
+        matcap_uv.operation = 'MULTIPLY_ADD'
+        matcap_uv.inputs[1].default_value = (0.5, 0.5, 1.0)
+        matcap_uv.inputs[2].default_value = (0.5, 0.5, 0.0)
+        links.new(texcoord.outputs['Normal'], normal_to_camera.inputs['Vector'])
+        links.new(normal_to_camera.outputs['Vector'], matcap_uv.inputs[0])
+        links.new(matcap_uv.outputs['Vector'], group_out.inputs['MatCap UV'])
+
+        metal = cls._node(group, 'ShaderNodeGroup', 'evaluate_metal_matcap', (-100, -70))
+        metal.node_tree = cls._metal_matcap_group()
+        links.new(group_in.outputs['Diffuse Color'], metal.inputs['Base Color'])
+        links.new(group_in.outputs['LightMap Color'], metal.inputs['LightMap'])
+        links.new(group_in.outputs['Metal Color'], metal.inputs['MatCap Color'])
+        links.new(decoded_normal.outputs['Normal'], metal.inputs['Surface Normal'])
+        ordinary = cls._node(group, 'ShaderNodeMixRGB', 'GIMI Ordinary Color', (150, 210))
+        links.new(metal.outputs['Metal Mask'], ordinary.inputs[0])
+        links.new(nonmetal.outputs['Color'], ordinary.inputs[1])
+        links.new(metal.outputs['Metal Color'], ordinary.inputs[2])
+
+        frame = cls._node(group, 'ShaderNodeValue', 'GIMI Current Frame', (-120, -500))
+        frame.outputs['Value'].default_value = 1.0
+        frame.outputs['Value'].driver_add('default_value').driver.expression = 'frame'
+        emission = cls._node(group, 'ShaderNodeGroup', 'evaluate_special_emission', (120, -360))
+        emission.node_tree = cls._special_emission_group()
+        emission.inputs['Element Color'].default_value = (0.39373726, 0.39373726, 0.39373726, 1.0)
+        links.new(grade.outputs['Graded Color'], emission.inputs['Graded Base'])
+        links.new(frame.outputs['Value'], emission.inputs['Frame'])
+        special_mask = cls._node(group, 'ShaderNodeMath', 'GIMI Diffuse Alpha > 0.5', (120, -500))
+        special_mask.operation = 'GREATER_THAN'
+        special_mask.inputs[1].default_value = 0.5
+        links.new(group_in.outputs['Diffuse Alpha'], special_mask.inputs[0])
+        selected = cls._node(group, 'ShaderNodeMixRGB', 'GIMI Special Region Selection', (390, 130))
+        links.new(special_mask.outputs[0], selected.inputs[0])
+        links.new(ordinary.outputs['Color'], selected.inputs[1])
+        links.new(emission.outputs['Emission Color'], selected.inputs[2])
+        edge = cls._node(group, 'ShaderNodeGroup', 'apply_screen_space_edge_light', (620, 130))
+        edge.node_tree = cls._edge_light_group()
+        links.new(selected.outputs['Color'], edge.inputs['Color'])
+        links.new(edge.outputs['Edge Lit Color'], group_out.inputs['Shader Color'])
+        return group
+
+    @classmethod
+    def _body_coordinates_group(cls):
+        """Shared pre-sampling coordinates; kept separate to avoid feedback loops."""
+        group = cls._group(
+            "NTclothes Coordinates",
+            [
+                ('NodeSocketColor', 'Normal Color'), ('NodeSocketColor', 'LightMap Color'),
+                ('NodeSocketFloat', 'LightMap Alpha'),
+            ],
+            [('NodeSocketVector', 'Ramp UV'), ('NodeSocketVector', 'MatCap UV')],
+        )
+        if len(group.nodes) > 2:
+            return group
+        nodes, links = group.nodes, group.links
+        group_in, group_out = nodes['Group Input'], nodes['Group Output']
+        decoded_normal = cls._node(group, 'ShaderNodeGroup', 'decode_tangent_normal_rg', (-840, 40))
+        decoded_normal.node_tree = cls._decode_normal_group()
+        links.new(group_in.outputs['Normal Color'], decoded_normal.inputs['Encoded RG'])
+        virtual_sun = cls._node(group, 'ShaderNodeGroup', 'evaluate_virtual_sun', (-620, 40))
+        virtual_sun.node_tree = cls._virtual_sun_group()
+        links.new(decoded_normal.outputs['Normal'], virtual_sun.inputs['Surface Normal'])
+        light_object = bpy.data.objects.get(cls.VIRTUAL_SUN_NAME)
+        if light_object is not None:
+            virtual_sun.inputs['Sun Rotation'].default_value = light_object.rotation_euler
+            for axis in range(3):
+                driver = virtual_sun.inputs['Sun Rotation'].driver_add('default_value', axis).driver
+                variable = driver.variables.new()
+                variable.name = 'rotation'
+                variable.targets[0].id = light_object
+                variable.targets[0].data_path = f'rotation_euler[{axis}]'
+                driver.expression = 'rotation'
+        lightmap = cls._node(group, 'ShaderNodeSeparateColor', 'LightMap Channels', (-840, -130))
+        links.new(group_in.outputs['LightMap Color'], lightmap.inputs['Color'])
+        links.new(lightmap.outputs['Green'], virtual_sun.inputs['Light Gain'])
+        body_uv = cls._node(group, 'ShaderNodeGroup', 'sample_body_ramp coordinates', (-380, 20))
+        body_uv.node_tree = cls._body_ramp_coordinates_group()
+        links.new(virtual_sun.outputs['Half Lambert'], body_uv.inputs['Half Lambert'])
+        links.new(group_in.outputs['LightMap Alpha'], body_uv.inputs['Material ID'])
+        links.new(body_uv.outputs['Ramp UV'], group_out.inputs['Ramp UV'])
+        texcoord = cls._node(group, 'ShaderNodeTexCoord', 'GIMI Geometric Coordinates', (-600, -360))
+        normal_to_camera = cls._node(group, 'ShaderNodeVectorTransform', 'GIMI Object Normal to Camera', (-380, -360))
+        normal_to_camera.vector_type = 'NORMAL'
+        normal_to_camera.convert_from = 'OBJECT'
+        normal_to_camera.convert_to = 'CAMERA'
+        matcap_uv = cls._node(group, 'ShaderNodeVectorMath', 'GIMI MatCap UV', (-160, -360))
+        matcap_uv.operation = 'MULTIPLY_ADD'
+        matcap_uv.inputs[1].default_value = (0.5, 0.5, 1.0)
+        matcap_uv.inputs[2].default_value = (0.5, 0.5, 0.0)
+        links.new(texcoord.outputs['Normal'], normal_to_camera.inputs['Vector'])
+        links.new(normal_to_camera.outputs['Vector'], matcap_uv.inputs[0])
+        links.new(matcap_uv.outputs['Vector'], group_out.inputs['MatCap UV'])
+        return group
+
+    @classmethod
     def _make_image_node(cls, nodes, image_path: str | None, name: str, location, non_color: bool = False):
         node = nodes.new('ShaderNodeTexImage')
         node.name = name
@@ -706,155 +866,54 @@ class GIMIHighFidelityMaterial:
         # Blender's implicit active UV unstable.  GIMI color, normal and
         # light maps are sampled from the primary TEXCOORD semantic.
         uv_map.uv_map = 'TEXCOORD.xy'
-        texcoord = nodes.new('ShaderNodeTexCoord')
-        texcoord.name = 'GIMI Geometric Coordinates'
-        texcoord.location = (-1750, -730)
         for texture in (diffuse, normal, lightmap):
             links.new(uv_map.outputs['UV'], texture.inputs['Vector'])
+        coordinates = nodes.new('ShaderNodeGroup')
+        coordinates.name = 'GIMI Shared Coordinates'
+        coordinates.label = 'SSMT GIMI v12 NTclothes Coordinates'
+        coordinates.node_tree = cls._body_coordinates_group()
+        coordinates.location = (-700, -220)
+        links.new(normal.outputs['Color'], coordinates.inputs['Normal Color'])
+        links.new(lightmap.outputs['Color'], coordinates.inputs['LightMap Color'])
 
-        decoded_normal = nodes.new('ShaderNodeGroup')
-        decoded_normal.node_tree = cls._decode_normal_group()
-        decoded_normal.label = 'decode_tangent_normal_rg'
-        decoded_normal.location = (-1120, -40)
-        links.new(normal.outputs['Color'], decoded_normal.inputs['Encoded RG'])
-
-        virtual_sun = nodes.new('ShaderNodeGroup')
-        virtual_sun.node_tree = cls._virtual_sun_group()
-        virtual_sun.label = 'evaluate_virtual_sun'
-        virtual_sun.location = (-840, -100)
-        links.new(decoded_normal.outputs['Normal'], virtual_sun.inputs['Surface Normal'])
-        virtual_sun.inputs['Sun Rotation'].default_value = light_object.rotation_euler
-        for axis in range(3):
-            driver = virtual_sun.inputs['Sun Rotation'].driver_add('default_value', axis).driver
-            variable = driver.variables.new()
-            variable.name = 'rotation'
-            variable.targets[0].id = light_object
-            variable.targets[0].data_path = f'rotation_euler[{axis}]'
-            driver.expression = 'rotation'
-        # Separate Color supplies RGB; Image Texture supplies the alpha
-        # channel directly for the material-id branch.
-        lightmap_separate = nodes.new('ShaderNodeSeparateColor')
-        lightmap_separate.name = 'GIMI LightMap Channels'
-        lightmap_separate.location = (-1140, -330)
-        links.new(lightmap.outputs['Color'], lightmap_separate.inputs['Color'])
-        links.new(lightmap_separate.outputs['Green'], virtual_sun.inputs['Light Gain'])
-
-        grade = nodes.new('ShaderNodeGroup')
-        grade.node_tree = cls._grade_base_group()
-        grade.label = 'grade_base_color'
-        grade.location = (-1100, 300)
-        links.new(diffuse.outputs['Color'], grade.inputs['Base Color'])
-
-        body_uv = nodes.new('ShaderNodeGroup')
-        body_uv.node_tree = cls._body_ramp_coordinates_group()
-        body_uv.label = 'sample_body_ramp coordinates'
-        body_uv.location = (-650, -330)
-        links.new(virtual_sun.outputs['Half Lambert'], body_uv.inputs['Half Lambert'])
+        master = nodes.new('ShaderNodeGroup')
+        master.name = 'GIMI Body/Clothes Shared Shader'
+        master.label = 'SSMT GIMI v12 NTclothes Body Master'
+        master.node_tree = cls._body_shader_group()
+        master.location = (-450, 80)
+        links.new(diffuse.outputs['Color'], master.inputs['Diffuse Color'])
+        links.new(normal.outputs['Color'], master.inputs['Normal Color'])
+        links.new(lightmap.outputs['Color'], master.inputs['LightMap Color'])
+        if cls._image_has_alpha(diffuse.image):
+            links.new(diffuse.outputs['Alpha'], master.inputs['Diffuse Alpha'])
+        else:
+            print('[GIMI Material] WARNING: DiffuseMap 不含 Alpha，禁用特殊发光区域遮罩。')
+            master.inputs['Diffuse Alpha'].default_value = 0.0
         if cls._image_has_alpha(lightmap.image):
-            links.new(lightmap.outputs['Alpha'], body_uv.inputs['Material ID'])
+            links.new(lightmap.outputs['Alpha'], master.inputs['LightMap Alpha'])
+            links.new(lightmap.outputs['Alpha'], coordinates.inputs['LightMap Alpha'])
         else:
             print('[GIMI Material] WARNING: LightMap 不含 Alpha，Ramp 材质行使用 0.0。')
-            body_uv.inputs['Material ID'].default_value = 0.0
-        links.new(body_uv.outputs['Ramp UV'], ramp.inputs['Vector'])
-        body_shading = nodes.new('ShaderNodeGroup')
-        body_shading.node_tree = cls._body_ramp_shading_group()
-        body_shading.label = 'sample_body_ramp'
-        body_shading.location = (-380, -330)
-        links.new(ramp.outputs['Color'], body_shading.inputs['Ramp Color'])
-        links.new(body_uv.outputs['Fully Lit Mask'], body_shading.inputs['Fully Lit Mask'])
-        nonmetal = nodes.new('ShaderNodeMixRGB')
-        nonmetal.name = 'GIMI Nonmetal Color'
-        nonmetal.label = 'graded_base * body_ramp'
-        nonmetal.blend_type = 'MULTIPLY'
-        nonmetal.inputs[0].default_value = 1.0
-        nonmetal.location = (-120, 250)
-        links.new(grade.outputs['Graded Color'], nonmetal.inputs[1])
-        links.new(body_shading.outputs['Body Ramp Color'], nonmetal.inputs[2])
-
-        normal_to_camera = nodes.new('ShaderNodeVectorTransform')
-        normal_to_camera.name = 'GIMI Object Normal to Camera'
-        normal_to_camera.location = (-950, -810)
-        normal_to_camera.vector_type = 'NORMAL'
-        normal_to_camera.convert_from = 'OBJECT'
-        normal_to_camera.convert_to = 'CAMERA'
-        matcap_uv = nodes.new('ShaderNodeVectorMath')
-        matcap_uv.name = 'GIMI MatCap UV'
-        matcap_uv.location = (-700, -730)
-        matcap_uv.operation = 'MULTIPLY_ADD'
-        matcap_uv.inputs[1].default_value = (0.5, 0.5, 1.0)
-        matcap_uv.inputs[2].default_value = (0.5, 0.5, 0.0)
-        links.new(texcoord.outputs['Normal'], normal_to_camera.inputs['Vector'])
-        links.new(normal_to_camera.outputs['Vector'], matcap_uv.inputs[0])
-        links.new(matcap_uv.outputs['Vector'], matcap.inputs['Vector'])
-        metal = nodes.new('ShaderNodeGroup')
-        metal.node_tree = cls._metal_matcap_group()
-        metal.label = 'evaluate_metal_matcap'
-        metal.location = (-100, -100)
-        links.new(diffuse.outputs['Color'], metal.inputs['Base Color'])
-        links.new(lightmap.outputs['Color'], metal.inputs['LightMap'])
-        links.new(matcap.outputs['Color'], metal.inputs['MatCap Color'])
-        links.new(decoded_normal.outputs['Normal'], metal.inputs['Surface Normal'])
-
-        ordinary = nodes.new('ShaderNodeMixRGB')
-        ordinary.name = 'GIMI Ordinary Color'
-        ordinary.label = 'mix(nonmetal, metal, metal_mask)'
-        ordinary.location = (150, 210)
-        links.new(metal.outputs['Metal Mask'], ordinary.inputs[0])
-        links.new(nonmetal.outputs['Color'], ordinary.inputs[1])
-        links.new(metal.outputs['Metal Color'], ordinary.inputs[2])
-
-        frame = nodes.new('ShaderNodeValue')
-        frame.name = 'GIMI Current Frame'
-        frame.label = 'current_frame()'
-        frame.location = (-210, -530)
-        frame.outputs['Value'].default_value = 1.0
-        frame.outputs['Value'].driver_add('default_value').driver.expression = 'frame'
-        emission = nodes.new('ShaderNodeGroup')
-        emission.node_tree = cls._special_emission_group()
-        emission.label = 'evaluate_special_emission'
-        emission.location = (120, -370)
-        emission.inputs['Element Color'].default_value = (0.39373726, 0.39373726, 0.39373726, 1.0)
-        links.new(grade.outputs['Graded Color'], emission.inputs['Graded Base'])
-        links.new(frame.outputs['Value'], emission.inputs['Frame'])
-        special_mask = nodes.new('ShaderNodeMath')
-        special_mask.name = 'GIMI Diffuse Alpha > 0.5'
-        special_mask.location = (180, -520)
-        special_mask.operation = 'GREATER_THAN'
-        special_mask.inputs[1].default_value = 0.5
-        if cls._image_has_alpha(diffuse.image):
-            links.new(diffuse.outputs['Alpha'], special_mask.inputs[0])
-        else:
-            # Diffuse alpha is a special-emission mask, not opacity.  A JPEG
-            # has no alpha and Blender exposes it as opaque (1.0), which would
-            # incorrectly route the entire character around ramp shading.
-            print('[GIMI Material] WARNING: DiffuseMap 不含 Alpha，禁用特殊发光区域遮罩。')
-            special_mask.inputs[0].default_value = 0.0
-        selected = nodes.new('ShaderNodeMixRGB')
-        selected.name = 'GIMI Special Region Selection'
-        selected.location = (400, 130)
-        links.new(special_mask.outputs[0], selected.inputs[0])
-        links.new(ordinary.outputs['Color'], selected.inputs[1])
-        links.new(emission.outputs['Emission Color'], selected.inputs[2])
-
-        edge = nodes.new('ShaderNodeGroup')
-        edge.node_tree = cls._edge_light_group()
-        edge.label = 'apply_screen_space_edge_light (viewport approximation)'
-        edge.location = (650, 130)
-        links.new(selected.outputs['Color'], edge.inputs['Color'])
+            master.inputs['LightMap Alpha'].default_value = 0.0
+            coordinates.inputs['LightMap Alpha'].default_value = 0.0
+        links.new(coordinates.outputs['Ramp UV'], ramp.inputs['Vector'])
+        links.new(ramp.outputs['Color'], master.inputs['Ramp Color'])
+        links.new(coordinates.outputs['MatCap UV'], matcap.inputs['Vector'])
+        links.new(matcap.outputs['Color'], master.inputs['Metal Color'])
         output = nodes.new('ShaderNodeOutputMaterial')
-        output.location = (1110, 130)
+        output.location = (300, 80)
         try:
             surface = nodes.new('ShaderNodeEmission')
             surface.name = 'GIMI Unlit Output'
-            surface.location = (890, 130)
+            surface.location = (80, 80)
             surface.inputs['Strength'].default_value = 1.0
-            links.new(edge.outputs['Edge Lit Color'], surface.inputs['Color'])
+            links.new(master.outputs['Shader Color'], surface.inputs['Color'])
             links.new(surface.outputs['Emission'], output.inputs['Surface'])
         except RuntimeError:
             surface = nodes.new('ShaderNodeBsdfPrincipled')
             surface.name = 'GIMI Unlit Output'
-            surface.location = (890, 130)
-            links.new(edge.outputs['Edge Lit Color'], surface.inputs['Emission Color'])
+            surface.location = (80, 80)
+            links.new(master.outputs['Shader Color'], surface.inputs['Emission Color'])
             surface.inputs['Emission Strength'].default_value = 1.0
             links.new(surface.outputs['BSDF'], output.inputs['Surface'])
 

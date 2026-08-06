@@ -137,6 +137,20 @@ class GlobalProperties(bpy.types.PropertyGroup):
         default=False,
     ) # type: ignore
 
+    gimi_body_outline_enabled: bpy.props.BoolProperty(
+        name="GIMI Body 黑色描边",
+        description="高拟真 GIMI Body 导入时创建反向外壳黑色描边",
+        default=True,
+    ) # type: ignore
+
+    gimi_body_outline_width_ratio: bpy.props.FloatProperty(
+        name="GIMI 描边相对宽度",
+        default=0.0008,
+        min=0.00001,
+        max=0.01,
+        precision=6,
+    ) # type: ignore
+
     import_merged_vgmap: bpy.props.EnumProperty(
         name="顶点组模式",
         description="Merged: 导入融合后的统一顶点组 (Unreal的合并顶点组技术会用到)，一般鸣潮Mod选这个来降低制作Mod的复杂度\nPerComponent: 按每个组件独立的顶点组导入\nUniComponent: Merged导入，导出时自动拆分回组件级顶点组",
@@ -248,6 +262,14 @@ class GlobalProperties(bpy.types.PropertyGroup):
     @classmethod
     def gimi_high_fidelity_rendering(cls):
         return cls._instance().gimi_high_fidelity_rendering
+
+    @classmethod
+    def gimi_body_outline_enabled(cls):
+        return cls._instance().gimi_body_outline_enabled
+
+    @classmethod
+    def gimi_body_outline_width_ratio(cls):
+        return cls._instance().gimi_body_outline_width_ratio
 
     @classmethod
     def import_merged_vgmap(cls) -> str:

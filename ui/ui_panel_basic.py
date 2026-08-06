@@ -134,6 +134,13 @@ class PanelBasicInformation(bpy.types.Panel):
             "gimi", "genshinimpact", "原神",
         }:
             layout.prop(global_properties, "gimi_high_fidelity_rendering")
+            if global_properties.gimi_high_fidelity_rendering:
+                outline = layout.column(align=True)
+                outline.prop(global_properties, "gimi_body_outline_enabled")
+                outline.prop(global_properties, "gimi_body_outline_width_ratio")
+                row = outline.row(align=True)
+                row.operator("ssmt.build_gimi_body_outline", icon='MOD_SOLIDIFY')
+                row.operator("ssmt.remove_gimi_body_outline", text="", icon='X')
 
 
 
