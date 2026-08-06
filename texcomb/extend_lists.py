@@ -34,12 +34,12 @@ class SMC_UL_Combine_List(bpy.types.UIList):
     and sorting options, and maintains parent-child relationships during filtering.
     """
 
-    filter_name = StringProperty(
+    filter_name: StringProperty(
         name="筛选",
         default="",
         description="按名称筛选条目",
     )
-    filter_mode = EnumProperty(
+    filter_mode: EnumProperty(
         name="筛选模式",
         items=[
             ("MATERIAL", "材质", "按材质名称筛选"),
@@ -49,12 +49,12 @@ class SMC_UL_Combine_List(bpy.types.UIList):
         default="BOTH",
         description="选择筛选方式",
     )
-    use_filter_sort_reverse = BoolProperty(
+    use_filter_sort_reverse: BoolProperty(
         name="反向排序",
         default=False,
         description="反转列表显示顺序",
     )
-    filter_initialized = BoolProperty(
+    filter_initialized: BoolProperty(
         name="筛选已初始化",
         default=False,
         description="筛选面板是否已完成初始化",

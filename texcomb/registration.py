@@ -13,7 +13,6 @@ from . import (
     operators,
     ui,
 )
-from .type_annotations import BlClasses
 
 __bl_classes = [
     ui.selection_menu.SMC_MT_SelectionMenu,
@@ -54,11 +53,10 @@ def unregister_all() -> None:
 def _register_classes() -> None:
     """Register all Blender classes used by the addon.
 
-    Converts properties to annotations as needed and logs registration results.
+    Blender 5.2 reads add-on properties directly from class annotations.
     """
     count = 0
     for cls in __bl_classes:
-        make_annotations(cls)
         try:
             bpy.utils.register_class(cls)
             count += 1
@@ -84,34 +82,3 @@ def _unregister_classes() -> None:
         except (ValueError, RuntimeError) as e:
             print("Error:", cls, e)
     print("Unregistered", count, "Material Combiner classes.")
-
-
-def make_annotations(cls: BlClasses) -> BlClasses:
-    """Convert class properties to annotations for Blender 2.80+.
-
-    This function handles the transition from Blender's old property
-    definition system to the new annotation-based system.
-
-    Args:
-        cls: Blender class to process.
-
-    Returns:
-        The processed class with properties converted to annotations.
-    """
-    bl_props = {
-        k: v
-        for k, v in cls.__dict__.items()
-        if isinstance(v, bpy.props._PropertyDeferred)
-    }
-
-    if bl_props:
-        if "__annotations__" not in cls.__dict__:
-            cls.__annotations__ = {}
-
-        annotations = cls.__dict__["__annotations__"]
-
-        for k, v in bl_props.items():
-            annotations[k] = v
-            delattr(cls, k)
-
-    return cls

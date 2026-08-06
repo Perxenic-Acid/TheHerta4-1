@@ -36,7 +36,7 @@ class PropertyMenu(bpy.types.Operator):
     bl_description = "显示此材质的设置"
     bl_options = {"UNDO", "INTERNAL"}
 
-    list_id = IntProperty(default=0)
+    list_id: IntProperty(default=0)
 
     def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> Set:
         """Display the property dialog when invoked.
