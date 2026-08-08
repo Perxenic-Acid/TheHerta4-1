@@ -316,10 +316,10 @@ class MaterialCombinerPanel(bpy.types.Panel):
         help_col = box.column()
         help_col.label(text="可能的解决方案:", icon="HELP")
         help_col.label(text="1. 以管理员身份运行 Blender")
-        help_col.label(text="2. 检查网络连接")
+        help_col.label(text="2. 检查网络连接（已默认优先使用清华镜像）")
         help_col.label(text="3. 检查防火墙设置")
         help_col.label(text="4. 尝试手动安装:")
-        help_col.label(text="   在命令行运行: python -m pip install Pillow --user")
+        help_col.label(text="   在命令行运行: python -m pip install Pillow --user -i https://pypi.tuna.tsinghua.edu.cn/simple")
         box.separator()
 
         # 按钮行
