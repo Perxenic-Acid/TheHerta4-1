@@ -20,6 +20,11 @@ import bpy
 from .. import globs
 
 
+# 默认走清华 PyPI 镜像，官方 PyPI 在国内经常超时导致安装失败
+PIP_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
+PIP_FALLBACK_INDEX_URL = "https://pypi.org/simple"
+
+
 def _refresh_combiner_pillow_cache() -> bool:
     """Refresh cached Pillow globals used by the combiner module."""
     try:
@@ -120,6 +125,16 @@ class InstallPIL(bpy.types.Operator):
         """
         return importlib.util.find_spec(module_name) is not None
 
+    @staticmethod
+    def _run_pip_install(pip_main, args: list) -> int:
+        """Runs pip install with the Tsinghua mirror first, falling back to PyPI."""
+        last_result = -1
+        for index_url in (PIP_INDEX_URL, PIP_FALLBACK_INDEX_URL):
+            last_result = pip_main(args + ["-i", index_url])
+            if last_result == 0:
+                break
+        return last_result
+
     def _install_pip(self) -> bool:
         """Attempts to install pip using an appropriate method for the Blender version.
 
@@ -181,21 +196,22 @@ class InstallPIL(bpy.types.Operator):
                 os.path.dirname(os.path.abspath(__file__)), "get-pip.py"
             )
 
-            process = subprocess.run(
-                [python_executable, get_pip, "--force-reinstall"],
-                capture_output=True,
-                text=True,
-                shell=True,
-                check=False,
-            )
+            last_error = "未知错误"
+            for index_url in (PIP_INDEX_URL, PIP_FALLBACK_INDEX_URL):
+                process = subprocess.run(
+                    [python_executable, get_pip, "--force-reinstall", "-i", index_url],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if process.returncode == 0:
+                    return True
+                last_error = process.stderr or process.stdout or "未知错误"
 
-            if process.returncode != 0:
-                error_msg = "get-pip.py 执行失败: {}".format(process.stderr or process.stdout or "未知错误")
-                self.report({"ERROR"}, error_msg)
-                globs.pil_install_error_message = error_msg
-                return False
-
-            return True
+            error_msg = "get-pip.py 执行失败: {}".format(last_error)
+            self.report({"ERROR"}, error_msg)
+            globs.pil_install_error_message = error_msg
+            return False
         except Exception as e:
             error_msg = "运行 get-pip.py 失败: {}".format(e)
             self.report({"ERROR"}, error_msg)
@@ -215,8 +231,9 @@ class InstallPIL(bpy.types.Operator):
         try:
             from pip import _internal
 
-            deps_result = _internal.main(
-                ["install", "pip", "setuptools", "wheel", "-U", "--user"]
+            deps_result = self._run_pip_install(
+                _internal.main,
+                ["install", "pip", "setuptools", "wheel", "-U", "--user"],
             )
             if deps_result != 0:
                 error_msg = "更新 pip 依赖失败 (错误代码: {})".format(deps_result)
@@ -224,7 +241,10 @@ class InstallPIL(bpy.types.Operator):
                 globs.pil_install_error_message = error_msg
                 return False
 
-            pillow_result = _internal.main(["install", "Pillow", "--user"])
+            pillow_result = self._run_pip_install(
+                _internal.main,
+                ["install", "Pillow", "--user"],
+            )
             if pillow_result != 0:
                 error_msg = "Pillow 安装失败 (错误代码: {})".format(pillow_result)
                 self.report({"ERROR"}, error_msg)
