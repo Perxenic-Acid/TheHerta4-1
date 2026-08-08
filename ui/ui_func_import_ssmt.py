@@ -474,6 +474,44 @@ def _deselect_imported_objects(imported_objects):
         bpy.context.view_layer.objects.active = None
 
 
+def _deselect_imported_shader_nodes(imported_objects):
+    """Clear selections left on all shader trees created during model import.
+
+    High-fidelity materials build reusable shader groups in ``bpy.data``;
+    some of those trees are not reachable through an imported object's
+    material slot, so walking only the material graph leaves nodes selected.
+    """
+    visited_trees = set()
+
+    def clear_tree(node_tree):
+        if node_tree is None:
+            return
+        pointer = node_tree.as_pointer()
+        if pointer in visited_trees:
+            return
+        visited_trees.add(pointer)
+        for node in node_tree.nodes:
+            node.select = False
+            group_tree = getattr(node, "node_tree", None)
+            if getattr(group_tree, "bl_idname", "") == "ShaderNodeTree":
+                clear_tree(group_tree)
+        node_tree.nodes.active = None
+
+    # Include every registered ShaderNodeTree. This also covers reusable
+    # groups created during import that are temporarily unattached.
+    for node_tree in bpy.data.node_groups:
+        if getattr(node_tree, "bl_idname", "") == "ShaderNodeTree":
+            clear_tree(node_tree)
+
+    # Keep the material-slot walk for Blender versions where a material node
+    # tree is not exposed in bpy.data.node_groups during the import callback.
+    for obj, _ in imported_objects.values():
+        for material_slot in getattr(obj, "material_slots", ()):
+            material = material_slot.material
+            if material is not None:
+                clear_tree(material.node_tree)
+
+
 def ImprotFromWorkSpaceFull(self, context):
     
     # 创建 WorkSpaceModel 统一管理所有映射
@@ -559,6 +597,7 @@ def ImprotFromWorkSpaceFull(self, context):
     JsonUtils.SaveToFile(json_dict=foldername_gametypename_dict, filepath=save_import_json_path)
     
     _deselect_imported_objects(foldername_imported_obj_dict)
+    _deselect_imported_shader_nodes(foldername_imported_obj_dict)
 
     # ==========================
     # 自动生成蓝图节点逻辑
@@ -854,6 +893,7 @@ def ImprotFromWorkSpaceSelected(self, context, submesh_lod_info_list, force_game
     JsonUtils.SaveToFile(json_dict=existing_import_json, filepath=save_import_json_path)
 
     _deselect_imported_objects(foldername_imported_obj_dict)
+    _deselect_imported_shader_nodes(foldername_imported_obj_dict)
 
     # 生成蓝图
     _generate_blueprint_for_imported_objects(context, foldername_imported_obj_dict, all_submesh_display_names, oldfoldername_jsonpath_dict)
