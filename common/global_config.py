@@ -138,6 +138,61 @@ class GlobalConfig:
         else:
             return ""
 
+    @staticmethod
+    def path_mimitools_settings_json():
+        return os.path.join(GlobalConfig.path_appdata_local(), "MIMIToolsGlobalConfigs", "MIMIToolsSettings.json")
+
+    @staticmethod
+    def path_mmt_settings_json():
+        return os.path.join(GlobalConfig.path_appdata_local(), "MMTGlobalConfigs", "MMTSettings.json")
+
+    @staticmethod
+    def _load_json_dict(file_path):
+        try:
+            if file_path and os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return json.load(f) or {}
+        except Exception as e:
+            print(e)
+        return {}
+
+    @staticmethod
+    def _mimitools_settings():
+        settings = GlobalConfig._load_json_dict(GlobalConfig.path_mimitools_settings_json())
+        if not settings:
+            settings = GlobalConfig._load_json_dict(GlobalConfig.path_mmt_settings_json())
+        return settings
+
+    @staticmethod
+    def path_mimitools_reversed_root():
+        settings = GlobalConfig._mimitools_settings()
+        work_folder = str(settings.get("DBMTWorkFolder", "") or "").strip()
+        if work_folder:
+            return os.path.join(work_folder, "Reversed")
+        for cache_folder_name in ("MIMIToolsCachedFolder", "MMTCachedFolder"):
+            candidate = os.path.join(GlobalConfig.path_appdata_local(), cache_folder_name, "Reversed")
+            if os.path.isdir(candidate):
+                return candidate
+        return ""
+
+    @staticmethod
+    def path_mimitools_reverse_output_folder():
+        settings = GlobalConfig._mimitools_settings()
+        reverse_output_folder = str(settings.get("ReverseOutputFolder", "") or "").strip()
+        if reverse_output_folder:
+            return reverse_output_folder
+        reversed_root = GlobalConfig.path_mimitools_reversed_root()
+        if not reversed_root:
+            return ""
+        workspace_name = str(
+            settings.get("ReversedWorkSpaceName", "")
+            or settings.get("CurrentWorkSpace", "")
+            or ""
+        ).strip()
+        if workspace_name:
+            return os.path.join(reversed_root, workspace_name)
+        return reversed_root
+
     @classmethod
     def path_mods_folder(cls):
         return os.path.join(cls.current_game_migoto_folder,"Mods\\") 

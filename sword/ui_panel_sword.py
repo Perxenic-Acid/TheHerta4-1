@@ -25,10 +25,12 @@ def _get_sword_reversed_workspace_items(self, context):
 
     try:
         GlobalConfig.read_from_main_json_ssmt4()
-        reversed_root = os.path.join(GlobalConfig.ssmtlocation, "Reversed")
+        reversed_root = GlobalConfig.path_mimitools_reversed_root()
+        if not reversed_root:
+            reversed_root = os.path.join(GlobalConfig.ssmtlocation, "Reversed")
         if not reversed_root or not os.path.isdir(reversed_root):
             sword_reversed_workspace_items_cache = [
-                ("", "当前没有可用逆向工作空间", "请确认 SSMT 缓存目录下存在 Reversed 文件夹")
+                ("", "当前没有可用逆向工作空间", "请确认 MIMITools / SSMT 缓存目录下存在 Reversed 文件夹")
             ]
             return sword_reversed_workspace_items_cache
 
@@ -308,7 +310,10 @@ class SwordImportAllReversed(bpy.types.Operator):
             if not selected_workspace_name:
                 self.report({"ERROR"}, "当前未选择指定工作空间，请先选择 Reversed 下的子文件夹")
                 return ""
-            return os.path.join(GlobalConfig.ssmtlocation, "Reversed", selected_workspace_name)
+            reversed_root = GlobalConfig.path_mimitools_reversed_root()
+            if not reversed_root:
+                reversed_root = os.path.join(GlobalConfig.ssmtlocation, "Reversed")
+            return os.path.join(reversed_root, selected_workspace_name)
 
         if source_mode == "CUSTOM":
             custom_folder_path = str(context.scene.sword_custom_reverse_output_folder_path).strip()
@@ -317,7 +322,7 @@ class SwordImportAllReversed(bpy.types.Operator):
                 return ""
             return custom_folder_path
 
-        return GlobalConfig.path_reverse_output_folder()
+        return GlobalConfig.path_mimitools_reverse_output_folder() or GlobalConfig.path_reverse_output_folder()
 
     def execute(self, context):
         reverse_output_folder_path = self._resolve_reverse_output_folder_path(context)
@@ -383,7 +388,7 @@ class SwordImportAllReversed(bpy.types.Operator):
 class SWORD4RefreshReversedWorkspaceList(bpy.types.Operator):
     bl_idname = "ssmt4.sword_refresh_reversed_workspace_list"
     bl_label = "刷新逆向工作空间列表"
-    bl_description = "刷新当前 SSMT 缓存目录下 Reversed 文件夹的子文件夹列表"
+    bl_description = "刷新当前 MIMITools / SSMT 缓存目录下 Reversed 文件夹的子文件夹列表"
 
     def execute(self, context):
         GlobalConfig.read_from_main_json_ssmt4()
@@ -560,14 +565,14 @@ def register():
         description="控制一键导入逆向结果时的目录来源",
         items=[
             ("LAST", "上次逆向结果", "使用全局配置中记录的上次逆向输出目录"),
-            ("SPECIFIC", "指定工作空间", "使用 SSMT 缓存目录下 Reversed 中指定的子文件夹"),
+            ("SPECIFIC", "指定工作空间", "使用 MIMITools / SSMT 缓存目录下 Reversed 中指定的子文件夹"),
             ("CUSTOM", "自定义目录", "使用你手动指定的目录"),
         ],
         default="LAST",
     )
     bpy.types.Scene.sword_specific_reversed_workspace_name = EnumProperty(
         name="指定工作空间",
-        description="当前 SSMT 缓存目录下 Reversed 的子文件夹列表",
+        description="当前 MIMITools / SSMT 缓存目录下 Reversed 的子文件夹列表",
         items=_get_sword_reversed_workspace_items,
     )
     bpy.types.Scene.sword_custom_reverse_output_folder_path = StringProperty(
