@@ -63,26 +63,25 @@ material-combiner-addon
 
 - Make sure the VPN is not currently active.
 
-- **Windows** | Verify that Blender is not installed from the Windows Store, as it may not function correctly. To
-  install Pillow manually, navigate to your Blender installation folder, then to the folder with the
-  ***blender version name\python\bin*** and copy this path. Press ***Win+R*** on your keyboard, type ***cmd.exe***, and
-  press Enter. In the Windows console, enter the following commands:
+- **Windows** | The addon's "Install Pillow" button installs Pillow into the addon's own `texcomb/libs` folder with
+  `pip --target`; no administrator rights are required and it works even though Blender disables `--user` installs.
+  To install manually, navigate to your Blender installation folder, then to the folder with the
+  ***blender version name\python\bin*** and copy this path. Press ***Win+R*** on your keyboard, type ***cmd.exe***,
+  and press Enter. In the Windows console, enter the following commands:
     ```powershell
     set PythonPath="Your\Copied\Path\To\Python\bin\Folder"
+    set LibPath="Your\Addon\Path\texcomb\libs"
 
-    %PythonPath%\python.exe -m pip install Pillow --user --upgrade
+    %PythonPath%\python.exe -m pip install --target "%LibPath%" --upgrade Pillow
     ```
-  Replace ***Your\Copied\Path\To\Python\bin\Folder*** with the path you copied.
+  Replace ***Your\Copied\Path\To\Python\bin\Folder*** and ***Your\Addon\Path\texcomb\libs*** with the paths
+  on your system.
 
 - **macOS** | Open a Terminal console and execute the following commands:
     ```bash
-    /Applications/Blender.app/Contents/MacOS/Blender -b --python-expr "__import__('ensurepip')._bootstrap()" 
-
-    /Applications/Blender.app/Contents/MacOS/Blender -b --python-expr "__import__('pip._internal')._internal.main(['install', '-U', 'pip', 'setuptools', 'wheel'])"
-
-    /Applications/Blender.app/Contents/MacOS/Blender -b --python-expr "__import__('pip._internal')._internal.main(['install', 'Pillow'])"
+    /Applications/Blender.app/Contents/MacOS/Blender -b --python-expr "__import__('pip._internal')._internal.main(['install', '--target', '/path/to/TheHerta4/texcomb/libs', '--upgrade', 'Pillow'])"
     ```
-  If you install Blender in a different location, adjust the path at the beginning of each command accordingly.
+  If you install Blender or the addon in a different location, adjust the paths accordingly.
 
 ### No module named 'material-combiner-addon-2'
 

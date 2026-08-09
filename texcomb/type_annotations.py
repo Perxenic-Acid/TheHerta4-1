@@ -21,9 +21,15 @@ BlClasses = Union[
     bpy.types.UIList,
 ]
 
+# Blender 5.2 removed bpy.utils.previews; keep a compatible type alias.
+if hasattr(bpy.utils, "previews"):
+    _PreviewCollectionType = bpy.utils.previews.ImagePreviewCollection
+else:
+    _PreviewCollectionType = bpy.types.ImagePreview
+
 # Type for the icon preview collection system
 SMCIcons = Union[
-    bpy.utils.previews.ImagePreviewCollection,
+    _PreviewCollectionType,
     Dict[str, bpy.types.ImagePreview],
     None,
 ]

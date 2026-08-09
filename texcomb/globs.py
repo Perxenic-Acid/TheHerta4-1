@@ -6,12 +6,22 @@ features and establishes addon-wide settings.
 """
 
 import importlib.util
+import os
 import site
 import sys
 
 import bpy
 
-sys.path.insert(0, site.getusersitepackages())
+# 插件自带依赖目录：pip --target 安装到这里，避免 Blender 禁用 user site 的问题
+_ADDON_DIR = os.path.dirname(os.path.abspath(__file__))
+PILLOW_LIB_PATH = os.path.join(_ADDON_DIR, "libs")
+
+if PILLOW_LIB_PATH not in sys.path:
+    sys.path.insert(0, PILLOW_LIB_PATH)
+
+_user_site = site.getusersitepackages()
+if _user_site and _user_site not in sys.path:
+    sys.path.insert(0, _user_site)
 
 pil_available = all(
     importlib.util.find_spec(module) is not None
@@ -42,9 +52,13 @@ def refresh_pil_availability() -> bool:
         if 'site' in sys.modules:
             importlib.reload(sys.modules['site'])
 
+        # 确保插件自带依赖目录在路径中
+        if PILLOW_LIB_PATH not in sys.path:
+            sys.path.insert(0, PILLOW_LIB_PATH)
+
         # 添加 user site packages 到路径（避免重复添加）
         user_site = site.getusersitepackages()
-        if user_site not in sys.path:
+        if user_site and user_site not in sys.path:
             sys.path.insert(0, user_site)
 
         # 检查各个模块
