@@ -23,6 +23,7 @@ from .blueprint import blueprint_node_texture
 from .blueprint import blueprint_node_custom_shader
 from .blueprint import blueprint_node_group
 from .blueprint import blueprint_file_drop
+from .blueprint import blueprint_node_highlight
 
 from .ui import ui_func_export
 
@@ -164,6 +165,7 @@ def _register_steps():
     yield blueprint_node_texture.register
     yield blueprint_node_custom_shader.register
     yield blueprint_file_drop.register
+    yield blueprint_node_highlight.register
 
     # 贴图合并工具 (texcomb)
     yield texcomb.register
@@ -182,6 +184,7 @@ def unregister():
     steps = [
         gimi_body_outline.unregister,
         texcomb.unregister,
+        blueprint_node_highlight.unregister,
         blueprint_file_drop.unregister,
         blueprint_node_group.unregister,
         blueprint_node_custom_shader.unregister,
