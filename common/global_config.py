@@ -78,31 +78,32 @@ class GlobalConfig:
     @classmethod
     def read_from_main_json_ssmt4(cls) :
         try:
-            main_json_path = GlobalConfig.path_main_json_ssmt4()
-            print("Reading SSMT4 main json from: " + main_json_path)
-            # 先从main_json_path里读取ssmt位置，也就是ssmt总工作空间的位置
-            # 在新架构中，总工作空间位置已不会再发生改变，所以用户只需要选择一次就可以了
-            if os.path.exists(main_json_path):
-                main_setting_file = open(main_json_path)
-                main_setting_json = json.load(main_setting_file)
-                main_setting_file.close()
-                cls.workspacename = main_setting_json.get("CurrentWorkSpace","")
-                cls.gamename = main_setting_json.get("CurrentGameName","")
-                cls.ssmtlocation = (
-                    main_setting_json.get("SSMTWorkFolder")
-                    or main_setting_json.get("DBMTWorkFolder", "")
-                ) + "\\" # 理论上应该绞杀所有旧时代孑遗, 然考虑到兼容性, 不得不保留 fallback.
-            else:
-                print("Can't find: " + main_json_path)
-            
-            game_config_json_path = os.path.join(GlobalConfig.path_ssmt4_global_configs_folder(),"Games\\" + cls.gamename + "\\Config.json")
-            if os.path.exists(game_config_json_path):
-                game_config_json_file = open(game_config_json_path)
-                game_config_json = json.load(game_config_json_file)
-                game_config_json_file.close()
+            main_settings = GlobalConfig._mimitools_settings()
+            cls.workspacename = main_settings.get("CurrentWorkSpace", "") or main_settings.get("ReversedWorkSpaceName", "")
+            cls.gamename = main_settings.get("CurrentGameName", "")
+            ssmt_work_folder = str(
+                main_settings.get("SSMTWorkFolder")
+                or main_settings.get("DBMTWorkFolder")
+                or ""
+            ).strip()
+            cls.ssmtlocation = ""
+            if ssmt_work_folder:
+                cls.ssmtlocation = ssmt_work_folder + "\\"
 
-                cls.current_game_migoto_folder = game_config_json.get("installDir","")
-                cls.logic_name = game_config_json.get("gamePreset","")
+            game_config_json_path = ""
+            for configs_folder in (
+                GlobalConfig.path_mmt_global_configs_folder(),
+                GlobalConfig.path_mimitools_global_configs_folder(),
+                GlobalConfig.path_ssmt4_global_configs_folder(),
+            ):
+                candidate = os.path.join(configs_folder, "Games", cls.gamename, "Config.json")
+                if os.path.exists(candidate):
+                    game_config_json_path = candidate
+                    break
+
+            game_config_json = GlobalConfig._load_json_dict(game_config_json_path)
+            cls.current_game_migoto_folder = game_config_json.get("installDir", "")
+            cls.logic_name = game_config_json.get("gamePreset", "")
         except Exception as e:
             print(e)
             
@@ -125,18 +126,11 @@ class GlobalConfig:
     
     @staticmethod
     def path_reverse_output_folder():
-        # 先从main_json_path里读取ssmt位置，也就是ssmt总工作空间的位置
-        # 在新架构中，总工作空间位置已不会再发生改变，所以用户只需要选择一次就可以了
-        if os.path.exists(GlobalConfig.path_main_json_ssmt4()):
-            main_setting_file = open(GlobalConfig.path_main_json_ssmt4())
-            main_setting_json = json.load(main_setting_file)
-            main_setting_file.close()
-            reverse_output_folder = main_setting_json.get("ReverseOutputFolder","") + "\\"
-            
-            print(reverse_output_folder)
+        settings = GlobalConfig._mimitools_settings()
+        reverse_output_folder = str(settings.get("ReverseOutputFolder", "") or "").strip()
+        if reverse_output_folder:
             return reverse_output_folder
-        else:
-            return ""
+        return ""
 
     @staticmethod
     def path_mimitools_settings_json():
@@ -145,6 +139,14 @@ class GlobalConfig:
     @staticmethod
     def path_mmt_settings_json():
         return os.path.join(GlobalConfig.path_appdata_local(), "MMTGlobalConfigs", "MMTSettings.json")
+
+    @staticmethod
+    def path_mmt_global_configs_folder():
+        return os.path.join(GlobalConfig.path_appdata_local(), "MMTGlobalConfigs\\")
+
+    @staticmethod
+    def path_mimitools_global_configs_folder():
+        return os.path.join(GlobalConfig.path_appdata_local(), "MIMIToolsGlobalConfigs\\")
 
     @staticmethod
     def _load_json_dict(file_path):
@@ -158,9 +160,13 @@ class GlobalConfig:
 
     @staticmethod
     def _mimitools_settings():
-        settings = GlobalConfig._load_json_dict(GlobalConfig.path_mimitools_settings_json())
+        settings = GlobalConfig._load_json_dict(GlobalConfig.path_mmt_settings_json())
         if not settings:
-            settings = GlobalConfig._load_json_dict(GlobalConfig.path_mmt_settings_json())
+            settings = GlobalConfig._load_json_dict(GlobalConfig.path_mimitools_settings_json())
+        if not settings:
+            settings = GlobalConfig._load_json_dict(
+                os.path.join(GlobalConfig.path_ssmt4_global_configs_folder(), "settings.json")
+            )
         return settings
 
     @staticmethod
@@ -169,7 +175,7 @@ class GlobalConfig:
         work_folder = str(settings.get("DBMTWorkFolder", "") or "").strip()
         if work_folder:
             return os.path.join(work_folder, "Reversed")
-        for cache_folder_name in ("MIMIToolsCachedFolder", "MMTCachedFolder"):
+        for cache_folder_name in ("MMTCachedFolder", "MIMIToolsCachedFolder", "SSMT4CachedFolder"):
             candidate = os.path.join(GlobalConfig.path_appdata_local(), cache_folder_name, "Reversed")
             if os.path.isdir(candidate):
                 return candidate
@@ -301,4 +307,12 @@ class GlobalConfig:
     # 定义基础的Json文件路径
     @staticmethod
     def path_main_json_ssmt4():
+        for folder, filename in (
+            (GlobalConfig.path_mmt_global_configs_folder(), "MMTSettings.json"),
+            (GlobalConfig.path_mimitools_global_configs_folder(), "MIMIToolsSettings.json"),
+            (GlobalConfig.path_ssmt4_global_configs_folder(), "settings.json"),
+        ):
+            candidate = os.path.join(folder, filename)
+            if os.path.exists(candidate):
+                return candidate
         return os.path.join(GlobalConfig.path_ssmt4_global_configs_folder(), "settings.json")

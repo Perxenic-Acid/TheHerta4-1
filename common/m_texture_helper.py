@@ -51,8 +51,8 @@ class M_TextureHelper:
         ]
         # 其次 SSMT4 工作空间常见位置
         ssmt_candidates = [
-            Path('C:/Users/angel/Desktop/github/ssmt4-alpha/src-tauri/resources/texconv.exe'),
-            Path('C:/Users/angel/Desktop/github/ssmt4-alpha/src-tauri/target/debug/resources/texconv.exe'),
+            Path('D:/Dev/ssmt4/src-tauri/resources/texconv.exe'),
+            Path('D:/Dev/ssmt4/src-tauri/target/debug/resources/texconv.exe'),
         ]
         for p in candidates + ssmt_candidates:
             if p.exists():
