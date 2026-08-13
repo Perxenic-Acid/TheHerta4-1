@@ -12,8 +12,8 @@ from .. import globs
 
 _DISCORD_CONTACT_URL = "https://discordapp.com/users/275608234595713024"
 _INSTALL_HELP_TEXT = (
-    "如果安装过程反复出现，请尝试以管理员身份运行 Blender "
-    "或检查你的网络连接。"
+    "点击“安装 Pillow”后，插件会使用 Blender 自带的 pip 把 Pillow "
+    "安装到插件自身的 libs 目录，不需要管理员权限。"
 )
 
 
@@ -282,7 +282,7 @@ class MaterialCombinerPanel(bpy.types.Panel):
         box = layout.box().column()
         box.label(text="安装完成", icon="CHECKMARK")
         box.label(
-            text="请重启 Blender", icon="FILE_REFRESH"
+            text="Pillow 已就绪，可以直接使用", icon="FILE_TICK"
         )
 
     @staticmethod
@@ -315,11 +315,10 @@ class MaterialCombinerPanel(bpy.types.Panel):
         # 显示帮助信息
         help_col = box.column()
         help_col.label(text="可能的解决方案:", icon="HELP")
-        help_col.label(text="1. 以管理员身份运行 Blender")
-        help_col.label(text="2. 检查网络连接（已默认优先使用清华镜像）")
-        help_col.label(text="3. 检查防火墙设置")
-        help_col.label(text="4. 尝试手动安装:")
-        help_col.label(text="   在命令行运行: python -m pip install Pillow --user -i https://pypi.tuna.tsinghua.edu.cn/simple")
+        help_col.label(text="1. 重试安装（默认使用清华镜像，失败后自动切换官方源）")
+        help_col.label(text="2. 检查网络连接与防火墙设置")
+        help_col.label(text="3. 如需手动安装，在命令行执行:")
+        help_col.label(text="   python -m pip install --target \"{}\" Pillow -i https://pypi.tuna.tsinghua.edu.cn/simple".format(globs.PILLOW_LIB_PATH))
         box.separator()
 
         # 按钮行
