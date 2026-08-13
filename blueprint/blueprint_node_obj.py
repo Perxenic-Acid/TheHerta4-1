@@ -459,8 +459,30 @@ class SSMTNode_Object_Info(SSMTNodeBase):
             if getattr(sock, 'bl_idname', '') == 'SSMTSocketCustomShader'
         ]
 
+    def _group_dynamic_input_sockets(self):
+        """Keep Texture and CustomShader inputs in two contiguous groups.
+
+        Blender appends new sockets, which otherwise makes an Object Info node
+        alternate between Texture and CustomShader sockets as each group grows.
+        Moving sockets preserves their links and their relative order.
+        """
+        texture_count = len(self._get_texture_sockets())
+        # Stable partition: repeatedly move the next Texture socket into the
+        # Texture block. Looking sockets up again after every move avoids stale
+        # RNA wrappers in Blender 5.2.
+        for target_index in range(texture_count):
+            current_index = next(
+                index
+                for index, socket in enumerate(self.inputs)
+                if index >= target_index
+                and getattr(socket, "bl_idname", "") == 'SSMTSocketTexture'
+            )
+            if current_index != target_index:
+                self.inputs.move(current_index, target_index)
+
     def _add_custom_shader_socket(self):
         self.inputs.new('SSMTSocketCustomShader', 'CustomShader')
+        self._group_dynamic_input_sockets()
 
     def ensure_custom_shader_socket(self):
         if not self._get_custom_shader_sockets():
@@ -478,11 +500,13 @@ class SSMTNode_Object_Info(SSMTNodeBase):
             slot_index = self._get_next_texture_slot_index()
         # socket 使用中性名称：槽位语义只在连接之后由对应的 slot item 决定
         self.inputs.new('SSMTSocketTexture', iface_("贴图"))
+        self._group_dynamic_input_sockets()
         item = self.texture_slot_items.add()
         item.slot_index = slot_index
 
 
     def update(self):
+        self._group_dynamic_input_sockets()
         # 贴图槽位完全由连接驱动：末尾始终保持恰好一个未连接的空槽位
         texture_sockets = self._get_texture_sockets()
         if texture_sockets and texture_sockets[-1].is_linked:
@@ -505,6 +529,7 @@ class SSMTNode_Object_Info(SSMTNodeBase):
         ):
             self.inputs.remove(custom_shader_sockets[-1])
             custom_shader_sockets = self._get_custom_shader_sockets()
+        self._group_dynamic_input_sockets()
 
     def _sync_texture_slot_items(self):
         """保证 texture_slot_items 与贴图输入 socket 一一对应。"""
