@@ -7,6 +7,7 @@ import hashlib
 import shutil
 import struct
 import subprocess
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -44,6 +45,10 @@ class M_TextureHelper:
         'BC7_UNORM', 'BC7_UNORM_SRGB', 'R8G8B8A8_UNORM', 'R8G8B8A8_UNORM_SRGB',
         'R10G10B10A2_UNORM', 'R11G11B10_FLOAT', 'BC5_UNORM', 'BC5_SNORM',
         'BC1_UNORM', 'BC1_UNORM_SRGB', 'BC3_UNORM', 'BC3_UNORM_SRGB',
+    }
+    _FORMAT_ALIASES = {
+        'BC7_SRGB': 'BC7_UNORM_SRGB',
+        'BC7_Linear': 'BC7_UNORM',
     }
     _resolved_texture_names: dict[int, tuple[str, str]] = {}
     _resolved_texture_nodes: dict[int, object] = {}
@@ -154,7 +159,9 @@ class M_TextureHelper:
     @classmethod
     def convert_texture_with_texconv(cls, source_path: str, target_path: str, target_format: str) -> bool:
         """调用 texconv 将源贴图转换为目标格式。成功返回 True。"""
-        target_format = target_format.strip()
+        target_format = cls._FORMAT_ALIASES.get(
+            target_format.strip().upper(), target_format.strip().upper()
+        )
         if not target_format:
             return False
         texconv = cls._get_texconv_path()
@@ -164,25 +171,34 @@ class M_TextureHelper:
         if not os.path.exists(source_path):
             return False
 
-        target_dir = os.path.dirname(target_path)
-        target_filename = os.path.basename(target_path)
-        base_name, _ = os.path.splitext(target_filename)
-
-        args = [
-            texconv,
-            source_path.replace('/', '\\'),
-            '-ft', 'dds',
-            '-f', target_format,
-            '-o', target_dir.replace('/', '\\'),
-            '-n', base_name,
-            '-y',
-        ]
         try:
             print(f"[M_TextureHelper] 转换贴图: {source_path} -> {target_format}")
-            result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
-            if result.returncode != 0:
-                print(f"[M_TextureHelper] texconv 失败: {result.stderr}")
-                return False
+            target_dir = os.path.dirname(target_path)
+            os.makedirs(target_dir, exist_ok=True)
+            with tempfile.TemporaryDirectory(prefix="theherta4_texconv_") as temp_dir:
+                args = [
+                    texconv, '-ft', 'dds', '-f', target_format,
+                    '-o', temp_dir, '-y', '--', source_path,
+                ]
+                result = subprocess.run(
+                    args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    text=True, check=False,
+                )
+                if result.returncode != 0:
+                    details = (result.stderr or result.stdout or "未知错误").strip()
+                    raise RuntimeError(f"texconv 返回 {result.returncode}: {details}")
+
+                converted_path = os.path.join(
+                    temp_dir, os.path.splitext(os.path.basename(source_path))[0] + '.dds'
+                )
+                if not os.path.isfile(converted_path):
+                    raise RuntimeError("texconv 未生成预期的 DDS 文件")
+                actual_format = cls.detect_dds_format(converted_path)
+                if actual_format != target_format:
+                    raise RuntimeError(
+                        f"转换结果格式不正确，期望 {target_format}，实际 {actual_format or '无法识别'}"
+                    )
+                os.replace(converted_path, target_path)
             return True
         except Exception as e:
             print(f"[M_TextureHelper] texconv 调用异常: {e}")
@@ -281,8 +297,11 @@ class M_TextureHelper:
         if hasattr(texture_node, "effective_texture_format"):
             fmt = str(texture_node.effective_texture_format or "").strip()
             if fmt:
-                return fmt
-        return str(getattr(texture_node, "texture_format", "") or "").strip()
+                return cls._FORMAT_ALIASES.get(fmt.upper(), fmt.upper())
+        fmt = str(getattr(texture_node, "texture_format", "") or "").strip().upper()
+        if fmt == 'AUTO':
+            return ''
+        return cls._FORMAT_ALIASES.get(fmt, fmt)
 
     @classmethod
     def copy_texture_files(cls, texture_node_list, output_texture_folder):
@@ -300,7 +319,7 @@ class M_TextureHelper:
 
             target_filename = cls._node_texture_filename(texture_node)
             target_path = os.path.join(output_texture_folder, target_filename)
-            if os.path.exists(target_path):
+            if os.path.exists(target_path) and cls.detect_dds_format(target_path):
                 continue
 
             target_format = cls._node_target_format(texture_node)
@@ -310,15 +329,28 @@ class M_TextureHelper:
                 source_format = cls.detect_dds_format(source_path)
 
             converted = False
-            if target_format and (source_format != target_format or source_ext != '.dds'):
+            conversion_required = source_ext != '.dds' or bool(
+                target_format and source_format != target_format
+            )
+            if conversion_required and not target_format:
+                raise RuntimeError(
+                    f"贴图 '{source_path}' 不是 DDS，请在贴图节点中选择目标 DDS 格式"
+                )
+            if conversion_required:
                 converted = cls.convert_texture_with_texconv(source_path, target_path, target_format)
+                if not converted:
+                    raise RuntimeError(
+                        f"贴图转换失败: {source_path} -> {target_path} ({target_format})"
+                    )
 
             if not converted:
                 try:
                     shutil.copy2(source_path, target_path)
                     print(f"[M_TextureHelper] 复制贴图: {source_path} -> {target_path}")
                 except Exception as e:
-                    print(f"[M_TextureHelper] 复制贴图失败: {source_path} -> {target_path}, 错误: {e}")
+                    raise RuntimeError(
+                        f"贴图复制失败: {source_path} -> {target_path}: {e}"
+                    ) from e
 
     @classmethod
     def generate_hash_texture_sections(cls, texture_node_list, ini_builder: M_IniBuilder):
