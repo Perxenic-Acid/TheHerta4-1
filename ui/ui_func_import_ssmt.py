@@ -17,6 +17,7 @@ from ..utils.translate_utils import iface_, rpt_
 
 from ..common.global_config import GlobalConfig
 from ..common.m_texture_helper import M_TextureHelper
+from ..common.texture_naming import normalize_texture_filename, normalize_texture_resource_name
 from ..common.ssmt_import_helper import SSMTImportHelper
 from ..workspace.ssmt_workspace import SSMTWorkSpace, WorkSpaceModel
 from ..blueprint.blueprint_export_helper import BlueprintExportHelper
@@ -158,6 +159,7 @@ def _build_texture_nodes(
             mark_type = str(mark.get("MarkType", "") or "").strip()
             mark_slot = str(mark.get("MarkSlot", "") or "").strip()
             mark_filename = str(mark.get("MarkFileName", "") or "").strip()
+            resource_name = str(mark.get("ResourceName", mark.get("resource_name", "")) or "").strip()
             mark_deduped_filename = str(mark.get("MarkDedupedFileName", "") or "").strip()
 
             tex_node = texture_node_by_hash.get(mark_hash)
@@ -180,9 +182,17 @@ def _build_texture_nodes(
                     tex_node.location = (abs_x - frame_abs_x, abs_y - frame_abs_y)
                 tex_node.texture_hash = mark_hash
                 tex_node.mark_name = mark_name
+                if resource_name:
+                    tex_node.resource_name = normalize_texture_resource_name(resource_name)
                 if mark_filename:
-                    tex_node.texture_filename = mark_filename
-                    candidate_path = os.path.join(os.path.dirname(json_path), mark_filename)
+                    # Generated texture assets are always DDS, even when older
+                    # metadata omitted the extension.
+                    tex_node.texture_filename = normalize_texture_filename(mark_filename)
+                    candidate_path = os.path.join(os.path.dirname(json_path), tex_node.texture_filename)
+                    if not os.path.isfile(candidate_path):
+                        # Preserve compatibility with metadata that points to a
+                        # real non-DDS source while exporting it as DDS.
+                        candidate_path = os.path.join(os.path.dirname(json_path), mark_filename)
                     if os.path.isfile(candidate_path):
                         tex_node.texture_filepath = candidate_path
 

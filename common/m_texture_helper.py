@@ -3,6 +3,7 @@ Texture 节点相关的导出辅助函数。
 所有贴图 INI 段落与文件复制均从蓝图 SSMTNode_Texture 节点驱动。
 '''
 import os
+import hashlib
 import shutil
 import struct
 import subprocess
@@ -13,7 +14,12 @@ import bpy
 
 from .m_ini_builder import M_IniBuilder, M_IniSection, M_SectionType
 from .global_config import GlobalConfig
-from .texture_naming import default_texture_filename, default_texture_resource_name
+from .texture_naming import (
+    default_texture_filename,
+    default_texture_resource_name,
+    normalize_texture_filename,
+    normalize_texture_resource_name,
+)
 
 
 @dataclass
@@ -39,6 +45,53 @@ class M_TextureHelper:
         'R10G10B10A2_UNORM', 'R11G11B10_FLOAT', 'BC5_UNORM', 'BC5_SNORM',
         'BC1_UNORM', 'BC1_UNORM_SRGB', 'BC3_UNORM', 'BC3_UNORM_SRGB',
     }
+    _resolved_texture_names: dict[int, tuple[str, str]] = {}
+    _resolved_texture_nodes: dict[int, object] = {}
+
+    @classmethod
+    def prepare_texture_names(cls, texture_node_list) -> None:
+        """Resolve export names once, adding stable suffixes for node collisions."""
+        cls._resolved_texture_names = {}
+        cls._resolved_texture_nodes = {}
+        used_resources: set[str] = set()
+        used_filenames: set[str] = set()
+        nodes = list(dict.fromkeys(id(node) for node in texture_node_list))
+        node_by_id = {id(node): node for node in texture_node_list}
+        for ordinal, node_id in enumerate(nodes):
+            node = node_by_id[node_id]
+            tex_hash = cls._node_hash(node)
+            raw_resource = str(getattr(node, "resource_name", "") or "").strip()
+            raw_filename = str(getattr(node, "texture_filename", "") or "").strip()
+            resource = normalize_texture_resource_name(raw_resource) or default_texture_resource_name(
+                tex_hash, getattr(node, "mark_name", "")
+            )
+            filename = normalize_texture_filename(raw_filename) or default_texture_filename(
+                tex_hash, getattr(node, "mark_name", "")
+            )
+            seed = "\0".join((
+                str(getattr(node, "name", "") or ""), tex_hash,
+                str(getattr(node, "mark_name", "") or ""), raw_resource,
+                raw_filename, str(getattr(node, "texture_filepath", "") or ""),
+                str(ordinal),
+            ))
+            suffix = hashlib.blake2s(seed.encode("utf-8"), digest_size=4).hexdigest()
+            if resource.casefold() in used_resources:
+                resource = f"{resource}_{suffix}"
+                counter = 2
+                while resource.casefold() in used_resources:
+                    resource = f"{resource}_{counter}"
+                    counter += 1
+            if filename.casefold() in used_filenames:
+                stem, extension = os.path.splitext(filename)
+                filename = f"{stem}_{suffix}{extension}"
+                counter = 2
+                while filename.casefold() in used_filenames:
+                    filename = f"{stem}_{suffix}_{counter}{extension}"
+                    counter += 1
+            used_resources.add(resource.casefold())
+            used_filenames.add(filename.casefold())
+            cls._resolved_texture_names[node_id] = (resource, filename)
+            cls._resolved_texture_nodes[node_id] = node
 
     @classmethod
     def _get_texconv_path(cls) -> str:
@@ -141,8 +194,13 @@ class M_TextureHelper:
 
     @staticmethod
     def _node_resource_name(texture_node):
+        resolved = M_TextureHelper._resolved_texture_names.get(id(texture_node))
+        if M_TextureHelper._resolved_texture_nodes.get(id(texture_node)) is not texture_node:
+            resolved = None
+        if resolved is not None:
+            return resolved[0]
         if hasattr(texture_node, "get_resource_name"):
-            return str(texture_node.get_resource_name() or "")
+            return normalize_texture_resource_name(texture_node.get_resource_name())
         return default_texture_resource_name(
             M_TextureHelper._node_hash(texture_node),
             getattr(texture_node, "mark_name", ""),
@@ -154,8 +212,13 @@ class M_TextureHelper:
 
     @staticmethod
     def _node_texture_filename(texture_node):
+        resolved = M_TextureHelper._resolved_texture_names.get(id(texture_node))
+        if M_TextureHelper._resolved_texture_nodes.get(id(texture_node)) is not texture_node:
+            resolved = None
+        if resolved is not None:
+            return resolved[1]
         if hasattr(texture_node, "get_texture_filename"):
-            return str(texture_node.get_texture_filename() or "")
+            return normalize_texture_filename(texture_node.get_texture_filename())
         return default_texture_filename(
             M_TextureHelper._node_hash(texture_node),
             getattr(texture_node, "mark_name", ""),
@@ -224,6 +287,8 @@ class M_TextureHelper:
     @classmethod
     def copy_texture_files(cls, texture_node_list, output_texture_folder):
         """把 Texture 节点指定的源文件拷贝/转换到生成目录的 Textures 文件夹。"""
+        texture_node_list = list(texture_node_list)
+        cls.prepare_texture_names(texture_node_list)
         if not os.path.exists(output_texture_folder):
             os.makedirs(output_texture_folder, exist_ok=True)
 
@@ -262,6 +327,13 @@ class M_TextureHelper:
         资源声明本身不受分支影响，以便所有分支都能引用它；``this`` 则在
         每条蓝图条件下写入。这样同一个 Hash 可以在不同分支绑定到不同资源。
         """
+        texture_node_list = list(texture_node_list)
+        hash_nodes = [
+            cls._normalize_hash_texture_binding(item).texture_node
+            for item in texture_node_list
+        ]
+        if any(cls._resolved_texture_nodes.get(id(node)) is not node for node in hash_nodes):
+            cls.prepare_texture_names(hash_nodes)
         section = M_IniSection(M_SectionType.ResourceAndTextureOverride_Texture)
         resource_filename_dict = {}
         hash_binding_dict = {}
@@ -280,21 +352,6 @@ class M_TextureHelper:
             filename = cls._node_texture_filename(texture_node) or default_texture_filename(
                 tex_hash, getattr(texture_node, "mark_name", "")
             )
-            existing_filename = resource_filename_dict.get(resource_name)
-            if existing_filename is not None and existing_filename != filename:
-                if not cls._node_uses_default_resource_name(texture_node):
-                    raise ValueError(
-                        f"贴图资源名 '{resource_name}' 指向了多个文件: "
-                        f"{existing_filename}, {filename}"
-                    )
-
-                # 相同 Hash 的多个默认资源用于不同分支时，不要求用户手动改名。
-                # 显式命名仍严格检查，避免把用户配置的同名资源静默拆开。
-                resource_suffix = 2
-                default_resource_name = resource_name
-                while resource_name in resource_filename_dict:
-                    resource_name = f"{default_resource_name}_{resource_suffix}"
-                    resource_suffix += 1
             resource_filename_dict[resource_name] = filename
 
             condition_str = binding.get_condition_str()
@@ -386,6 +443,14 @@ class M_TextureHelper:
         section = M_IniSection(M_SectionType.ResourceTexture)
         resource_definitions = {}
 
+        slot_nodes = [
+            texture_node
+            for submesh_model in drawib_model.submesh_model_list
+            for _slot_item, texture_node in submesh_model.get_slot_texture_node_list()
+        ]
+        if any(cls._resolved_texture_nodes.get(id(node)) is not node for node in slot_nodes):
+            cls.prepare_texture_names(slot_nodes)
+
         # 从所有 SubMesh 的 slot texture 节点中收集
         for submesh_model in drawib_model.submesh_model_list:
             for slot_item, texture_node in submesh_model.get_slot_texture_node_list():
@@ -398,12 +463,6 @@ class M_TextureHelper:
                 filename = cls._node_texture_filename(texture_node) or default_texture_filename(
                     tex_hash, getattr(texture_node, "mark_name", "")
                 )
-                existing_filename = resource_definitions.get(resource_name)
-                if existing_filename is not None and existing_filename != filename:
-                    raise ValueError(
-                        f"贴图资源名 '{resource_name}' 指向了多个文件: "
-                        f"{existing_filename}, {filename}"
-                    )
                 resource_definitions[resource_name] = filename
 
 

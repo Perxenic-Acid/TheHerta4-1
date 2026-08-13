@@ -156,10 +156,11 @@ def _register_steps():
     yield ui_panel_fast_texture.register
 
     # 蓝图系统
+    # ShapeKey PropertyGroup 必须先于引用它的 Generate Mod 节点注册。
+    yield blueprint_node_shapekey.register
     yield blueprint_node_obj.register
     yield ui_func_export.register
     yield blueprint_node_menu.register
-    yield blueprint_node_shapekey.register
     yield blueprint_node_panel.register
 
     yield blueprint_node_texture.register
@@ -190,10 +191,10 @@ def unregister():
         blueprint_node_custom_shader.unregister,
         blueprint_node_texture.unregister,
         blueprint_node_panel.unregister,
-        blueprint_node_shapekey.unregister,
         blueprint_node_menu.unregister,
         ui_func_export.unregister,
         blueprint_node_obj.unregister,
+        blueprint_node_shapekey.unregister,
         ui_panel_fast_texture.unregister,
         ui_func_import_ssmt.unregister,
         ui_panel_sword.unregister,

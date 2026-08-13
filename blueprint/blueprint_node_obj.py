@@ -11,6 +11,7 @@ from ..common.global_properties import GlobalProperties
 from ..utils.translate_utils import iface_, rpt_
 from .blueprint_export_helper import BlueprintExportHelper
 from .blueprint_node_base import SSMTNodeBase
+from .blueprint_node_shapekey import SSMTShapeKeyListItem
 from ..workspace.ssmt_workspace import WorkSpaceModel
 
 OBJECT_PERSISTENT_ID_KEY = "_ssmt_object_uuid"
@@ -709,12 +710,22 @@ class SSMTNode_Result_Output(SSMTNodeBase):
     bl_label = '生成Mod'
     bl_icon = 'EXPORT'
 
+    enable_shapekey: bpy.props.BoolProperty(
+        name="使用形态键选项",
+        description="导出勾选的形态键 Buffer 和运行时控制配置",
+        default=False,
+    ) # type: ignore
+    shapekey_items: bpy.props.CollectionProperty(type=SSMTShapeKeyListItem) # type: ignore
+
     def init(self, context):
         self.inputs.new('SSMTSocketObject', iface_("组 1"))
         self.width = 400
 
     def draw_buttons(self, context, layout):
         layout.operator("ssmt.generate_mod_blueprint", text=iface_("生成Mod"), icon='EXPORT')
+
+        from .blueprint_node_shapekey import draw_shapekey_settings
+        draw_shapekey_settings(self, layout)
         
         if GlobalConfig.logic_name == LogicName.WWMI:
             layout.prop(context.scene.global_properties, "ignore_muted_shape_keys")

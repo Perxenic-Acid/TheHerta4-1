@@ -358,17 +358,17 @@ class BlueprintExportHelper:
         if not tree:
             return {}
 
-        gen_node = None
+        output_node = None
         for node in tree.nodes:
-            if node.bl_idname == 'SSMTNode_GenerateShapeKey':
-                gen_node = node
+            if node.bl_idname == 'SSMTNode_Result_Output':
+                output_node = node
                 break
-        if not gen_node:
+        if not output_node or not getattr(output_node, "enable_shapekey", False):
             return {}
 
         shapekey_name_mkey_dict = {}
         key_index = 0
-        for item in gen_node.shapekey_items:
+        for item in output_node.shapekey_items:
             if not item.enabled or not item.shapekey_name.strip():
                 continue
             m_key = M_Key()
