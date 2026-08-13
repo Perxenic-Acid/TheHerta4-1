@@ -60,6 +60,7 @@ class M_TextureHelper:
         cls._resolved_texture_nodes = {}
         used_resources: set[str] = set()
         used_filenames: set[str] = set()
+        resolved_by_texture: dict[tuple, tuple[str, str]] = {}
         nodes = list(dict.fromkeys(id(node) for node in texture_node_list))
         node_by_id = {id(node): node for node in texture_node_list}
         for ordinal, node_id in enumerate(nodes):
@@ -73,6 +74,24 @@ class M_TextureHelper:
             filename = normalize_texture_filename(raw_filename) or default_texture_filename(
                 tex_hash, getattr(node, "mark_name", "")
             )
+            source_path = str(getattr(node, "texture_filepath", "") or "").strip()
+            if source_path:
+                source_path = os.path.normcase(os.path.abspath(bpy.path.abspath(source_path)))
+            target_format = cls._node_target_format(node)
+            # Imported/copied blueprint trees can contain several node objects
+            # representing the exact same texture.  They must share one INI
+            # ResourceTexture.  A collision is split only when the underlying
+            # source/format is actually different.
+            texture_identity = (
+                tex_hash.casefold(),
+                source_path or filename.casefold(),
+                target_format.casefold(),
+            )
+            existing_names = resolved_by_texture.get(texture_identity)
+            if existing_names is not None:
+                cls._resolved_texture_names[node_id] = existing_names
+                cls._resolved_texture_nodes[node_id] = node
+                continue
             seed = "\0".join((
                 str(getattr(node, "name", "") or ""), tex_hash,
                 str(getattr(node, "mark_name", "") or ""), raw_resource,
@@ -97,6 +116,7 @@ class M_TextureHelper:
             used_filenames.add(filename.casefold())
             cls._resolved_texture_names[node_id] = (resource, filename)
             cls._resolved_texture_nodes[node_id] = node
+            resolved_by_texture[texture_identity] = (resource, filename)
 
     @classmethod
     def _get_texconv_path(cls) -> str:
@@ -132,8 +152,20 @@ class M_TextureHelper:
                 return ''
             # pixel format fourcc at offset 84
             pf_fourcc = struct.unpack_from('<I', data, 84)[0]
-            if pf_fourcc.to_bytes(4, 'little') != b'DX10':
-                return ''
+            fourcc = pf_fourcc.to_bytes(4, 'little')
+            legacy_format_map = {
+                b'DXT1': 'BC1_UNORM',
+                b'DXT3': 'BC2_UNORM',
+                b'DXT5': 'BC3_UNORM',
+                b'ATI1': 'BC4_UNORM',
+                b'BC4U': 'BC4_UNORM',
+                b'BC4S': 'BC4_SNORM',
+                b'ATI2': 'BC5_UNORM',
+                b'BC5U': 'BC5_UNORM',
+                b'BC5S': 'BC5_SNORM',
+            }
+            if fourcc != b'DX10':
+                return legacy_format_map.get(fourcc, '')
             dxgi_format = struct.unpack_from('<I', data, 128)[0]
             format_map = {
                 28: 'R8G8B8A8_UNORM',

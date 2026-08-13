@@ -1,6 +1,7 @@
 
 import bpy
 import copy
+import math
 import re
 
 from ..utils.log_utils import LOG
@@ -52,6 +53,10 @@ class BluePrintModel:
         if not tree:
             raise ValueError("未找到当前蓝图树，请先打开正确的蓝图编辑器")
 
+        # Nodes sharing an explicit alias share one INI variable.  Its period
+        # is the LCM of the participating nodes' branch counts.
+        self._switch_alias_state_counts = self._collect_switch_alias_state_counts(tree)
+
         print(tree)
         output_node = BlueprintExportHelper.get_node_from_bl_idname(tree, SSMTNode_Result_Output.bl_idname)
         if not output_node:
@@ -72,19 +77,43 @@ class BluePrintModel:
     def _allocate_switch_key_name(self, switch_node: bpy.types.Node) -> tuple[str, bool]:
         key_alias = self._normalize_switch_key_alias(switch_node)
         if key_alias:
-            key_name = key_alias
-            if key_name in self.keyname_mkey_dict:
-                raise ValueError("按键切换节点的变量名重复: " + key_name)
-            return key_name, False
+            return key_alias, False
 
         key_name = "$swapkey" + str(GlobalConfig.global_key_index)
-        while key_name in self.keyname_mkey_dict:
+        while (
+            key_name in self.keyname_mkey_dict
+            or key_name in self._switch_alias_state_counts
+        ):
             GlobalConfig.global_key_index = GlobalConfig.global_key_index + 1
             key_name = "$swapkey" + str(GlobalConfig.global_key_index)
 
         if key_name in self.keyname_mkey_dict:
             raise ValueError("按键切换节点的变量名重复: " + key_name)
         return key_name, True
+
+    @classmethod
+    def _collect_switch_alias_state_counts(cls, root_tree) -> dict[str, int]:
+        counts: dict[str, list[int]] = {}
+        visited_trees = set()
+
+        def visit(tree):
+            if tree is None or id(tree) in visited_trees:
+                return
+            visited_trees.add(id(tree))
+            for node in getattr(tree, "nodes", []):
+                if getattr(node, "bl_idname", "") == SSMTNode_SwitchKey.bl_idname:
+                    alias = cls._normalize_switch_key_alias(node)
+                    branch_count = len(getattr(node, "inputs", []))
+                    if alias and branch_count > 1:
+                        counts.setdefault(alias, []).append(branch_count)
+                if getattr(node, "bl_idname", "") == GROUP_NODE_IDNAME:
+                    visit(getattr(node, "node_tree", None))
+
+        visit(root_tree)
+        return {
+            alias: math.lcm(*branch_counts)
+            for alias, branch_counts in counts.items()
+        }
 
     def parse_current_node(self, current_node:bpy.types.Node, chain_key_list:list[M_Key]):
         for input_socket in current_node.inputs:
@@ -146,8 +175,10 @@ class BluePrintModel:
                 current_add_key_index = len(self.keyname_mkey_dict.keys())
                 m_key.key_name, uses_auto_key_name = self._allocate_switch_key_name(unknown_node)
 
-                # 值列表就是分支索引的列表 [0, 1, 2, ...]
-                m_key.value_list = list(range(len(valid_input_sockets)))
+                state_count = self._switch_alias_state_counts.get(
+                    m_key.key_name, len(valid_input_sockets)
+                )
+                m_key.value_list = list(range(state_count))
 
                 m_key.initialize_vk_str = unknown_node.key_name
                 m_key.initialize_value = 0  # 默认选择第一个分支
@@ -155,40 +186,46 @@ class BluePrintModel:
                 # 设置备注信息
                 m_key.comment = getattr(unknown_node, 'comment', '')
 
-                # 创建的key加入全局key列表
-                self.keyname_mkey_dict[m_key.key_name] = m_key
+                # 显式同别名只创建一份全局 Key；LCM 状态数已在预扫描确定。
+                existing_key = self.keyname_mkey_dict.get(m_key.key_name)
+                if existing_key is None:
+                    self.keyname_mkey_dict[m_key.key_name] = m_key
+                else:
+                    m_key = existing_key
 
                 # 更新全局key索引
                 if uses_auto_key_name and len(self.keyname_mkey_dict.keys()) > current_add_key_index:
                     GlobalConfig.global_key_index = GlobalConfig.global_key_index + 1
 
                 # 逐个处理每个分支节点（包括空分支）
-                key_tmp_value = 0
-                for socket in valid_input_sockets:
+                for branch_index, socket in enumerate(valid_input_sockets):
                     # 无论这个 socket 是否连接了节点，或者是空的，都对应一个 key value
                     
                     if socket.is_linked:
                         # 如果连接了节点，则需要把这个 value 对应的 key 传递下去解析
-                        for link in socket.links:
-                            # 为每个分支创建一个临时key传递下去
-                            chain_tmp_key = copy.deepcopy(m_key)
-                            chain_tmp_key.tmp_value = key_tmp_value # 当前分支对应的 value
-
-                            tmp_chain_key_list = copy.deepcopy(chain_key_list)
-                            tmp_chain_key_list.append(chain_tmp_key)
-
-                            # 递归解析连接的节点
-                            # 注意：这里我们调用 parse_single_node，因为我们直接找到了目标节点
-                            self.parse_single_node(link.from_node, tmp_chain_key_list)
+                        matching_states = range(branch_index, state_count, len(valid_input_sockets))
+                        for state in matching_states:
+                            # Nested nodes with the same alias intersect the
+                            # existing state instead of emitting contradictions.
+                            existing_state = next(
+                                (key.tmp_value for key in chain_key_list if key.key_name == m_key.key_name),
+                                None,
+                            )
+                            if existing_state is not None and existing_state != state:
+                                continue
+                            for link in socket.links:
+                                tmp_chain_key_list = copy.deepcopy(chain_key_list)
+                                if existing_state is None:
+                                    chain_tmp_key = copy.deepcopy(m_key)
+                                    chain_tmp_key.tmp_value = state
+                                    tmp_chain_key_list.append(chain_tmp_key)
+                                self.parse_single_node(link.from_node, tmp_chain_key_list)
                     else:
                         # 如果是空端口（没有连接），则代表这个 value 对应的是空物体
                         # 我们不需要做任何 parse 操作，因为没有任何 obj 需要在这个条件下生成
                         # 这个 key value 存在于 key.value_list 中，但没有任何 obj 的 condition 会匹配到这个 value
                         # 这样就实现了“切换到这个分支时，什么都不显示”的效果
                         pass
-
-                    key_tmp_value = key_tmp_value + 1
-
 
         elif unknown_node.bl_idname == SSMTNode_Object_Info.bl_idname:
             obj = bpy.data.objects.get(unknown_node.object_name)

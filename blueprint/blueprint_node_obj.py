@@ -677,7 +677,7 @@ class SSMTNode_SwitchKey(SSMTNodeBase):
         self.update_node_width([self.key_name, self.key_alias, self.comment])
     
     key_name: bpy.props.StringProperty(name="按键名称", default="", update=update_key_name) # type: ignore
-    key_alias: bpy.props.StringProperty(name="变量别名", description="只允许英文字母和数字，用于生成 ini 变量名", default="", update=update_key_alias) # type: ignore
+    key_alias: bpy.props.StringProperty(name="变量别名", description="只允许英文字母和数字；相同别名共享变量，不同分支数按最小公倍数展开", default="", update=update_key_alias) # type: ignore
     comment: bpy.props.StringProperty(name="备注", description="备注信息，会以注释形式生成到配置表中", default="", update=update_comment) # type: ignore
     
     def init(self, context):
