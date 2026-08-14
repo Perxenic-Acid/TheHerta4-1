@@ -2,9 +2,6 @@
 import bpy
 
 from ..utils.translate_utils import iface_
-from .blueprint_node_base import SSMTNodeBase
-
-
 # ── 形态键列表项 ──
 class SSMTShapeKeyListItem(bpy.types.PropertyGroup):
     enabled: bpy.props.BoolProperty(name="", default=False) # type: ignore
@@ -35,17 +32,22 @@ class SSMT_OT_RefreshShapeKeyList(bpy.types.Operator):
             self.report({'WARNING'}, "请在 SSMT 蓝图编辑器中执行")
             return {'CANCELLED'}
 
-        gen_node = None
+        output_node = None
         for node in tree.nodes:
-            if node.bl_idname == 'SSMTNode_GenerateShapeKey':
-                gen_node = node
+            if node.bl_idname == 'SSMTNode_Result_Output':
+                output_node = node
                 break
-        if not gen_node:
-            self.report({'WARNING'}, "请先在蓝图中添加一个「生成形态键」节点")
+        if not output_node:
+            self.report({'WARNING'}, "当前蓝图缺少「生成 Mod」输出节点")
             return {'CANCELLED'}
 
+        previous_items = {
+            item.shapekey_name: (item.enabled, item.key)
+            for item in output_node.shapekey_items
+            if item.shapekey_name
+        }
         seen = set()
-        gen_node.shapekey_items.clear()
+        output_node.shapekey_items.clear()
         for node in tree.nodes:
             if node.bl_idname != 'SSMTNode_Object_Info':
                 continue
@@ -54,47 +56,38 @@ class SSMT_OT_RefreshShapeKeyList(bpy.types.Operator):
                 if sk_name in seen:
                     continue
                 seen.add(sk_name)
-                item = gen_node.shapekey_items.add()
+                item = output_node.shapekey_items.add()
                 item.shapekey_name = sk_name
+                if sk_name in previous_items:
+                    item.enabled, item.key = previous_items[sk_name]
 
-        self.report({'INFO'}, f"已刷新 {len(gen_node.shapekey_items)} 个形态键")
+        self.report({'INFO'}, f"已刷新 {len(output_node.shapekey_items)} 个形态键")
         return {'FINISHED'}
 
 
-# ── 生成形态键节点 ──
-class SSMTNode_GenerateShapeKey(SSMTNodeBase):
-    '''生成形态键 Mod 节点：扫描蓝图物体，勾选需要生成的形态键并绑定按键'''
-    bl_idname = 'SSMTNode_GenerateShapeKey'
-    bl_label = '生成形态键'
-    bl_icon = 'SHAPEKEY_DATA'
+def draw_shapekey_settings(node, layout):
+    """绘制 Generate Mod 输出节点中的形态键设置。"""
+    layout.prop(node, "enable_shapekey", text=iface_("生成形态键 Mod"), icon='SHAPEKEY_DATA')
+    if not node.enable_shapekey:
+        return
 
-    shapekey_items: bpy.props.CollectionProperty(type=SSMTShapeKeyListItem) # type: ignore
+    box = layout.box()
+    row = box.row(align=True)
+    row.operator("ssmt.refresh_shapekey_list", text=iface_("刷新列表"), icon='FILE_REFRESH')
+    row.label(text=f"共 {len(node.shapekey_items)} 个" if node.shapekey_items else iface_("（空）"), icon='SHAPEKEY_DATA')
 
-    def init(self, context):
-        self.width = 320
-
-    def draw_buttons(self, context, layout):
-        box = layout.box()
+    for item in node.shapekey_items:
         row = box.row(align=True)
-        row.operator("ssmt.refresh_shapekey_list", text=iface_("刷新列表"), icon='FILE_REFRESH')
-        if not self.shapekey_items:
-            row.label(text=iface_("（空）"), icon='BLANK1')
-        else:
-            row.label(text=f"共 {len(self.shapekey_items)} 个", icon='SHAPEKEY_DATA')
-
-        for item in self.shapekey_items:
-            row = layout.row(align=True)
-            row.prop(item, "enabled", text="")
-            row.label(text=item.shapekey_name, icon='SHAPEKEY_DATA')
-            row.prop(item, "key", text="", placeholder="VK键值（可选）")
-            op = row.operator("wm.url_open", text="", icon='HELP')
-            op.url = "https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes"
+        row.prop(item, "enabled", text="")
+        row.label(text=item.shapekey_name, icon='SHAPEKEY_DATA')
+        row.prop(item, "key", text="", placeholder="VK键值（可选）")
+        op = row.operator("wm.url_open", text="", icon='HELP')
+        op.url = "https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes"
 
 
 classes = (
     SSMTShapeKeyListItem,
     SSMT_OT_RefreshShapeKeyList,
-    SSMTNode_GenerateShapeKey,
 )
 
 

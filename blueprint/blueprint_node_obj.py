@@ -11,6 +11,7 @@ from ..common.global_properties import GlobalProperties
 from ..utils.translate_utils import iface_, rpt_
 from .blueprint_export_helper import BlueprintExportHelper
 from .blueprint_node_base import SSMTNodeBase
+from .blueprint_node_shapekey import SSMTShapeKeyListItem
 from ..workspace.ssmt_workspace import WorkSpaceModel
 
 OBJECT_PERSISTENT_ID_KEY = "_ssmt_object_uuid"
@@ -458,8 +459,30 @@ class SSMTNode_Object_Info(SSMTNodeBase):
             if getattr(sock, 'bl_idname', '') == 'SSMTSocketCustomShader'
         ]
 
+    def _group_dynamic_input_sockets(self):
+        """Keep Texture and CustomShader inputs in two contiguous groups.
+
+        Blender appends new sockets, which otherwise makes an Object Info node
+        alternate between Texture and CustomShader sockets as each group grows.
+        Moving sockets preserves their links and their relative order.
+        """
+        texture_count = len(self._get_texture_sockets())
+        # Stable partition: repeatedly move the next Texture socket into the
+        # Texture block. Looking sockets up again after every move avoids stale
+        # RNA wrappers in Blender 5.2.
+        for target_index in range(texture_count):
+            current_index = next(
+                index
+                for index, socket in enumerate(self.inputs)
+                if index >= target_index
+                and getattr(socket, "bl_idname", "") == 'SSMTSocketTexture'
+            )
+            if current_index != target_index:
+                self.inputs.move(current_index, target_index)
+
     def _add_custom_shader_socket(self):
         self.inputs.new('SSMTSocketCustomShader', 'CustomShader')
+        self._group_dynamic_input_sockets()
 
     def ensure_custom_shader_socket(self):
         if not self._get_custom_shader_sockets():
@@ -477,11 +500,13 @@ class SSMTNode_Object_Info(SSMTNodeBase):
             slot_index = self._get_next_texture_slot_index()
         # socket 使用中性名称：槽位语义只在连接之后由对应的 slot item 决定
         self.inputs.new('SSMTSocketTexture', iface_("贴图"))
+        self._group_dynamic_input_sockets()
         item = self.texture_slot_items.add()
         item.slot_index = slot_index
 
 
     def update(self):
+        self._group_dynamic_input_sockets()
         # 贴图槽位完全由连接驱动：末尾始终保持恰好一个未连接的空槽位
         texture_sockets = self._get_texture_sockets()
         if texture_sockets and texture_sockets[-1].is_linked:
@@ -504,6 +529,7 @@ class SSMTNode_Object_Info(SSMTNodeBase):
         ):
             self.inputs.remove(custom_shader_sockets[-1])
             custom_shader_sockets = self._get_custom_shader_sockets()
+        self._group_dynamic_input_sockets()
 
     def _sync_texture_slot_items(self):
         """保证 texture_slot_items 与贴图输入 socket 一一对应。"""
@@ -676,7 +702,7 @@ class SSMTNode_SwitchKey(SSMTNodeBase):
         self.update_node_width([self.key_name, self.key_alias, self.comment])
     
     key_name: bpy.props.StringProperty(name="按键名称", default="", update=update_key_name) # type: ignore
-    key_alias: bpy.props.StringProperty(name="变量别名", description="只允许英文字母和数字，用于生成 ini 变量名", default="", update=update_key_alias) # type: ignore
+    key_alias: bpy.props.StringProperty(name="变量别名", description="只允许英文字母和数字；相同别名共享变量，不同分支数按最小公倍数展开", default="", update=update_key_alias) # type: ignore
     comment: bpy.props.StringProperty(name="备注", description="备注信息，会以注释形式生成到配置表中", default="", update=update_comment) # type: ignore
     
     def init(self, context):
@@ -709,12 +735,22 @@ class SSMTNode_Result_Output(SSMTNodeBase):
     bl_label = '生成Mod'
     bl_icon = 'EXPORT'
 
+    enable_shapekey: bpy.props.BoolProperty(
+        name="使用形态键选项",
+        description="导出勾选的形态键 Buffer 和运行时控制配置",
+        default=False,
+    ) # type: ignore
+    shapekey_items: bpy.props.CollectionProperty(type=SSMTShapeKeyListItem) # type: ignore
+
     def init(self, context):
         self.inputs.new('SSMTSocketObject', iface_("组 1"))
         self.width = 400
 
     def draw_buttons(self, context, layout):
         layout.operator("ssmt.generate_mod_blueprint", text=iface_("生成Mod"), icon='EXPORT')
+
+        from .blueprint_node_shapekey import draw_shapekey_settings
+        draw_shapekey_settings(self, layout)
         
         if GlobalConfig.logic_name == LogicName.WWMI:
             layout.prop(context.scene.global_properties, "ignore_muted_shape_keys")

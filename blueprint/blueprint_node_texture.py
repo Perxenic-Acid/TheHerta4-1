@@ -8,7 +8,12 @@ import os
 import bpy
 
 from ..utils.translate_utils import iface_
-from ..common.texture_naming import default_texture_filename, default_texture_resource_name
+from ..common.texture_naming import (
+    default_texture_filename,
+    default_texture_resource_name,
+    normalize_texture_filename,
+    normalize_texture_resource_name,
+)
 from .blueprint_node_base import SSMTNodeBase
 
 
@@ -143,11 +148,11 @@ class SSMTNode_Texture(SSMTNodeBase):
 
     def get_resource_name(self) -> str:
         name = self.resource_name.strip()
-        return name if name else default_texture_resource_name(self.texture_hash, self.mark_name)
+        return normalize_texture_resource_name(name) if name else default_texture_resource_name(self.texture_hash, self.mark_name)
 
     def get_texture_filename(self) -> str:
         filename = self.texture_filename.strip()
-        return filename if filename else _get_default_texture_filename(
+        return normalize_texture_filename(filename) if filename else _get_default_texture_filename(
             self.texture_hash, self.mark_name
         )
 

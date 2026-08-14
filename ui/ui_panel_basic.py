@@ -50,10 +50,10 @@ class PanelBasicInformation(bpy.types.Panel):
             selected_name=getattr(global_properties, "selected_blueprint_name", ""),
             context=context,
         )
-        if preferred_blueprint_name and global_properties.selected_blueprint_name != preferred_blueprint_name:
-            global_properties.selected_blueprint_name = preferred_blueprint_name
-        elif not preferred_blueprint_name and global_properties.selected_blueprint_name != "__NONE__":
-            global_properties.selected_blueprint_name = "__NONE__"
+        # Blender 5.2 forbids writing Scene/ID properties from Panel.draw().
+        # Keep drawing read-only and use the computed preferred name for the
+        # action buttons below. Operators/import callbacks remain responsible
+        # for persisting an explicit selection.
 
         layout.label(text=iface_("SSMT缓存文件夹路径: ") + GlobalConfig.ssmtlocation)
         layout.label(text=iface_("当前配置名称: ") + GlobalConfig.gamename)
