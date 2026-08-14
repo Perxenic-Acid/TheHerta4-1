@@ -92,9 +92,9 @@ class GlobalConfig:
 
             game_config_json_path = ""
             for configs_folder in (
+                GlobalConfig.path_ssmt4_global_configs_folder(),
                 GlobalConfig.path_mmt_global_configs_folder(),
                 GlobalConfig.path_mimitools_global_configs_folder(),
-                GlobalConfig.path_ssmt4_global_configs_folder(),
             ):
                 candidate = os.path.join(configs_folder, "Games", cls.gamename, "Config.json")
                 if os.path.exists(candidate):
@@ -160,13 +160,13 @@ class GlobalConfig:
 
     @staticmethod
     def _mimitools_settings():
-        settings = GlobalConfig._load_json_dict(GlobalConfig.path_mmt_settings_json())
+        settings = GlobalConfig._load_json_dict(
+            os.path.join(GlobalConfig.path_ssmt4_global_configs_folder(), "settings.json")
+        )
+        if not settings:
+            settings = GlobalConfig._load_json_dict(GlobalConfig.path_mmt_settings_json())
         if not settings:
             settings = GlobalConfig._load_json_dict(GlobalConfig.path_mimitools_settings_json())
-        if not settings:
-            settings = GlobalConfig._load_json_dict(
-                os.path.join(GlobalConfig.path_ssmt4_global_configs_folder(), "settings.json")
-            )
         return settings
 
     @staticmethod
@@ -308,9 +308,9 @@ class GlobalConfig:
     @staticmethod
     def path_main_json_ssmt4():
         for folder, filename in (
+            (GlobalConfig.path_ssmt4_global_configs_folder(), "settings.json"),
             (GlobalConfig.path_mmt_global_configs_folder(), "MMTSettings.json"),
             (GlobalConfig.path_mimitools_global_configs_folder(), "MIMIToolsSettings.json"),
-            (GlobalConfig.path_ssmt4_global_configs_folder(), "settings.json"),
         ):
             candidate = os.path.join(folder, filename)
             if os.path.exists(candidate):
